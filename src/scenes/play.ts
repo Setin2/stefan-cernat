@@ -321,7 +321,7 @@ export default class Play extends Node {
         ]
 
         // create new instances of the trunk and crown of the tree
-        for (let i = 0; i < 4; i++){
+        for (let i = 0; i < tree_coordinates.length; i++){
             var trunkClone = trunk.createInstance("trunk1");
             trunkClone.position = tree_coordinates[i];
             trunkClone.physicsImpostor = new BABYLON.PhysicsImpostor(trunkClone, BABYLON.PhysicsImpostor.BoxImpostor, { mass: 0, restitution: 0 }, this.scene);
