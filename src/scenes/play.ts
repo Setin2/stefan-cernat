@@ -11,8 +11,8 @@ export default class Play extends Node {
 
     // audio files
     private bullet: BABYLON.Sound;
-    private tank_sound: BABYLON.Sound;
-    private brick_sound: BABYLON.Sound;
+    private tankSound: BABYLON.Sound;
+    private brickSound: BABYLON.Sound;
 
     // objects
     private tank;
@@ -39,14 +39,14 @@ export default class Play extends Node {
         //this.scene.debugLayer.show();
     }
 
-    /*
+    /**
      * Might add other easter eggs later if I feel like it
      */
     public easterEgg(){
         console.log("%c Very sly of you, but there is nothing to see here ;)", "color: #CE718F");
     }
 
-    /*
+    /**
      * Initialize constant variables and functionalities of the game
      */
     public play(){
@@ -61,27 +61,27 @@ export default class Play extends Node {
         this.show_Control();
     }
 
-    /*
+    /**
      * Add image telling the player how to control the tank (+ under developement text)
      */
     public show_Control(){
         var advancedTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
-        var image3 = new Image("control", "assets/textures/control_final.png");
-        image3.width = "250px";
-        image3.height = "100px";
-        image3.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
-        image3.paddingBottomInPixels = 40;
-        advancedTexture.addControl(image3);
+        var image = new Image("control", "assets/textures/control_final.png");
+        image.width = "250px";
+        image.height = "100px";
+        image.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
+        image.paddingBottomInPixels = 40;
+        advancedTexture.addControl(image);
 
         var text = new TextBlock("alpha", "ALPHA VERSION: UNDER DEVELOPEMENT");
         advancedTexture.addControl(text);
-        
+
         setTimeout(() => {
-            advancedTexture.removeControl(image3);
+            advancedTexture.removeControl(image);
         }, 7500);
     }
     
-    /*
+    /**
      * Initialize the movement of the player
      */
     public initializeTankMovement(_this: this, rotationSpeed: number){
@@ -96,12 +96,12 @@ export default class Play extends Node {
         }));
 
         // create instances of the splatter object to reduce memory usage
-        var splatter_objects = [];
-        splatter_objects.push(_this.scene.getMeshByName("splatter1"))
-        splatter_objects.push(splatter_objects[0].createInstance("i" + 1))
-        splatter_objects.push(splatter_objects[0].createInstance("i" + 2))
+        var splatterObjects = [];
+        splatterObjects.push(_this.scene.getMeshByName("splatter1"))
+        splatterObjects.push(splatterObjects[0].createInstance("i" + 1))
+        splatterObjects.push(splatterObjects[0].createInstance("i" + 2))
         // we iterate through the splatter objects so we always move the last one in the order
-        var current_splatter_index = 0;
+        var currentSplatterIndex = 0;
         var tick = 0;
         var splatPos = new BABYLON.Vector3(0,0,0);
 
@@ -112,12 +112,12 @@ export default class Play extends Node {
                 splatPos = new BABYLON.Vector3(_this.tank.position.x, 0, _this.tank.position.z);
             }
             else if (tick == 40){
-                if (current_splatter_index == 3) current_splatter_index = 0;
-                splatter_objects[current_splatter_index].position = splatPos;
-                splatter_objects[current_splatter_index].rotate(BABYLON.Axis.Y, Math.floor(Math.random() * (360 - 10 + 1) + 10), BABYLON.Space.WORLD);
-                current_splatter_index++;
+                if (currentSplatterIndex == 3) currentSplatterIndex = 0;
+                splatterObjects[currentSplatterIndex].position = splatPos;
+                splatterObjects[currentSplatterIndex].rotate(BABYLON.Axis.Y, Math.floor(Math.random() * (360 - 10 + 1) + 10), BABYLON.Space.WORLD);
+                currentSplatterIndex++;
                 tick = 0;
-                _this.tank_sound.play();
+                _this.tankSound.play();
             }
         }
 
@@ -135,6 +135,7 @@ export default class Play extends Node {
             );
         }
 
+        // on w,a,s,d key pressed
         _this.scene.registerBeforeRender(()=>{
             var keydown = false;
             if (inputMap["w"]){
@@ -162,19 +163,19 @@ export default class Play extends Node {
         });
     }
 
-    /*
+    /**
      * Give the player the ability to shoot with the tank
      */
     public initializeShooting(_this: this, forward: BABYLON.Vector3){
         // initialize the social media targets for shooting
         var github = _this.scene.getMeshByName("target_github");
         github.material.albedoTexture = new Texture("assets/models/target/target (Base Color).png", this.scene);
-        var twitter = github.createInstance("target_twitter");
-        twitter.position = new BABYLON.Vector3(69.8355941772461, 4.408603668212891, 46.30295181274414)
-        twitter.scaling = new BABYLON.Vector3(1.75, 1.75, 1.75);
         var linkedin = github.createInstance("target_linkedin");
-        linkedin.position = new BABYLON.Vector3(69.8355941772461, 2.112103668212891, 17.29005181274414);
-        linkedin.scaling = new BABYLON.Vector3(1.5, 1.5, 1.5);
+        linkedin.position = new BABYLON.Vector3(69.8355941772461, 4.408603668212891, 46.30295181274414)
+        linkedin.scaling = new BABYLON.Vector3(1.75, 1.75, 1.75);
+        var twitter = github.createInstance("target_twitter");
+        twitter.position = new BABYLON.Vector3(69.8355941772461, 2.112103668212891, 17.29005181274414);
+        twitter.scaling = new BABYLON.Vector3(1.5, 1.5, 1.5);
 
         // add velocity to the ball to make a shooting animation
         var translate = function (mesh, direction, power) {
@@ -218,7 +219,7 @@ export default class Play extends Node {
                         _this.scene.meshes
                         .filter((mesh) => mesh.name == "brick")
                         .forEach((mesh) => {
-                            shootedball.physicsImpostor.registerOnPhysicsCollide(mesh.physicsImpostor, () => {_this.brick_sound.play();});  
+                            shootedball.physicsImpostor.registerOnPhysicsCollide(mesh.physicsImpostor, () => {_this.brickSound.play();});  
                         });
 
                         // if we shoot the github target with this ball
@@ -247,7 +248,7 @@ export default class Play extends Node {
                                     parameter: shootedball,
                                 },
                                 (event) => {
-                                    window.open("https://www.linkedin.com/in/stefan-cernat/");
+                                    window.open("https://www.linkedin.com/in/stefan-cernat/"); // open a new tab to my linkedin profile
                                     clearTimeout(dispose); // we dont wait to dispose the ball anymore
                                     shootedball.dispose(); // we just dispose of it
                                 }
@@ -259,7 +260,7 @@ export default class Play extends Node {
         );
     }
 
-    /*
+    /**
      * Set up a wall of bricks in the scene at a specified position
      */
     public instantiateBricks(_this: this, x: number, y: number, z: number){
@@ -299,12 +300,12 @@ export default class Play extends Node {
         function changeBrickPropreties(brick, x: number, y: number, z: number){
             brick.position = new BABYLON.Vector3(x, y, z);
             brick.physicsImpostor = new BABYLON.PhysicsImpostor(brick, BABYLON.PhysicsImpostor.BoxImpostor, { mass: brickMass, friction: 0.3}, _this.scene);
-            brick.physicsImpostor.registerOnPhysicsCollide(_this.tank.physicsImpostor, () => {_this.brick_sound.play();});
+            brick.physicsImpostor.registerOnPhysicsCollide(_this.tank.physicsImpostor, () => {_this.brickSound.play();});
             brick.physicsImpostor.physicsBody.linearDamping = 0.95;
         }
     }
 
-    /*
+    /**
      * We instantiate clones of the sakura tree instead of adding them from the get go. This way we save memory. 
      */
     public instantiateTrees(){
@@ -331,7 +332,7 @@ export default class Play extends Node {
         }
     }
 
-    /*
+    /**
      * Initialize all global variables that will be used in other functions
      */
     public initializeGlobalVariables(){
@@ -340,8 +341,8 @@ export default class Play extends Node {
 
         // initialize all audio 
         this.bullet = new BABYLON.Sound("music", "assets/sounds/bullet.wav", this.scene, null, {loop:false, volume: 0.5});
-        this.tank_sound = new BABYLON.Sound("tank", "assets/sounds/splash.mp3", this.scene, null, {loop:false, volume: 1});
-        this.brick_sound = new BABYLON.Sound("brick", "assets/sounds/brick.mp3", this.scene, null, {loop:false, volume: 0.5});
+        this.tankSound = new BABYLON.Sound("tank", "assets/sounds/splash.mp3", this.scene, null, {loop:false, volume: 1});
+        this.brickSound = new BABYLON.Sound("brick", "assets/sounds/brick.mp3", this.scene, null, {loop:false, volume: 0.5});
 
         // initialize global objects & their physicsImpostors
         this.tank = this.scene.getMeshByName("tank_holder");
@@ -350,16 +351,16 @@ export default class Play extends Node {
         this.tank.physicsImpostor.physicsBody.angularDamping = 1;
     }
 
-    /*
+    /**
      * We have to initialize textures manually inside code, otherwise they dont show up in production for some reason
      */
     public initializeTextures(){
-        var fruit_factory_screen = this.scene.getMeshByName("monitor");
-        fruit_factory_screen.material.albedoTexture = new Texture("assets/models/projects/monitor (Base Color).png", this.scene);
+        var fruitFactoryScreen = this.scene.getMeshByName("monitor");
+        fruitFactoryScreen.material.albedoTexture = new Texture("assets/models/projects/monitor (Base Color).png", this.scene);
 
-        var fruit_factory_description_text = this.scene.getMeshByName("ffdescription");
-        fruit_factory_description_text.material.diffuseTexture = new Texture("assets/textures/fruit factory description.png", this.scene);
-        fruit_factory_description_text.material.opacityTexture = new Texture("assets/textures/fruit factory description.png", this.scene);
+        var fruitFactoryDescriptionText = this.scene.getMeshByName("ffdescription");
+        fruitFactoryDescriptionText.material.diffuseTexture = new Texture("assets/textures/fruit factory description.png", this.scene);
+        fruitFactoryDescriptionText.material.opacityTexture = new Texture("assets/textures/fruit factory description.png", this.scene);
     }
 
     public optimizeScene(){
