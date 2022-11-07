@@ -27,7 +27,6 @@
 }
 {
   "scripts": {
-    ...
     "lint": "eslint . --ext .ts",
   }
 }
