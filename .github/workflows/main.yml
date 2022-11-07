@@ -8,7 +8,7 @@ on:
 
 # only one job  thgat does the following
 jobs:
-  test-job:
+  lint:
     runs-on: ubuntu-latest
     steps:
     # Retrieve the code from our repository
@@ -20,17 +20,17 @@ jobs:
       uses: actions/setup-node@v3
       with:
         node-version: '17.x'
+    
+    - name: Cache dependencies
+      uses: actions/cache@v2
+      with:
+        path: ~/.npm
+        key: npm-${{ hashFiles('package-lock.json') }}
+        restore-keys: npm-
 
     # Install the required dependencies
     - name: Install dependencies
-      run: |
-        if [ -e yarn.lock ]; then
-        yarn install --frozen-lockfile
-        elif [ -e package-lock.json ]; then
-        npm ci
-        else
-        npm i
-        fi
+      run: npm ci --ignore-scripts
 
     # Run the tests
     - name: Test
