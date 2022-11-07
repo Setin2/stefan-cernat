@@ -1,0 +1,30 @@
+# the unit test file(s) should be placed inside a folder called test
+name: main
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+# only one job  thgat does the following
+jobs:
+  test-job:
+    runs-on: ubuntu-latest
+    steps:
+    # Retrieve the code from our repository
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    # Download Node.js version 17 for GitHub Actions to run
+    - name: Use Node 17.x
+      uses: actions/setup-node@v3
+      with:
+        node-version: '17.x'
+
+    # Install the required dependencies
+    - name: Install dependencies
+      run: npm ci
+
+    # Run the tests
+    - name: Test
+      run: npm test
