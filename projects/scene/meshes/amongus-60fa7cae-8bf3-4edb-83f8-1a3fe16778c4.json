@@ -1,0 +1,146 @@
+{
+	"materials": [],
+	"meshes": [
+		{
+			"name": "amongus",
+			"id": "60fa7cae-8bf3-4edb-83f8-1a3fe16778c4",
+			"uniqueId": 4680,
+			"type": "Mesh",
+			"position": [
+				-0.49947962164878845,
+				-0.522524356842041,
+				-0.2833729386329651
+			],
+			"rotationQuaternion": [
+				0,
+				-1.6886531994941593e-7,
+				0,
+				0.9999999999999858
+			],
+			"scaling": [
+				0.012613853439689375,
+				0.027827046811580658,
+				0.014964547939599447
+			],
+			"localMatrix": {
+				"0": 1,
+				"1": 0,
+				"2": 0,
+				"3": 0,
+				"4": 0,
+				"5": 1,
+				"6": 0,
+				"7": 0,
+				"8": 0,
+				"9": 0,
+				"10": 1,
+				"11": 0,
+				"12": 0,
+				"13": 0,
+				"14": 0,
+				"15": 1
+			},
+			"isEnabled": true,
+			"isVisible": true,
+			"infiniteDistance": false,
+			"pickable": true,
+			"receiveShadows": false,
+			"billboardMode": 0,
+			"visibility": 1,
+			"checkCollisions": false,
+			"isBlocker": false,
+			"overrideMaterialSideOrientation": null,
+			"parentId": "fe25f507-0875-4e24-a5a5-e667a5e6d212",
+			"isUnIndexed": false,
+			"geometryId": "28e82ec2-ef92-45ae-880e-862d2f4e6620",
+			"subMeshes": null,
+			"materialId": "default material",
+			"metadata": {
+				"basePoseMatrix": {
+					"0": 1,
+					"1": 0,
+					"2": 0,
+					"3": 0,
+					"4": 0,
+					"5": 1,
+					"6": 0,
+					"7": 0,
+					"8": 0,
+					"9": 0,
+					"10": 1,
+					"11": 0,
+					"12": 0,
+					"13": 0,
+					"14": 0,
+					"15": 1
+				},
+				"originalSourceFile": {
+					"id": "stlmesh",
+					"name": "stlmesh",
+					"sceneFileName": "models/projects/C#.stl"
+				},
+				"isPickable": true,
+				"doNotExport": false,
+				"script": {
+					"name": "None"
+				},
+				"renderingGroupId": 0
+			},
+			"instances": [],
+			"animations": [],
+			"ranges": [],
+			"layerMask": 268435455,
+			"alphaIndex": 1.7976931348623157e+308,
+			"hasVertexAlpha": false,
+			"overlayAlpha": 0.3,
+			"overlayColor": [
+				1,
+				0,
+				0
+			],
+			"applyFog": true,
+			"delayLoadingFile": "geometries/28e82ec2-ef92-45ae-880e-862d2f4e6620.babylonbinarymeshdata",
+			"boundingBoxMaximum": [
+				75.525390625,
+				35.9814453125,
+				51.53076171875
+			],
+			"boundingBoxMinimum": [
+				0,
+				0,
+				0
+			],
+			"_binaryInfo": {
+				"positionsAttrDesc": {
+					"count": 14796,
+					"stride": 3,
+					"offset": 0,
+					"dataType": 1
+				},
+				"normalsAttrDesc": {
+					"count": 14796,
+					"stride": 3,
+					"offset": 59184,
+					"dataType": 1
+				},
+				"indicesAttrDesc": {
+					"count": 4932,
+					"stride": 1,
+					"offset": 118368,
+					"dataType": 0
+				},
+				"subMeshesAttrDesc": {
+					"count": 1,
+					"stride": 5,
+					"offset": 138096,
+					"dataType": 0
+				}
+			},
+			"positions": null,
+			"normals": null,
+			"indices": null
+		}
+	],
+	"multiMaterials": [],
+	"lods": []
+}

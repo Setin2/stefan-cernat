@@ -1,0 +1,64 @@
+{
+	"tags": null,
+	"position": [
+		-635.663818359375,
+		647.7968139648438,
+		-90.7955093383789
+	],
+	"rotation": [
+		0,
+		0,
+		0
+	],
+	"rotationQuaternion": [
+		-0.7071068286895752,
+		0,
+		0,
+		0.7071067094802856
+	],
+	"scaling": [
+		128.05010986328125,
+		128.05007934570312,
+		128.05007934570312
+	],
+	"billboardMode": 0,
+	"scalingDeterminant": 1,
+	"infiniteDistance": false,
+	"ignoreNonUniformScaling": false,
+	"reIntegrateRotationIntoRotationQuaternion": false,
+	"name": "Cube.002",
+	"id": "20cf49ba-36bf-42b1-8f38-af83e1b25907",
+	"state": "",
+	"metadata": {
+		"gltf": {
+			"pointers": [
+				"/nodes/6"
+			]
+		},
+		"script": {
+			"name": "None"
+		}
+	},
+	"type": "TransformNode",
+	"uniqueId": 192,
+	"parentId": "ffc71b03-a323-4005-945f-32ada5e22ce8",
+	"localMatrix": {
+		"0": 1,
+		"1": 0,
+		"2": 0,
+		"3": 0,
+		"4": 0,
+		"5": 1,
+		"6": 0,
+		"7": 0,
+		"8": 0,
+		"9": 0,
+		"10": 1,
+		"11": 0,
+		"12": 0,
+		"13": 0,
+		"14": 0,
+		"15": 1
+	},
+	"isEnabled": true
+}

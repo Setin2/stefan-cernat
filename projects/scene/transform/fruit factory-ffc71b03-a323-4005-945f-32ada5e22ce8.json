@@ -1,0 +1,64 @@
+{
+	"tags": null,
+	"position": [
+		-98.38471984863281,
+		-1.7007969617843628,
+		6.350790977478027
+	],
+	"rotation": [
+		0,
+		0,
+		0
+	],
+	"rotationQuaternion": [
+		0,
+		-0.7605579145562438,
+		0,
+		0.6492700968055263
+	],
+	"scaling": [
+		0.024999999309811817,
+		0.02500000037252903,
+		0.024999999309811817
+	],
+	"billboardMode": 0,
+	"scalingDeterminant": 1,
+	"infiniteDistance": false,
+	"ignoreNonUniformScaling": false,
+	"reIntegrateRotationIntoRotationQuaternion": false,
+	"name": "fruit factory",
+	"id": "ffc71b03-a323-4005-945f-32ada5e22ce8",
+	"state": "",
+	"metadata": {
+		"gltf": {
+			"pointers": [
+				"/nodes/29"
+			]
+		},
+		"doNotExport": false,
+		"script": {
+			"name": "None"
+		}
+	},
+	"type": "TransformNode",
+	"uniqueId": 183,
+	"localMatrix": {
+		"0": 1,
+		"1": 0,
+		"2": 0,
+		"3": 0,
+		"4": 0,
+		"5": 1,
+		"6": 0,
+		"7": 0,
+		"8": 0,
+		"9": 0,
+		"10": 1,
+		"11": 0,
+		"12": 0,
+		"13": 0,
+		"14": 0,
+		"15": 1
+	},
+	"isEnabled": true
+}

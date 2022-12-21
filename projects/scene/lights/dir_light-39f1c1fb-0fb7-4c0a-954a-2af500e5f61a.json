@@ -1,0 +1,57 @@
+{
+	"tags": null,
+	"shadowFrustumSize": 0,
+	"shadowOrthoScale": 0.1,
+	"autoUpdateExtends": true,
+	"autoCalcShadowZBounds": false,
+	"orthoLeft": 1.7976931348623157e+308,
+	"orthoRight": 5e-324,
+	"orthoTop": 5e-324,
+	"orthoBottom": 1.7976931348623157e+308,
+	"diffuse": [
+		1,
+		1,
+		1
+	],
+	"specular": [
+		0,
+		0,
+		0
+	],
+	"falloffType": 0,
+	"intensity": 1,
+	"range": 1.7976931348623157e+308,
+	"intensityMode": 0,
+	"radius": 1e-7,
+	"_renderPriority": 0,
+	"shadowEnabled": true,
+	"excludeWithLayerMask": 0,
+	"includeOnlyWithLayerMask": 0,
+	"lightmapMode": 0,
+	"position": [
+		-25,
+		50,
+		20
+	],
+	"direction": [
+		1.5,
+		-2,
+		1
+	],
+	"name": "dir_light",
+	"id": "39f1c1fb-0fb7-4c0a-954a-2af500e5f61a",
+	"state": "",
+	"metadata": {
+		"script": {
+			"name": "None"
+		},
+		"doNotExport": false,
+		"_waitingParentId": null
+	},
+	"uniqueId": 28728,
+	"type": 1,
+	"animations": [],
+	"ranges": [],
+	"isEnabled": true,
+	"parentId": null
+}

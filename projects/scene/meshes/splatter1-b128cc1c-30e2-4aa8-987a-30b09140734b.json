@@ -1,0 +1,176 @@
+{
+	"materials": [],
+	"meshes": [
+		{
+			"name": "splatter1",
+			"id": "b128cc1c-30e2-4aa8-987a-30b09140734b",
+			"uniqueId": 857,
+			"type": "Mesh",
+			"position": [
+				1.1815928220748901,
+				-0.38141337037086487,
+				-3.6432807445526123
+			],
+			"rotationQuaternion": [
+				-0.7071067811865475,
+				0,
+				0,
+				0.7071067811865476
+			],
+			"scaling": [
+				10.000001559677047,
+				10.000001559676138,
+				10.000000000001775
+			],
+			"localMatrix": {
+				"0": 1,
+				"1": 0,
+				"2": 0,
+				"3": 0,
+				"4": 0,
+				"5": 1,
+				"6": 0,
+				"7": 0,
+				"8": 0,
+				"9": 0,
+				"10": 1,
+				"11": 0,
+				"12": 0,
+				"13": 0,
+				"14": 0,
+				"15": 1
+			},
+			"isEnabled": true,
+			"isVisible": true,
+			"infiniteDistance": false,
+			"pickable": true,
+			"receiveShadows": false,
+			"billboardMode": 0,
+			"visibility": 1,
+			"checkCollisions": false,
+			"isBlocker": false,
+			"overrideMaterialSideOrientation": 0,
+			"isUnIndexed": false,
+			"geometryId": "b88d7ab0-dfb5-41ac-b8b4-30fef23a2c49",
+			"subMeshes": null,
+			"materialId": "76447bea-32a7-482c-a072-3497bc233b10",
+			"metadata": {
+				"gltf": {
+					"pointers": [
+						"/meshes/0/primitives/0",
+						"/nodes/4"
+					]
+				},
+				"basePoseMatrix": {
+					"0": -39.370079040527344,
+					"1": 0,
+					"2": 0,
+					"3": 0,
+					"4": 0,
+					"5": 8.74191364642115e-15,
+					"6": 39.370079040527344,
+					"7": 0,
+					"8": 0,
+					"9": -39.370079040527344,
+					"10": 8.74191364642115e-15,
+					"11": 0,
+					"12": 0,
+					"13": 0,
+					"14": 0,
+					"15": 1
+				},
+				"originalSourceFile": {
+					"id": "ColorSpot2_ColorSpot2_0",
+					"name": "ColorSpot2_ColorSpot2_0",
+					"sceneFileName": "models/splatter.glb"
+				},
+				"isPickable": true,
+				"doNotExport": false,
+				"script": {
+					"name": "None"
+				},
+				"renderingGroupId": 0,
+				"_waitingParentId": null
+			},
+			"instances": [],
+			"animations": [],
+			"ranges": [],
+			"layerMask": 268435455,
+			"alphaIndex": 1.7976931348623157e+308,
+			"hasVertexAlpha": false,
+			"overlayAlpha": 0.3,
+			"overlayColor": [
+				1,
+				0,
+				0
+			],
+			"applyFog": true,
+			"parentId": null,
+			"delayLoadingFile": "geometries/b88d7ab0-dfb5-41ac-b8b4-30fef23a2c49.babylonbinarymeshdata",
+			"boundingBoxMaximum": [
+				0.39660269021987915,
+				0.597972571849823,
+				0.044500090181827545
+			],
+			"boundingBoxMinimum": [
+				-0.3966027498245239,
+				-0.5979726314544678,
+				-0.04450009763240814
+			],
+			"_binaryInfo": {
+				"positionsAttrDesc": {
+					"count": 516,
+					"stride": 3,
+					"offset": 0,
+					"dataType": 1
+				},
+				"normalsAttrDesc": {
+					"count": 516,
+					"stride": 3,
+					"offset": 2064,
+					"dataType": 1
+				},
+				"uvsAttrDesc": {
+					"count": 344,
+					"stride": 2,
+					"offset": 4128,
+					"dataType": 1
+				},
+				"uvs2AttrDesc": {
+					"count": 344,
+					"stride": 2,
+					"offset": 5504,
+					"dataType": 1
+				},
+				"tangetsAttrDesc": {
+					"count": 688,
+					"stride": 3,
+					"offset": 6880,
+					"dataType": 1
+				},
+				"indicesAttrDesc": {
+					"count": 756,
+					"stride": 1,
+					"offset": 9632,
+					"dataType": 0
+				},
+				"subMeshesAttrDesc": {
+					"count": 1,
+					"stride": 5,
+					"offset": 12656,
+					"dataType": 0
+				}
+			},
+			"positions": null,
+			"normals": null,
+			"uvs": null,
+			"hasUVs": true,
+			"uv2s": null,
+			"hasUVs2": true,
+			"tangents": null,
+			"indices": null
+		}
+	],
+	"multiMaterials": [],
+	"lods": []
+}

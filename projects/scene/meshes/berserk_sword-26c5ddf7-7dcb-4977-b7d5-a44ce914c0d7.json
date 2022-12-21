@@ -1,0 +1,176 @@
+{
+	"materials": [],
+	"meshes": [
+		{
+			"name": "berserk_sword",
+			"id": "26c5ddf7-7dcb-4977-b7d5-a44ce914c0d7",
+			"uniqueId": 1511,
+			"type": "Mesh",
+			"position": [
+				56.6615104675293,
+				18.712928771972656,
+				98.6903305053711
+			],
+			"rotationQuaternion": [
+				-0.596358276687382,
+				0.12752730900746412,
+				0.16572892557596186,
+				0.7750016222635976
+			],
+			"scaling": [
+				15.0000005723608,
+				15.000001025193725,
+				14.99999892325346
+			],
+			"localMatrix": {
+				"0": 1,
+				"1": 0,
+				"2": 0,
+				"3": 0,
+				"4": 0,
+				"5": 1,
+				"6": 0,
+				"7": 0,
+				"8": 0,
+				"9": 0,
+				"10": 1,
+				"11": 0,
+				"12": 0,
+				"13": 0,
+				"14": 0,
+				"15": 1
+			},
+			"isEnabled": true,
+			"isVisible": true,
+			"infiniteDistance": false,
+			"pickable": true,
+			"receiveShadows": false,
+			"billboardMode": 0,
+			"visibility": 1,
+			"checkCollisions": false,
+			"isBlocker": false,
+			"overrideMaterialSideOrientation": 0,
+			"isUnIndexed": false,
+			"geometryId": "3ceee410-c9ee-4f22-9cec-493aa46243d5",
+			"subMeshes": null,
+			"materialId": "76447bea-32a7-482c-a072-3497bc233b10",
+			"metadata": {
+				"gltf": {
+					"pointers": [
+						"/meshes/0/primitives/0",
+						"/nodes/4"
+					]
+				},
+				"basePoseMatrix": {
+					"0": -4.3711387287537207e-10,
+					"1": 0.009999999776482582,
+					"2": 4.3711387287537207e-10,
+					"3": 0,
+					"4": -1.8640728516480517e-17,
+					"5": -4.3711387287537207e-10,
+					"6": 0.009999999776482582,
+					"7": 0,
+					"8": -0.009999999776482582,
+					"9": -4.3711384511979645e-10,
+					"10": -1.9106853063460274e-17,
+					"11": 0,
+					"12": 0.014973007142543793,
+					"13": -0.003694998100399971,
+					"14": -1.6465954780578613,
+					"15": 1
+				},
+				"originalSourceFile": {
+					"id": "Cube.002_Dragon_slayer_0",
+					"name": "Cube.002_Dragon_slayer_0",
+					"sceneFileName": "models/berserk/berserk_sword.glb"
+				},
+				"isPickable": true,
+				"doNotExport": false,
+				"script": {
+					"name": "None"
+				},
+				"renderingGroupId": 0,
+				"_waitingParentId": null
+			},
+			"instances": [],
+			"animations": [],
+			"ranges": [],
+			"layerMask": 268435455,
+			"alphaIndex": 1.7976931348623157e+308,
+			"hasVertexAlpha": false,
+			"overlayAlpha": 0.3,
+			"overlayColor": [
+				1,
+				0,
+				0
+			],
+			"applyFog": true,
+			"parentId": null,
+			"delayLoadingFile": "geometries/3ceee410-c9ee-4f22-9cec-493aa46243d5.babylonbinarymeshdata",
+			"boundingBoxMaximum": [
+				0.1566704511642456,
+				0.07428330183029175,
+				0.48988205194473267
+			],
+			"boundingBoxMinimum": [
+				-0.15375885367393494,
+				-0.05005151033401489,
+				-1.6362032890319824
+			],
+			"_binaryInfo": {
+				"positionsAttrDesc": {
+					"count": 3576,
+					"stride": 3,
+					"offset": 0,
+					"dataType": 1
+				},
+				"normalsAttrDesc": {
+					"count": 3576,
+					"stride": 3,
+					"offset": 14304,
+					"dataType": 1
+				},
+				"uvsAttrDesc": {
+					"count": 2384,
+					"stride": 2,
+					"offset": 28608,
+					"dataType": 1
+				},
+				"uvs2AttrDesc": {
+					"count": 2384,
+					"stride": 2,
+					"offset": 38144,
+					"dataType": 1
+				},
+				"tangetsAttrDesc": {
+					"count": 4768,
+					"stride": 3,
+					"offset": 47680,
+					"dataType": 1
+				},
+				"indicesAttrDesc": {
+					"count": 3006,
+					"stride": 1,
+					"offset": 66752,
+					"dataType": 0
+				},
+				"subMeshesAttrDesc": {
+					"count": 1,
+					"stride": 5,
+					"offset": 78776,
+					"dataType": 0
+				}
+			},
+			"positions": null,
+			"normals": null,
+			"uvs": null,
+			"hasUVs": true,
+			"uv2s": null,
+			"hasUVs2": true,
+			"tangents": null,
+			"indices": null
+		}
+	],
+	"multiMaterials": [],
+	"lods": []
+}

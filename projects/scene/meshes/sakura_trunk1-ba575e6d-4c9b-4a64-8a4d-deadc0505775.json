@@ -1,0 +1,165 @@
+{
+	"materials": [],
+	"meshes": [
+		{
+			"name": "sakura_trunk1",
+			"id": "ba575e6d-4c9b-4a64-8a4d-deadc0505775",
+			"uniqueId": 9852,
+			"type": "Mesh",
+			"position": [
+				78.3985366821289,
+				5.184815406799316,
+				-11.201844215393066
+			],
+			"rotationQuaternion": [
+				-0.7071067811865475,
+				0,
+				0,
+				0.7071067811865476
+			],
+			"scaling": [
+				4,
+				4,
+				4
+			],
+			"pivotMatrix": {
+				"0": 1,
+				"1": 0,
+				"2": 0,
+				"3": 0,
+				"4": 0,
+				"5": 1,
+				"6": 0,
+				"7": 0,
+				"8": 0,
+				"9": 0,
+				"10": 1,
+				"11": 0,
+				"12": 0,
+				"13": 0,
+				"14": 0,
+				"15": 1
+			},
+			"isEnabled": true,
+			"isVisible": true,
+			"infiniteDistance": false,
+			"pickable": true,
+			"receiveShadows": false,
+			"billboardMode": 0,
+			"visibility": 1,
+			"checkCollisions": false,
+			"isBlocker": false,
+			"overrideMaterialSideOrientation": 0,
+			"isUnIndexed": false,
+			"geometryId": "632061a7-dfb3-4188-8809-e3540a5d0f40",
+			"subMeshes": null,
+			"materialId": "default material",
+			"physicsMass": 0,
+			"physicsFriction": 0,
+			"physicsRestitution": 0,
+			"physicsImpostor": 2,
+			"metadata": {
+				"gltf": {
+					"pointers": [
+						"/meshes/0/primitives/0",
+						"/nodes/0"
+					]
+				},
+				"basePoseMatrix": {
+					"0": -0.009999999776482582,
+					"1": 0,
+					"2": 0,
+					"3": 0,
+					"4": 0,
+					"5": -1.343588684754593e-9,
+					"6": 0.010000000707805157,
+					"7": 0,
+					"8": 0,
+					"9": -0.010000000707805157,
+					"10": -1.343588684754593e-9,
+					"11": 0,
+					"12": 0,
+					"13": 2.382670487577343e-7,
+					"14": -1.7733631134033203,
+					"15": 1
+				},
+				"originalSourceFile": {
+					"id": "Tronc_Bois_0",
+					"name": "Tronc_Bois_0",
+					"sceneFileName": "models/sakura/sakura.glb"
+				},
+				"isPickable": true,
+				"script": {
+					"name": "None"
+				},
+				"renderingGroupId": 0,
+				"doNotExport": false,
+				"_waitingParentId": null
+			},
+			"instances": [],
+			"animations": [],
+			"ranges": [],
+			"layerMask": 268435455,
+			"alphaIndex": 1.7976931348623157e+308,
+			"hasVertexAlpha": false,
+			"overlayAlpha": 0.3,
+			"overlayColor": [
+				1,
+				0,
+				0
+			],
+			"applyFog": true,
+			"parentId": null,
+			"delayLoadingFile": "geometries/632061a7-dfb3-4188-8809-e3540a5d0f40.babylonbinarymeshdata",
+			"boundingBoxMaximum": [
+				0.7337098121643066,
+				0.7214722037315369,
+				4.249361991882324
+			],
+			"boundingBoxMinimum": [
+				-0.7033833265304565,
+				-0.6500239968299866,
+				-1.5
+			],
+			"_binaryInfo": {
+				"positionsAttrDesc": {
+					"count": 1080,
+					"stride": 3,
+					"offset": 0,
+					"dataType": 1
+				},
+				"normalsAttrDesc": {
+					"count": 1080,
+					"stride": 3,
+					"offset": 4320,
+					"dataType": 1
+				},
+				"uvsAttrDesc": {
+					"count": 720,
+					"stride": 2,
+					"offset": 8640,
+					"dataType": 1
+				},
+				"indicesAttrDesc": {
+					"count": 450,
+					"stride": 1,
+					"offset": 11520,
+					"dataType": 0
+				},
+				"subMeshesAttrDesc": {
+					"count": 1,
+					"stride": 5,
+					"offset": 13320,
+					"dataType": 0
+				}
+			},
+			"positions": null,
+			"normals": null,
+			"uvs": null,
+			"hasUVs": true,
+			"indices": null
+		}
+	],
+	"multiMaterials": [],
+	"lods": []
+}

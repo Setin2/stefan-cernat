@@ -1,0 +1,160 @@
+{
+	"materials": [],
+	"meshes": [
+		{
+			"name": "tank",
+			"id": "ab9ffcb0-cb3c-4668-9177-f15f9cf90ead",
+			"uniqueId": 1634,
+			"type": "Mesh",
+			"position": [
+				0,
+				-0.5,
+				0.1
+			],
+			"rotationQuaternion": [
+				-0.7071067811865475,
+				0,
+				0,
+				0.7071067811865476
+			],
+			"scaling": [
+				0.30000001192092896,
+				0.30000001192092896,
+				0.30000001192092896
+			],
+			"localMatrix": {
+				"0": 1,
+				"1": 0,
+				"2": 0,
+				"3": 0,
+				"4": 0,
+				"5": 1,
+				"6": 0,
+				"7": 0,
+				"8": 0,
+				"9": 0,
+				"10": 1,
+				"11": 0,
+				"12": 0,
+				"13": 0,
+				"14": 0,
+				"15": 1
+			},
+			"isEnabled": true,
+			"isVisible": true,
+			"infiniteDistance": false,
+			"pickable": true,
+			"receiveShadows": false,
+			"billboardMode": 0,
+			"visibility": 1,
+			"checkCollisions": false,
+			"isBlocker": false,
+			"overrideMaterialSideOrientation": 0,
+			"parentId": "a4df7cf0-bff3-4800-a70e-37279c0d605d",
+			"isUnIndexed": false,
+			"geometryId": "6c852eb3-a772-434b-b4a5-eb5d7da72ef0",
+			"subMeshes": null,
+			"materialId": "76447bea-32a7-482c-a072-3497bc233b10",
+			"metadata": {
+				"gltf": {
+					"pointers": [
+						"/meshes/1/primitives/0",
+						"/nodes/5"
+					]
+				},
+				"basePoseMatrix": {
+					"0": -1,
+					"1": 0,
+					"2": 0,
+					"3": 0,
+					"4": 0,
+					"5": 2.220446049250313e-16,
+					"6": 1,
+					"7": 0,
+					"8": 0,
+					"9": -1,
+					"10": 2.220446049250313e-16,
+					"11": 0,
+					"12": 0,
+					"13": 0,
+					"14": 0,
+					"15": 1
+				},
+				"originalSourceFile": {
+					"id": "Object_5",
+					"name": "Object_5",
+					"sceneFileName": "models/tank/stylized_tank.glb"
+				},
+				"isPickable": true,
+				"doNotExport": false,
+				"script": {
+					"name": "None"
+				},
+				"renderingGroupId": 0
+			},
+			"instances": [],
+			"animations": [],
+			"ranges": [],
+			"layerMask": 268435455,
+			"alphaIndex": 1.7976931348623157e+308,
+			"hasVertexAlpha": false,
+			"overlayAlpha": 0.3,
+			"overlayColor": [
+				1,
+				0,
+				0
+			],
+			"applyFog": true,
+			"delayLoadingFile": "geometries/6c852eb3-a772-434b-b4a5-eb5d7da72ef0.babylonbinarymeshdata",
+			"boundingBoxMaximum": [
+				1.6031290292739868,
+				2.0880749225616455,
+				3.154829978942871
+			],
+			"boundingBoxMinimum": [
+				-1.6031290292739868,
+				-2.7392361164093018,
+				0.038927000015974045
+			],
+			"_binaryInfo": {
+				"positionsAttrDesc": {
+					"count": 10050,
+					"stride": 3,
+					"offset": 0,
+					"dataType": 1
+				},
+				"normalsAttrDesc": {
+					"count": 10050,
+					"stride": 3,
+					"offset": 40200,
+					"dataType": 1
+				},
+				"uvsAttrDesc": {
+					"count": 6700,
+					"stride": 2,
+					"offset": 80400,
+					"dataType": 1
+				},
+				"indicesAttrDesc": {
+					"count": 7056,
+					"stride": 1,
+					"offset": 107200,
+					"dataType": 0
+				},
+				"subMeshesAttrDesc": {
+					"count": 1,
+					"stride": 5,
+					"offset": 135424,
+					"dataType": 0
+				}
+			},
+			"positions": null,
+			"normals": null,
+			"uvs": null,
+			"hasUVs": true,
+			"indices": null
+		}
+	],
+	"multiMaterials": [],
+	"lods": []
+}

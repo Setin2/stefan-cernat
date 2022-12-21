@@ -1,0 +1,598 @@
+{
+	"animationGroups": [
+		"grp_Rotate_Planet!Take 001!BaseLayer.json",
+		"grp_Rotate_Meteor!Take 001!BaseLayer.json",
+		"EmptyAction.001.json",
+		"Meteor!Take 001!BaseLayer.json",
+		"3rd.json",
+		"EmptyAction.001.json",
+		"grp_Planet_ALL!Take 001!BaseLayer.json",
+		"KeyAction.json"
+	],
+	"cameras": [
+		"free_camera-bdb64464-0893-4335-88e4-004300a59dbe.json"
+	],
+	"materials": [
+		{
+			"isMultiMaterial": false,
+			"bindedMeshes": [
+				"615d3b40-f115-4bbd-80b6-8d4740a78a7b"
+			],
+			"json": "materials/sakura.material"
+		},
+		{
+			"isMultiMaterial": false,
+			"bindedMeshes": [
+				"edfbe4f4-22ff-4f02-9bf7-dcb2eaf2a686",
+				"2fb514c6-817c-4aa4-b99a-1cefe00ea02b",
+				"d48f3759-4380-4434-a4d9-959e0d8f2b79"
+			],
+			"json": "models/amongus/Outline.002-Outline.002.material"
+		},
+		{
+			"isMultiMaterial": false,
+			"bindedMeshes": [
+				"adc0b959-541a-4c00-b47e-1cea505451cf",
+				"b128cc1c-30e2-4aa8-987a-30b09140734b",
+				"26c5ddf7-7dcb-4977-b7d5-a44ce914c0d7",
+				"ab9ffcb0-cb3c-4668-9177-f15f9cf90ead",
+				"b7758891-aab4-4db8-934b-9f7afc8e0d40",
+				"1ddd47b1-8c70-4d21-be2a-1241113d3972",
+				"3cef0a65-68df-4084-88f0-64d5ccb48b7a",
+				"61615748-be61-4fb4-babb-174b67cd4d49",
+				"a74e77b0-ce8e-4097-996f-5efb41bd579a",
+				"31bb7f1f-8441-491e-8bb6-49aa5cd1fd59",
+				"4cbcc069-671d-443e-9779-57b795262c23",
+				"ade8233e-2e51-4454-bd6c-8e3061e1bc08"
+			],
+			"json": "models/sakura/Feuille.002-Feuille.002.material"
+		},
+		{
+			"isMultiMaterial": false,
+			"bindedMeshes": [
+				"a408f14a-a4a1-4ad7-a2c7-d9557e97bc0a"
+			],
+			"json": "models/target/target-target.material"
+		},
+		{
+			"isMultiMaterial": false,
+			"bindedMeshes": [
+				"66768f13-22f5-4240-91b3-f6041ab5fb81",
+				"9347772b-72bf-4f8b-a9d4-5b9bb7b2b311",
+				"87f80214-81a7-458b-a9b1-5b8e013466c3",
+				"a3182d8b-172e-4503-9661-0087a286fa6f",
+				"69b627b6-2444-46b1-b3a4-77672f86852b",
+				"d2e4814d-800e-4cdb-861e-d473b686c322",
+				"53efe02a-a395-43a6-906d-e5c2cca6e0bf",
+				"4b09a0f5-b2e4-4d07-bba1-c86e361ac4dd"
+			],
+			"json": "materials/testt.material"
+		},
+		{
+			"isMultiMaterial": false,
+			"bindedMeshes": [
+				"443e6f28-31f2-4bd4-80a9-81a9c8f59fcd"
+			],
+			"json": "models/projects/monitor-monitor.material"
+		},
+		{
+			"isMultiMaterial": false,
+			"bindedMeshes": [
+				"b2cd9bfd-3f71-4d27-97c4-c9c88124126a"
+			],
+			"json": "materials/text_materials/fruit factory.material"
+		}
+	],
+	"textures": [
+		"target (Base Color).png-3a500925-5dfe-458e-bd3f-75a44b02dddc.json",
+		"monitor (Base Color).png-81661937-6e07-4c3e-a236-e03cc8b5d806.json",
+		"fruit factory description.png-b687ab2a-e044-40de-a47f-6616ed60df3f.json"
+	],
+	"meshes": [
+		"Cube.001_table_0-adc0b959-541a-4c00-b47e-1cea505451cf.json",
+		"monitor-443e6f28-31f2-4bd4-80a9-81a9c8f59fcd.json",
+		"Cube.004_keyboard_0-66768f13-22f5-4240-91b3-f6041ab5fb81.json",
+		"Cube.005_cpu_0-9347772b-72bf-4f8b-a9d4-5b9bb7b2b311.json",
+		"Cube.008_mouse_0-87f80214-81a7-458b-a9b1-5b8e013466c3.json",
+		"Cube.012_speakers_0-a3182d8b-172e-4503-9661-0087a286fa6f.json",
+		"podium-047a508c-d533-453d-a8a7-75d058b8abd7.json",
+		"splatter1-b128cc1c-30e2-4aa8-987a-30b09140734b.json",
+		"twitter-69b627b6-2444-46b1-b3a4-77672f86852b.json",
+		"ffdescription-b2cd9bfd-3f71-4d27-97c4-c9c88124126a.json",
+		"berserk_sword-26c5ddf7-7dcb-4977-b7d5-a44ce914c0d7.json",
+		"tank-ab9ffcb0-cb3c-4668-9177-f15f9cf90ead.json",
+		"target_text-faa4e16f-4309-4351-9d7d-dc9c2a87c9d1.json",
+		"fruit factory-057f0a7b-e6b6-4d9a-ab92-9dd608a0bae4.json",
+		"amongus-11ab76f1-a0dc-406c-a700-e81c6f2281c5.json",
+		"amongus-b7758891-aab4-4db8-934b-9f7afc8e0d40.json",
+		"amongus-edfbe4f4-22ff-4f02-9bf7-dcb2eaf2a686.json",
+		"amongus-1ddd47b1-8c70-4d21-be2a-1241113d3972.json",
+		"linkedin-d2e4814d-800e-4cdb-861e-d473b686c322.json",
+		"amongus-60fa7cae-8bf3-4edb-83f8-1a3fe16778c4.json",
+		"road1-d209cd67-097e-4be5-80ef-c21ef7d76b89.json",
+		"berserk_symbol_inside-3cef0a65-68df-4084-88f0-64d5ccb48b7a.json",
+		"berserk_symbol_outside-53efe02a-a395-43a6-906d-e5c2cca6e0bf.json",
+		"stlmesh-a2169172-59c5-4d4b-b6bf-b003d3a2fe30.json",
+		"c#-fe25f507-0875-4e24-a5a5-e667a5e6d212.json",
+		"amongus-1274a373-b4d6-4d37-bfa2-1f42fb6624a4.json",
+		"amongus.amongus-61615748-be61-4fb4-babb-174b67cd4d49.json",
+		"amongus.amongus-2fb514c6-817c-4aa4-b99a-1cefe00ea02b.json",
+		"amongus.amongus-a74e77b0-ce8e-4097-996f-5efb41bd579a.json",
+		"target_github-a408f14a-a4a1-4ad7-a2c7-d9557e97bc0a.json",
+		"sakura_trunk1-ba575e6d-4c9b-4a64-8a4d-deadc0505775.json",
+		"sakura_crown1-31bb7f1f-8441-491e-8bb6-49aa5cd1fd59.json",
+		"ground-4b09a0f5-b2e4-4d07-bba1-c86e361ac4dd.json",
+		"stlmesh-615d3b40-f115-4bbd-80b6-8d4740a78a7b.json",
+		"road2-3d83861f-fa04-4098-9960-7860939e147d.json",
+		"tank_holder-a4df7cf0-bff3-4800-a70e-37279c0d605d.json",
+		"amongus-d3de8c7c-97fb-4d02-be8e-d9c7f88f7ad8.json",
+		"amongus-d48f3759-4380-4434-a4d9-959e0d8f2b79.json",
+		"amongus-4cbcc069-671d-443e-9779-57b795262c23.json",
+		"amongus-ade8233e-2e51-4454-bd6c-8e3061e1bc08.json",
+		"projects_sign-ab0b9a3c-eb67-4183-abfc-a86f76e3c118.json"
+	],
+	"transformNodes": [
+		"fruit factory-ffc71b03-a323-4005-945f-32ada5e22ce8.json",
+		"Cube.001-58409b83-762e-475c-87f4-7a4267417f22.json",
+		"Cube.002-20cf49ba-36bf-42b1-8f38-af83e1b25907.json",
+		"Cube.004-2b800085-f2e8-444b-8346-4b784c7b4154.json",
+		"Cube.005-6470de6b-fb5b-41a7-a736-ccaf2739dc4a.json",
+		"Cube.008-b1c68754-a4e1-4ab7-b49a-f4e808912071.json",
+		"Cube.012-d1a3aab7-d1f8-4199-b50d-e61cd6a90b2f.json",
+		"Text-25407ccb-01aa-4ec3-a97a-62975b3dca08.json"
+	],
+	"particleSystems": [],
+	"lights": [
+		{
+			"json": "light-807924bd-e2db-416c-bbd6-ab95abfecdeb.json"
+		},
+		{
+			"json": "dir_light-39f1c1fb-0fb7-4c0a-954a-2af500e5f61a.json",
+			"shadowGenerator": "dir_light-39f1c1fb-0fb7-4c0a-954a-2af500e5f61a.json"
+		}
+	],
+	"sounds": [],
+	"morphTargetManagers": [],
+	"reflectionProbes": [],
+	"scene": {
+		"autoClear": true,
+		"clearColor": [
+			0.2,
+			0.2,
+			0.3,
+			1
+		],
+		"ambientColor": [
+			1,
+			1,
+			1
+		],
+		"gravity": [
+			0,
+			-9.807,
+			0
+		],
+		"collisionsEnabled": true,
+		"fogEnabled": true,
+		"physicsEnabled": true,
+		"physicsGravity": [
+			0,
+			0,
+			0
+		],
+		"physicsEngine": "CannonJSPlugin",
+		"imageProcessingConfiguration": {
+			"tags": null,
+			"colorCurves": {
+				"tags": null,
+				"_globalHue": 200,
+				"_globalDensity": 80,
+				"_globalSaturation": 80,
+				"_globalExposure": 0,
+				"_highlightsHue": 20,
+				"_highlightsDensity": 80,
+				"_highlightsSaturation": -80,
+				"_highlightsExposure": 0,
+				"_midtonesHue": 30,
+				"_midtonesDensity": 0,
+				"_midtonesSaturation": 0,
+				"_midtonesExposure": 0
+			},
+			"_colorCurvesEnabled": false,
+			"_colorGradingEnabled": false,
+			"_colorGradingWithGreenDepth": true,
+			"_colorGradingBGR": true,
+			"_exposure": 1,
+			"_toneMappingEnabled": false,
+			"_contrast": 1,
+			"vignetteStretch": 0,
+			"vignetteCentreX": 0,
+			"vignetteCentreY": 0,
+			"vignetteWeight": 1.5,
+			"vignetteColor": [
+				0,
+				0,
+				0,
+				0
+			],
+			"vignetteCameraFov": 0.5,
+			"_vignetteBlendMode": 0,
+			"_vignetteEnabled": false,
+			"_skipFinalColorClamp": false,
+			"_applyByPostProcess": true,
+			"_isEnabled": true
+		},
+		"animations": [],
+		"postProcessesEnabled": true,
+		"metadata": {
+			"script": {
+				"name": "None"
+			},
+			"postProcesses": {
+				"ssao": {
+					"enabled": true,
+					"json": {
+						"tags": null,
+						"totalStrength": 1.5,
+						"maxZ": 1000,
+						"minZAspect": 0.2,
+						"samples": 16,
+						"textureSamples": 1,
+						"_ratio": {
+							"ssaoRatio": 0.5,
+							"blurRatio": 0.5
+						},
+						"expensiveBlur": true,
+						"radius": 1,
+						"base": 0,
+						"_name": "ssao",
+						"customType": "SSAO2RenderingPipeline"
+					}
+				},
+				"screenSpaceReflections": {
+					"enabled": false
+				},
+				"default": {
+					"enabled": true,
+					"json": {
+						"serializedFromEditor": true,
+						"imageProcessing": {
+							"enabled": true,
+							"exposure": 1,
+							"contrast": 1,
+							"fromLinearSpace": true,
+							"toneMappingEnabled": false,
+							"colorCurvesEnabled": false,
+							"colorCurves": {
+								"tags": null,
+								"_globalHue": 200,
+								"_globalDensity": 80,
+								"_globalSaturation": 80,
+								"_globalExposure": 0,
+								"_highlightsHue": 20,
+								"_highlightsDensity": 80,
+								"_highlightsSaturation": -80,
+								"_highlightsExposure": 0,
+								"_midtonesHue": 30,
+								"_midtonesDensity": 0,
+								"_midtonesSaturation": 0,
+								"_midtonesExposure": 0
+							},
+							"colorGradingEnabled": false
+						},
+						"bloom": {
+							"enabled": false,
+							"bloomScale": 0.5,
+							"bloomWeight": 0.15,
+							"bloomKernel": 64,
+							"bloomThreshold": 0.9
+						},
+						"sharpen": {
+							"enabled": true,
+							"edgeAmount": 0.3,
+							"colorAmount": 1
+						},
+						"depthOfField": {
+							"enabled": false,
+							"fStop": 1.4,
+							"focalLength": 150,
+							"focusDistance": 2000,
+							"depthOfFieldBlurLevel": 0
+						},
+						"chromaticAberration": {
+							"enabled": false,
+							"aberrationAmount": 30,
+							"radialIntensity": 0,
+							"direction": [
+								0.707,
+								0.707
+							],
+							"centerPosition": [
+								0.5,
+								0.5
+							]
+						},
+						"grain": {
+							"enabled": false,
+							"animated": false,
+							"intensity": 30
+						},
+						"glowLayer": {
+							"enabled": false
+						},
+						"vignette": {
+							"enabled": false,
+							"vignetteWeight": 1.5,
+							"vignetteBlendMode": 0,
+							"vignetteColor": [
+								0,
+								0,
+								0,
+								0
+							]
+						},
+						"fxaa": {
+							"enabled": true
+						}
+					}
+				},
+				"motionBlur": {
+					"enabled": false
+				}
+			}
+		},
+		"environmentIntensity": 1,
+		"shadowGenerators": [
+			{
+				"className": "CascadedShadowGenerator",
+				"lightId": "39f1c1fb-0fb7-4c0a-954a-2af500e5f61a",
+				"id": "39f1c1fb-0fb7-4c0a-954a-2af500e5f61a",
+				"mapSize": 1024,
+				"forceBackFacesOnly": false,
+				"darkness": 0.04,
+				"transparencyShadow": false,
+				"frustumEdgeFalloff": 0,
+				"bias": 0.00005,
+				"normalBias": 0,
+				"usePercentageCloserFiltering": true,
+				"useContactHardeningShadow": false,
+				"contactHardeningLightSizeUVRatio": 0.1,
+				"filteringQuality": 0,
+				"useExponentialShadowMap": false,
+				"useBlurExponentialShadowMap": false,
+				"useCloseExponentialShadowMap": false,
+				"useBlurCloseExponentialShadowMap": false,
+				"usePoissonSampling": false,
+				"depthScale": 50,
+				"blurBoxOffset": 1,
+				"blurKernel": 1,
+				"blurScale": 2,
+				"useKernelBlur": false,
+				"renderList": [],
+				"numCascades": 4,
+				"debug": false,
+				"stabilizeCascades": false,
+				"lambda": 0.5,
+				"cascadeBlendPercentage": 0.1,
+				"depthClamp": true,
+				"autoCalcDepthBounds": false,
+				"shadowMaxZ": 629749629841.0366,
+				"penumbraDarkness": 1,
+				"freezeShadowCastersBoundingInfo": false,
+				"minDistance": 0,
+				"maxDistance": 1
+			}
+		],
+		"sounds": []
+	},
+	"assets": {
+		"meshes": [],
+		"graphs": [],
+		"prefabs": []
+	},
+	"cinematics": [],
+	"project": {
+		"camera": {
+			"tags": null,
+			"ellipsoid": [
+				0.5,
+				1,
+				0.5
+			],
+			"ellipsoidOffset": [
+				0,
+				0,
+				0
+			],
+			"checkCollisions": false,
+			"applyGravity": false,
+			"rotation": [
+				0.35196911911485307,
+				2.6859245232877162,
+				0
+			],
+			"speed": 2,
+			"position": [
+				-102.11871188268196,
+				52.4546756064907,
+				116.70101419690103
+			],
+			"upVector": [
+				0,
+				1,
+				0
+			],
+			"fov": 0.8,
+			"projectionPlaneTilt": 0,
+			"minZ": 1,
+			"maxZ": 4.5738132472711726e+21,
+			"inertia": 0.5,
+			"mode": 0,
+			"layerMask": 268435455,
+			"fovMode": 0,
+			"cameraRigMode": 0,
+			"name": "Editor Camera",
+			"id": "1257b2d4-e578-4a73-8db6-26571f403ef4",
+			"state": "",
+			"metadata": {
+				"script": {
+					"name": "None"
+				},
+				"detached": false
+			},
+			"uniqueId": 4,
+			"type": "UniversalCamera",
+			"inputsmgr": {
+				"FreeCameraKeyboardMoveInput": {
+					"tags": null,
+					"keysUp": [
+						87
+					],
+					"keysUpward": [
+						33
+					],
+					"keysDown": [
+						83
+					],
+					"keysDownward": [
+						34
+					],
+					"keysLeft": [
+						65
+					],
+					"keysRight": [
+						68
+					],
+					"rotationSpeed": 0.5,
+					"keysRotateLeft": [],
+					"keysRotateRight": []
+				},
+				"FreeCameraMouseInput": {
+					"tags": null,
+					"buttons": [
+						0,
+						1,
+						2
+					],
+					"angularSensibility": 500
+				}
+			},
+			"animations": [],
+			"ranges": [],
+			"isEnabled": true
+		}
+	},
+	"postProcesses": {
+		"ssao": {
+			"enabled": true,
+			"json": {
+				"tags": null,
+				"totalStrength": 1.5,
+				"maxZ": 1000,
+				"minZAspect": 0.2,
+				"samples": 16,
+				"textureSamples": 1,
+				"_ratio": {
+					"ssaoRatio": 0.5,
+					"blurRatio": 0.5
+				},
+				"expensiveBlur": true,
+				"radius": 1,
+				"base": 0,
+				"_name": "ssao",
+				"customType": "SSAO2RenderingPipeline"
+			}
+		},
+		"screenSpaceReflections": {
+			"enabled": false
+		},
+		"default": {
+			"enabled": true,
+			"json": {
+				"serializedFromEditor": true,
+				"imageProcessing": {
+					"enabled": true,
+					"exposure": 1,
+					"contrast": 1,
+					"fromLinearSpace": true,
+					"toneMappingEnabled": false,
+					"colorCurvesEnabled": false,
+					"colorCurves": {
+						"tags": null,
+						"_globalHue": 200,
+						"_globalDensity": 80,
+						"_globalSaturation": 80,
+						"_globalExposure": 0,
+						"_highlightsHue": 20,
+						"_highlightsDensity": 80,
+						"_highlightsSaturation": -80,
+						"_highlightsExposure": 0,
+						"_midtonesHue": 30,
+						"_midtonesDensity": 0,
+						"_midtonesSaturation": 0,
+						"_midtonesExposure": 0
+					},
+					"colorGradingEnabled": false
+				},
+				"bloom": {
+					"enabled": false,
+					"bloomScale": 0.5,
+					"bloomWeight": 0.15,
+					"bloomKernel": 64,
+					"bloomThreshold": 0.9
+				},
+				"sharpen": {
+					"enabled": true,
+					"edgeAmount": 0.3,
+					"colorAmount": 1
+				},
+				"depthOfField": {
+					"enabled": false,
+					"fStop": 1.4,
+					"focalLength": 150,
+					"focusDistance": 2000,
+					"depthOfFieldBlurLevel": 0
+				},
+				"chromaticAberration": {
+					"enabled": false,
+					"aberrationAmount": 30,
+					"radialIntensity": 0,
+					"direction": [
+						0.707,
+						0.707
+					],
+					"centerPosition": [
+						0.5,
+						0.5
+					]
+				},
+				"grain": {
+					"enabled": false,
+					"animated": false,
+					"intensity": 30
+				},
+				"glowLayer": {
+					"enabled": false
+				},
+				"vignette": {
+					"enabled": false,
+					"vignetteWeight": 1.5,
+					"vignetteBlendMode": 0,
+					"vignetteColor": [
+						0,
+						0,
+						0,
+						0
+					]
+				},
+				"fxaa": {
+					"enabled": true
+				}
+			}
+		},
+		"motionBlur": {
+			"enabled": false
+		}
+	},
+	"physicsEnabled": true
+}

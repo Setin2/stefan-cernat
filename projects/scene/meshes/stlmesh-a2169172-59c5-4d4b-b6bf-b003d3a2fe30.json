@@ -1,0 +1,144 @@
+{
+	"materials": [],
+	"meshes": [
+		{
+			"name": "stlmesh",
+			"id": "a2169172-59c5-4d4b-b6bf-b003d3a2fe30",
+			"uniqueId": 7118,
+			"type": "Mesh",
+			"position": [
+				4.6558380126953125,
+				-4.664667585529969e-8,
+				-0.0000011400605899325456
+			],
+			"rotation": [
+				-1.5150028082311822,
+				3.1415881628487328,
+				-0.10908435988530228
+			],
+			"scaling": [
+				0.020000002014259416,
+				0.019999995699727133,
+				0.019999999368309495
+			],
+			"localMatrix": {
+				"0": 1,
+				"1": 0,
+				"2": 0,
+				"3": 0,
+				"4": 0,
+				"5": 1,
+				"6": 0,
+				"7": 0,
+				"8": 0,
+				"9": 0,
+				"10": 1,
+				"11": 0,
+				"12": 0,
+				"13": 0,
+				"14": 0,
+				"15": 1
+			},
+			"isEnabled": true,
+			"isVisible": true,
+			"infiniteDistance": false,
+			"pickable": true,
+			"receiveShadows": false,
+			"billboardMode": 0,
+			"visibility": 1,
+			"checkCollisions": false,
+			"isBlocker": false,
+			"overrideMaterialSideOrientation": null,
+			"parentId": "25407ccb-01aa-4ec3-a97a-62975b3dca08",
+			"isUnIndexed": false,
+			"geometryId": "2a586183-4730-43f2-b2fa-4a71423e23a5",
+			"subMeshes": null,
+			"materialId": "default material",
+			"metadata": {
+				"basePoseMatrix": {
+					"0": 1,
+					"1": 0,
+					"2": 0,
+					"3": 0,
+					"4": 0,
+					"5": 1,
+					"6": 0,
+					"7": 0,
+					"8": 0,
+					"9": 0,
+					"10": 1,
+					"11": 0,
+					"12": 0,
+					"13": 0,
+					"14": 0,
+					"15": 1
+				},
+				"originalSourceFile": {
+					"id": "stlmesh",
+					"name": "stlmesh",
+					"sceneFileName": "models/projects/fruit factory text.stl"
+				},
+				"isPickable": true,
+				"script": {
+					"name": "None"
+				},
+				"renderingGroupId": 0
+			},
+			"instances": [],
+			"animations": [],
+			"ranges": [],
+			"layerMask": 268435455,
+			"alphaIndex": 1.7976931348623157e+308,
+			"hasVertexAlpha": false,
+			"overlayAlpha": 0.3,
+			"overlayColor": [
+				1,
+				0,
+				0
+			],
+			"applyFog": true,
+			"delayLoadingFile": "geometries/2a586183-4730-43f2-b2fa-4a71423e23a5.babylonbinarymeshdata",
+			"boundingBoxMaximum": [
+				207.2021484375,
+				10,
+				32.3876953125
+			],
+			"boundingBoxMinimum": [
+				4.1748046875,
+				0,
+				-45.2197265625
+			],
+			"_binaryInfo": {
+				"positionsAttrDesc": {
+					"count": 49212,
+					"stride": 3,
+					"offset": 0,
+					"dataType": 1
+				},
+				"normalsAttrDesc": {
+					"count": 49212,
+					"stride": 3,
+					"offset": 196848,
+					"dataType": 1
+				},
+				"indicesAttrDesc": {
+					"count": 16404,
+					"stride": 1,
+					"offset": 393696,
+					"dataType": 0
+				},
+				"subMeshesAttrDesc": {
+					"count": 1,
+					"stride": 5,
+					"offset": 459312,
+					"dataType": 0
+				}
+			},
+			"positions": null,
+			"normals": null,
+			"indices": null
+		}
+	],
+	"multiMaterials": [],
+	"lods": []
+}

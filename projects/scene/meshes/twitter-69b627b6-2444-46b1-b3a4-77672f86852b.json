@@ -1,0 +1,160 @@
+{
+	"materials": [],
+	"meshes": [
+		{
+			"name": "twitter",
+			"id": "69b627b6-2444-46b1-b3a4-77672f86852b",
+			"uniqueId": 944,
+			"type": "Mesh",
+			"position": [
+				1.7843399047851562,
+				0.26962587237358093,
+				0.4447462558746338
+			],
+			"rotationQuaternion": [
+				1,
+				6.123233995736766e-17,
+				6.123233995736766e-17,
+				3.749399456654644e-33
+			],
+			"scaling": [
+				0.005000003786366899,
+				0.005000003601344122,
+				0.005000004544854694
+			],
+			"localMatrix": {
+				"0": 1,
+				"1": 0,
+				"2": 0,
+				"3": 0,
+				"4": 0,
+				"5": 1,
+				"6": 0,
+				"7": 0,
+				"8": 0,
+				"9": 0,
+				"10": 1,
+				"11": 0,
+				"12": 0,
+				"13": 0,
+				"14": 0,
+				"15": 1
+			},
+			"isEnabled": true,
+			"isVisible": true,
+			"infiniteDistance": false,
+			"pickable": true,
+			"receiveShadows": false,
+			"billboardMode": 0,
+			"visibility": 1,
+			"checkCollisions": false,
+			"isBlocker": false,
+			"overrideMaterialSideOrientation": 0,
+			"parentId": "047a508c-d533-453d-a8a7-75d058b8abd7",
+			"isUnIndexed": false,
+			"geometryId": "e2ddaedd-0596-4092-bed6-8792d14b1371",
+			"subMeshes": null,
+			"materialId": "e5483569-c8a8-48fb-b885-2bf51d444118",
+			"metadata": {
+				"gltf": {
+					"pointers": [
+						"/meshes/0/primitives/0",
+						"/nodes/6"
+					]
+				},
+				"basePoseMatrix": {
+					"0": -1,
+					"1": 0,
+					"2": 0,
+					"3": 0,
+					"4": 0,
+					"5": 2.220446049250313e-16,
+					"6": -1,
+					"7": 0,
+					"8": 0,
+					"9": 1,
+					"10": 2.220446049250313e-16,
+					"11": 0,
+					"12": 0,
+					"13": -3.944304526105059e-31,
+					"14": 0,
+					"15": 1
+				},
+				"originalSourceFile": {
+					"id": "twitter_logo_twitter_logo_0",
+					"name": "twitter_logo_twitter_logo_0",
+					"sceneFileName": "models/social media/twitter_logo.glb"
+				},
+				"isPickable": true,
+				"doNotExport": false,
+				"script": {
+					"name": "None"
+				},
+				"renderingGroupId": 0
+			},
+			"instances": [],
+			"animations": [],
+			"ranges": [],
+			"layerMask": 268435455,
+			"alphaIndex": 1.7976931348623157e+308,
+			"hasVertexAlpha": false,
+			"overlayAlpha": 0.3,
+			"overlayColor": [
+				1,
+				0,
+				0
+			],
+			"applyFog": true,
+			"delayLoadingFile": "geometries/e2ddaedd-0596-4092-bed6-8792d14b1371.babylonbinarymeshdata",
+			"boundingBoxMaximum": [
+				154.06875610351562,
+				7.000005722045898,
+				129.32286071777344
+			],
+			"boundingBoxMinimum": [
+				-155.3306121826172,
+				-7.000005722045898,
+				-126.53911590576172
+			],
+			"_binaryInfo": {
+				"positionsAttrDesc": {
+					"count": 2751,
+					"stride": 3,
+					"offset": 0,
+					"dataType": 1
+				},
+				"normalsAttrDesc": {
+					"count": 2751,
+					"stride": 3,
+					"offset": 11004,
+					"dataType": 1
+				},
+				"uvsAttrDesc": {
+					"count": 1834,
+					"stride": 2,
+					"offset": 22008,
+					"dataType": 1
+				},
+				"indicesAttrDesc": {
+					"count": 1860,
+					"stride": 1,
+					"offset": 29344,
+					"dataType": 0
+				},
+				"subMeshesAttrDesc": {
+					"count": 1,
+					"stride": 5,
+					"offset": 36784,
+					"dataType": 0
+				}
+			},
+			"positions": null,
+			"normals": null,
+			"uvs": null,
+			"hasUVs": true,
+			"indices": null
+		}
+	],
+	"multiMaterials": [],
+	"lods": []
+}
