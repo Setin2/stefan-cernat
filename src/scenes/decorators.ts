@@ -7,8 +7,9 @@ import { Control } from "@babylonjs/gui/2D/controls/control";
 export type VisiblityPropertyType =
     "number" | "string" | "boolean" |
     "Vector2" | "Vector3" | "Vector4" |
+    "Quaternion" |
     "Color3" | "Color4" |
-    "Texture" |
+    "Texture" | "Node" |
     "KeyMap";
 
 export interface IVisibleInInspectorOptions {
@@ -29,6 +30,10 @@ export interface IVisibleInInspectorOptions {
      * In case of numbers, defines the step applied in the editor.
      */
     step?: number;
+    /**
+     * In case of node, restricts the type of node that can be assigned
+     */
+    allowedNodeType?: "TransformNode" | "Mesh" | "Light" | "Camera";
 }
 
 /**
@@ -233,7 +238,7 @@ export function fromControls(controlName?: string): any {
 }
 
 type KeyOfType<T, V> = keyof {
-    [P in keyof T as T[P] extends V? P: never]: any;
+    [P in keyof T as T[P] extends V ? P : never]: any;
 }
 
 function onControlEvent(controlName: string, type: KeyOfType<Control, Observable<any>>): any {
