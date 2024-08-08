@@ -18,7 +18,16 @@ export default class Play extends Node {
     private tank;
 
     // @ts-ignore ignoring the super call as we don't want to re-init
-    protected constructor() { }
+    protected constructor(name: string, scene: BABYLON.Scene) {
+        super(name, scene);
+        this.scene = scene;
+    }
+
+    public static createInstance(name: string, scene: BABYLON.Scene): Play {
+        const instance = new Play(name, scene);
+        instance.onInitialize();
+        return instance;
+    }
 
     /**
      * Called on the node is being initialized.

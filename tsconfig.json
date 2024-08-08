@@ -1,5 +1,6 @@
 {
     "compilerOptions": {
+        "allowJs": true,
         "target": "es5",
         "module": "commonjs",
         "sourceMap": true,
@@ -7,6 +8,7 @@
         "outDir": "./build/src",
         "declarationDir": "./declaration/src",
         "experimentalDecorators": true,
+        "types": ["jest", "node"],
         "typeRoots": [
             "node_modules/@types"
         ],
@@ -15,9 +17,13 @@
             "es2015.promise",
             "es2015",
             "dom"
-        ]
+        ],
+        "esModuleInterop": true,
+        "forceConsistentCasingInFileNames": true
     },
+    "include": ["src/**/*.ts", "tests/*.ts"],
     "exclude": [
+        "./cypress.config.ts",
         "./node_modules",
         "./build",
         "./declaration"
