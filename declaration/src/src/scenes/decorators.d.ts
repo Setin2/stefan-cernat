@@ -1,6 +1,6 @@
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
 import { KeyboardEventTypes } from "@babylonjs/core/Events/keyboardEvents";
-export declare type VisiblityPropertyType = "number" | "string" | "boolean" | "Vector2" | "Vector3" | "Vector4" | "Quaternion" | "Color3" | "Color4" | "Texture" | "Node" | "KeyMap";
+export type VisiblityPropertyType = "number" | "string" | "boolean" | "Vector2" | "Vector3" | "Vector4" | "Quaternion" | "Color3" | "Color4" | "Texture" | "Node" | "KeyMap";
 export interface IVisibleInInspectorOptions {
     /**
      * Defines the section of the inspector.

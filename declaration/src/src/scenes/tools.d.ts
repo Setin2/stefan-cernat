@@ -15,9 +15,9 @@ import "@babylonjs/core/Physics/physicsEngineComponent";
 import "@babylonjs/core/Engines/Extensions/engine.textureSelector";
 import "@babylonjs/core/Materials/Textures/Loaders/ktxTextureLoader";
 import { ISceneScriptMap } from "./scripts-map";
-export declare type NodeScriptConstructor = (new (...args: any[]) => Node);
-export declare type GraphScriptConstructor = (new (scene: Scene) => any);
-export declare type ScriptMap = {
+export type NodeScriptConstructor = (new (...args: any[]) => Node);
+export type GraphScriptConstructor = (new (scene: Scene) => any);
+export type ScriptMap = {
     IsGraph?: boolean;
     IsGraphAttached?: boolean;
     default: (new (...args: any[]) => NodeScriptConstructor | GraphScriptConstructor);

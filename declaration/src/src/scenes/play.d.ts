@@ -8,7 +8,8 @@ export default class Play extends Node {
     private tankSound;
     private brickSound;
     private tank;
-    protected constructor();
+    protected constructor(name: string, scene: BABYLON.Scene);
+    static createInstance(name: string, scene: BABYLON.Scene): Play;
     /**
      * Called on the node is being initialized.
      * This function is called immediatly after the constructor has been called.
@@ -31,15 +32,27 @@ export default class Play extends Node {
      */
     initializeTankMovement(_this: this, rotationSpeed: number): void;
     /**
-     * Give the player the ability to shoot with the tank
+     * Gives the player the ability to shoot with the tank.
      */
     initializeShooting(_this: this, forward: BABYLON.Vector3): void;
     /**
-     * Set up a wall of bricks in the scene at a specified position
+     * Set up a wall of bricks in the scene at a specified position.
      */
-    instantiateBricks(_this: this, x: number, y: number, z: number): void;
+    instantiateBricks(x: number, y: number, z: number): void;
     /**
-     * We instantiate clones of the sakura tree instead of adding them from the get go. This way we save memory.
+     * Creates a brick mesh with the given dimensions.
+     */
+    private createBrick;
+    /**
+     * Positions and sets up physics properties for a brick.
+     */
+    private positionBrick;
+    /**
+     * Determines the number of bricks in the current row based on its index.
+     */
+    private getBricksPerRow;
+    /**
+     * Instantiates clones of the sakura tree to save memory and allow dynamic placement.
      */
     instantiateTrees(): void;
     /**

@@ -17,7 +17,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     function verb(n) { return function (v) { return step([n, v]); }; }
     function step(op) {
         if (f) throw new TypeError("Generator is already executing.");
-        while (_) try {
+        while (g && (g = 0, op[0] && (_ = 0)), _) try {
             if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
             if (y = 0, t) op = [op[0] & 2, t.value];
             switch (op[0]) {
@@ -39,7 +39,17 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.configurePostProcesses = exports.motionBlurPostProcessRef = exports.defaultRenderingPipelineRef = exports.screenSpaceReflectionPostProcessRef = exports.ssao2RenderingPipelineRef = exports.attachScriptToNodeAtRuntime = exports.attachTransformNodesToBones = exports.applyMeshesPoseMatrices = exports.setupRenderingGroups = exports.applyMeshColliders = exports.attachScripts = exports.runScene = exports.appendScene = exports.configureEngine = exports.projectConfiguration = void 0;
+exports.motionBlurPostProcessRef = exports.defaultRenderingPipelineRef = exports.screenSpaceReflectionPostProcessRef = exports.ssao2RenderingPipelineRef = exports.projectConfiguration = void 0;
+exports.configureEngine = configureEngine;
+exports.appendScene = appendScene;
+exports.runScene = runScene;
+exports.attachScripts = attachScripts;
+exports.applyMeshColliders = applyMeshColliders;
+exports.setupRenderingGroups = setupRenderingGroups;
+exports.applyMeshesPoseMatrices = applyMeshesPoseMatrices;
+exports.attachTransformNodesToBones = attachTransformNodesToBones;
+exports.attachScriptToNodeAtRuntime = attachScriptToNodeAtRuntime;
+exports.configurePostProcesses = configurePostProcesses;
 var node_1 = require("@babylonjs/core/node");
 var scene_1 = require("@babylonjs/core/scene");
 var mesh_1 = require("@babylonjs/core/Meshes/mesh");
@@ -75,7 +85,6 @@ function configureEngine(engine) {
         engine.setTextureFormatToUse(exports.projectConfiguration.compressedTextures.supportedFormats);
     }
 }
-exports.configureEngine = configureEngine;
 /**
  * Loads the given scene file and appends it to the given scene reference (`toScene`).
  * @param toScene defines the instance of `Scene` to append to.
@@ -99,7 +108,6 @@ function appendScene(toScene, rootUrl, sceneFilename) {
         });
     });
 }
-exports.appendScene = appendScene;
 /**
  * Returns wether or not the given constructor is an ES6 (or more) class.
  * @param ctor defines the reference to the constructor to test.
@@ -122,9 +130,9 @@ function isEs6Class(ctor, scene) {
  * @param exports defines the reference to the exported object of the attached script.
  */
 function loadGuiComponent(path, node, exports) {
-    var _a, _b, _c;
     return __awaiter(this, void 0, void 0, function () {
-        var isDisposed, disposeObserver, dataResult, data, ui, controlsLinks, _i, controlsLinks_1, link, c, controlsClickLinks, _loop_1, _d, controlsClickLinks_1, link, images, basePath;
+        var isDisposed, disposeObserver, dataResult, data, ui, controlsLinks, _i, controlsLinks_1, link, c, controlsClickLinks, _loop_1, _a, controlsClickLinks_1, link, images, basePath;
+        var _b, _c, _d;
         return __generator(this, function (_e) {
             switch (_e.label) {
                 case 0:
@@ -138,19 +146,19 @@ function loadGuiComponent(path, node, exports) {
                     }
                     node.onDisposeObservable.remove(disposeObserver);
                     data = JSON.parse(dataResult);
-                    ui = (_a = node.onGuiInitialized) === null || _a === void 0 ? void 0 : _a.call(node, data);
+                    ui = (_b = node.onGuiInitialized) === null || _b === void 0 ? void 0 : _b.call(node, data);
                     if (!ui) {
                         return [2 /*return*/];
                     }
                     ui.parseContent(data, true);
                     node.onDisposeObservable.addOnce(function () { return ui.dispose(); });
-                    controlsLinks = (_b = exports.default._ControlsValues) !== null && _b !== void 0 ? _b : [];
+                    controlsLinks = (_c = exports.default._ControlsValues) !== null && _c !== void 0 ? _c : [];
                     for (_i = 0, controlsLinks_1 = controlsLinks; _i < controlsLinks_1.length; _i++) {
                         link = controlsLinks_1[_i];
                         c = ui.getControlByName(link.controlName);
                         node[link.propertyKey] = c;
                     }
-                    controlsClickLinks = (_c = exports.default._ControlsClickValues) !== null && _c !== void 0 ? _c : [];
+                    controlsClickLinks = (_d = exports.default._ControlsClickValues) !== null && _d !== void 0 ? _d : [];
                     _loop_1 = function (link) {
                         var c = ui.getControlByName(link.controlName);
                         switch (link.type) {
@@ -165,8 +173,8 @@ function loadGuiComponent(path, node, exports) {
                                 break;
                         }
                     };
-                    for (_d = 0, controlsClickLinks_1 = controlsClickLinks; _d < controlsClickLinks_1.length; _d++) {
-                        link = controlsClickLinks_1[_d];
+                    for (_a = 0, controlsClickLinks_1 = controlsClickLinks; _a < controlsClickLinks_1.length; _a++) {
+                        link = controlsClickLinks_1[_a];
                         _loop_1(link);
                     }
                     images = ui.getControlsByType("Image");
@@ -506,7 +514,6 @@ function runScene(scene, rootUrl) {
         });
     });
 }
-exports.runScene = runScene;
 /**
  * Attaches all available scripts on nodes of the given scene.
  * @param scene the scene reference that contains the nodes to attach scripts.
@@ -530,7 +537,6 @@ function attachScripts(scriptsMap, scene) {
         _loop_9(scriptKey);
     }
 }
-exports.attachScripts = attachScripts;
 /**
  * Applies the waiting mesh colliders in case the scene is incremental.
  * @param scene defines the reference to the scene that contains the mesh colliders to apply.
@@ -543,7 +549,6 @@ function applyMeshColliders(scene) {
         }
     });
 }
-exports.applyMeshColliders = applyMeshColliders;
 /**
  * Setups the rendering groups for meshes in the given scene.
  * @param scene defines the scene containing the meshes to configure their rendering group Ids.
@@ -557,7 +562,6 @@ function setupRenderingGroups(scene) {
         m.renderingGroupId = (_a = m.metadata.renderingGroupId) !== null && _a !== void 0 ? _a : m.renderingGroupId;
     });
 }
-exports.setupRenderingGroups = setupRenderingGroups;
 /**
  * Meshes using pose matrices with skeletons can't be parsed directly as the pose matrix is
  * missing from the serialzied data of meshes. These matrices are stored in the meshes metadata
@@ -573,7 +577,6 @@ function applyMeshesPoseMatrices(scene) {
         }
     });
 }
-exports.applyMeshesPoseMatrices = applyMeshesPoseMatrices;
 /**
  * Checks scene's transform nodes in order to attach to related bones.
  * @param scene defines the reference to the scene containing the transform nodes to potentially attach to bones.
@@ -598,7 +601,6 @@ function attachTransformNodesToBones(scene) {
     scene.meshes.forEach(function (m) { return apply(m); });
     scene.transformNodes.forEach(function (tn) { return apply(tn); });
 }
-exports.attachTransformNodesToBones = attachTransformNodesToBones;
 /**
  * Attaches the a script at runtime to the given node according to the given script's path.
  * @param scriptPath defines the path to the script to attach (available as a key in the exported "scriptsMap" map).
@@ -613,7 +615,6 @@ function attachScriptToNodeAtRuntime(scriptPath, object) {
     requireScriptForNodes(object instanceof scene_1.Scene ? object : object.getScene(), scriptsMap, [object]);
     return object;
 }
-exports.attachScriptToNodeAtRuntime = attachScriptToNodeAtRuntime;
 /**
  * Defines the reference to the SSAO2 rendering pipeline.
  */
@@ -734,7 +735,6 @@ function configurePostProcesses(scene, rootUrl) {
         exports.motionBlurPostProcessRef = null;
     });
 }
-exports.configurePostProcesses = configurePostProcesses;
 /**
  * Overrides the texture parser.
  */

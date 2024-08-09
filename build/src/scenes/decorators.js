@@ -1,6 +1,20 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onControlPointerOut = exports.onControlPointerEnter = exports.onControlClick = exports.fromControls = exports.guiComponent = exports.onEngineResize = exports.onKeyboardEvent = exports.onPointerEvent = exports.fromMaterials = exports.fromSounds = exports.fromAnimationGroups = exports.fromParticleSystems = exports.fromScene = exports.fromChildren = exports.visibleInInspector = void 0;
+exports.visibleInInspector = visibleInInspector;
+exports.fromChildren = fromChildren;
+exports.fromScene = fromScene;
+exports.fromParticleSystems = fromParticleSystems;
+exports.fromAnimationGroups = fromAnimationGroups;
+exports.fromSounds = fromSounds;
+exports.fromMaterials = fromMaterials;
+exports.onPointerEvent = onPointerEvent;
+exports.onKeyboardEvent = onKeyboardEvent;
+exports.onEngineResize = onEngineResize;
+exports.guiComponent = guiComponent;
+exports.fromControls = fromControls;
+exports.onControlClick = onControlClick;
+exports.onControlPointerEnter = onControlPointerEnter;
+exports.onControlPointerOut = onControlPointerOut;
 /**
  * Sets the decorated member visible in the inspector.
  * @param type the property type.
@@ -22,7 +36,6 @@ function visibleInInspector(type, name, defaultValue, options) {
         });
     };
 }
-exports.visibleInInspector = visibleInInspector;
 /**
  * Sets the decorated member linked to a child node.
  * @param nodeName defines the name of the node in children to retrieve.
@@ -38,7 +51,6 @@ function fromChildren(nodeName) {
         });
     };
 }
-exports.fromChildren = fromChildren;
 /**
  * Sets the decorated member linked to a node in the scene.
  * @param nodeName defines the name of the node in the scene to retrieve.
@@ -54,7 +66,6 @@ function fromScene(nodeName) {
         });
     };
 }
-exports.fromScene = fromScene;
 /**
  * Sets the decorated member linked to a particle system which has the current Mesh attached.
  * @param particleSystemName defines the name of the attached particle system to retrieve.
@@ -70,7 +81,6 @@ function fromParticleSystems(particleSystemName) {
         });
     };
 }
-exports.fromParticleSystems = fromParticleSystems;
 /**
  * Sets the decorated member linked to an animation group.
  * @param animationGroupName defines the name of the animation group to retrieve.
@@ -86,7 +96,6 @@ function fromAnimationGroups(animationGroupName) {
         });
     };
 }
-exports.fromAnimationGroups = fromAnimationGroups;
 /**
  * Sets the decorated member linked to a sound.
  * @param soundName defines the name of the sound to retrieve.
@@ -104,7 +113,6 @@ function fromSounds(soundName, type) {
         });
     };
 }
-exports.fromSounds = fromSounds;
 /**
  * Sets the decorated member linked to a material.
  * @param materialName defines the name of the material to retrieve.
@@ -120,7 +128,6 @@ function fromMaterials(materialName) {
         });
     };
 }
-exports.fromMaterials = fromMaterials;
 /**
  * Sets the decorated member function to be called on the given pointer event is fired.
  * @param type the event type to listen to execute the decorated function.
@@ -142,7 +149,6 @@ function onPointerEvent(type, onlyWhenMeshPicked) {
         });
     };
 }
-exports.onPointerEvent = onPointerEvent;
 /**
  * Sets the decorated member function to be called on the given keyboard key(s) is/are pressed.
  * @param key the key or array of key to listen to execute the decorated function.
@@ -162,7 +168,6 @@ function onKeyboardEvent(key, type) {
         });
     };
 }
-exports.onKeyboardEvent = onKeyboardEvent;
 /**
  * Sets the decorated member function to be called each time the engine is resized.
  * The decorated function can take 2 arguments:
@@ -182,7 +187,6 @@ function onEngineResize() {
         });
     };
 }
-exports.onEngineResize = onEngineResize;
 /**
  * Sets the component as a GUI component. Loads the GUI data located at the given path
  * and allows to use the @fromControls decorator.
@@ -193,7 +197,6 @@ function guiComponent(path) {
         target._GuiPath = path;
     };
 }
-exports.guiComponent = guiComponent;
 /**
  * Sets the decorated member linked to a GUI control.
  * Handled only if the component is tagged @guiComponent
@@ -210,7 +213,6 @@ function fromControls(controlName) {
         });
     };
 }
-exports.fromControls = fromControls;
 function onControlEvent(controlName, type) {
     return function (target, propertyKey) {
         var _a;
@@ -234,7 +236,6 @@ function onControlEvent(controlName, type) {
 function onControlClick(controlName) {
     return onControlEvent(controlName, "onPointerClickObservable");
 }
-exports.onControlClick = onControlClick;
 /**
  * Sets the decorated member function to be called on the pointer enters the control identified by the given name.
  * Handled only if the component is tagged @guiComponent
@@ -243,7 +244,6 @@ exports.onControlClick = onControlClick;
 function onControlPointerEnter(controlName) {
     return onControlEvent(controlName, "onPointerEnterObservable");
 }
-exports.onControlPointerEnter = onControlPointerEnter;
 /**
  * Sets the decorated member function to be called on the pointer is out of the control identified by the given name.
  * Handled only if the component is tagged @guiComponent
@@ -252,5 +252,4 @@ exports.onControlPointerEnter = onControlPointerEnter;
 function onControlPointerOut(controlName) {
     return onControlEvent(controlName, "onPointerOutObservable");
 }
-exports.onControlPointerOut = onControlPointerOut;
 //# sourceMappingURL=decorators.js.map

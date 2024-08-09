@@ -6,6 +6,5 @@ exports.scriptsMap = void 0;
  */
 exports.scriptsMap = {
     "src/scenes/play.ts": require("./play"),
-    "src/scenes/tank.ts": require("./tank"),
 };
 //# sourceMappingURL=scripts-map.js.map

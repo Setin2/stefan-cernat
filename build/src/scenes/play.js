@@ -23,10 +23,15 @@ var babylonjs_1 = require("babylonjs");
 var Play = /** @class */ (function (_super) {
     __extends(Play, _super);
     // @ts-ignore ignoring the super call as we don't want to re-init
-    function Play() {
+    function Play(name, scene) {
         var _this_1 = this;
         return _this_1;
     }
+    Play.createInstance = function (name, scene) {
+        var instance = new Play(name, scene);
+        instance.onInitialize();
+        return instance;
+    };
     /**
      * Called on the node is being initialized.
      * This function is called immediatly after the constructor has been called.
@@ -57,7 +62,7 @@ var Play = /** @class */ (function (_super) {
         var forward = new BABYLON.Vector3(0, 0, 1);
         //const backward = new BABYLON.Vector3(0, 0, -1);	
         this.instantiateTrees();
-        this.instantiateBricks(this, -20, 0.5, -30);
+        this.instantiateBricks(-20, 0.5, -30);
         this.initializeTankMovement(this, rotationSpeed);
         this.initializeShooting(this, forward);
         this.show_Control();
@@ -153,142 +158,170 @@ var Play = /** @class */ (function (_super) {
         });
     };
     /**
-     * Give the player the ability to shoot with the tank
+     * Gives the player the ability to shoot with the tank.
      */
     Play.prototype.initializeShooting = function (_this, forward) {
-        // initialize the social media targets for shooting
+        // Initialize social media targets
+        var targetNames = ["github", "linkedin", "twitter"];
+        var targetPositions = [
+            new BABYLON.Vector3(69.8356, 4.4086, 46.3030),
+            new BABYLON.Vector3(69.8356, 2.1121, 17.2901),
+        ];
+        var targetScalings = [
+            new BABYLON.Vector3(1.75, 1.75, 1.75),
+            new BABYLON.Vector3(1.5, 1.5, 1.5),
+        ];
         var github = _this.scene.getMeshByName("target_github");
-        github.material.albedoTexture = new babylonjs_1.Texture("assets/models/target/target (Base Color).png", this.scene);
-        var linkedin = github.createInstance("target_linkedin");
-        linkedin.position = new BABYLON.Vector3(69.8355941772461, 4.408603668212891, 46.30295181274414);
-        linkedin.scaling = new BABYLON.Vector3(1.75, 1.75, 1.75);
-        var twitter = github.createInstance("target_twitter");
-        twitter.position = new BABYLON.Vector3(69.8355941772461, 2.112103668212891, 17.29005181274414);
-        twitter.scaling = new BABYLON.Vector3(1.5, 1.5, 1.5);
-        // add velocity to the ball to make a shooting animation
-        var translate = function (mesh, direction, power) {
+        if (!github) {
+            console.error("GitHub target not found in the scene");
+            return;
+        }
+        github.material.albedoTexture = new BABYLON.Texture("assets/models/target/target (Base Color).png", _this.scene);
+        // Create and configure targets
+        var _a = targetNames.slice(1).map(function (name, index) {
+            var target = github.createInstance("target_".concat(name));
+            target.position = targetPositions[index];
+            target.scaling = targetScalings[index];
+            return target;
+        }), linkedin = _a[0], twitter = _a[1];
+        // Function to apply velocity to a mesh
+        var applyVelocity = function (mesh, direction, power) {
             mesh.physicsImpostor.setLinearVelocity(mesh.physicsImpostor.getLinearVelocity().add(direction.scale(power)));
         };
-        // create a ball object to instantiate each time we shoot
+        // Create a ball object for shooting
         var ball = BABYLON.Mesh.CreateSphere("ball1", 16, 1.5, _this.scene);
         ball.parent = _this.camera;
-        var shot = false;
-        // once the key 'e' is pressed
-        this.scene.actionManager.registerAction(new BABYLON.ExecuteCodeAction({
-            trigger: BABYLON.ActionManager.OnKeyDownTrigger,
-            parameter: 'e'
-        }, function () {
-            // we can not shoot more than once every 400 ms
-            if (!shot) {
-                shot = true;
-                _this.bullet.play();
-                var shooting_direction = _this.tank.getDirection(forward).normalize();
-                var shootedball = ball.createInstance("shootedball");
-                // change origin position of the ball to make it look like it is coming from the barrel
-                shootedball.position.x = _this.tank.position.x + shooting_direction.x * 5;
-                shootedball.position.y = _this.tank.position.y + 3;
-                shootedball.position.z = _this.tank.position.z + shooting_direction.z * 5;
-                // add a physics impostor an shoot the ball
-                shootedball.physicsImpostor = new BABYLON.PhysicsImpostor(shootedball, BABYLON.PhysicsImpostor.SphereImpostor, { mass: 0.5, restitution: 0 }, _this.scene);
-                translate(shootedball, shooting_direction, 200);
-                setTimeout(function () { shot = false; }, 400);
-                var dispose = setTimeout(function () { shootedball.dispose(); }, 2000);
-                // if we shoot a brick with this ball, we play a brick sound
-                _this.scene.meshes
-                    .filter(function (mesh) { return mesh.name == "brick"; })
-                    .forEach(function (mesh) {
-                    shootedball.physicsImpostor.registerOnPhysicsCollide(mesh.physicsImpostor, function () { _this.brickSound.play(); });
-                });
-                // if we shoot the github target with this ball
-                // each time, we restart the action manager to remove the action from the previous ball
-                github.actionManager = new BABYLON.ActionManager();
-                github.actionManager.registerAction(new BABYLON.ExecuteCodeAction({
-                    trigger: BABYLON.ActionManager.OnIntersectionEnterTrigger,
-                    parameter: shootedball,
-                }, function (event) {
-                    window.open("https://github.com/Setin2"); // open a new tab to my github profile
-                    clearTimeout(dispose); // we dont wait to dispose the ball anymore
-                    shootedball.dispose(); // we just dispose of it
+        var canShoot = true;
+        // Handle shooting logic
+        var handleShoot = function () {
+            if (!canShoot)
+                return;
+            canShoot = false;
+            _this.bullet.play();
+            var shootingDirection = _this.tank.getDirection(forward).normalize();
+            var shotBall = ball.createInstance("shootedball");
+            // Set the initial position of the ball
+            shotBall.position = _this.tank.position.add(shootingDirection.scale(5));
+            shotBall.position.y += 3;
+            // Add physics and shoot the ball
+            shotBall.physicsImpostor = new BABYLON.PhysicsImpostor(shotBall, BABYLON.PhysicsImpostor.SphereImpostor, { mass: 0.5, restitution: 0 }, _this.scene);
+            applyVelocity(shotBall, shootingDirection, 200);
+            // Reset shooting ability after 400 ms
+            setTimeout(function () { canShoot = true; }, 400);
+            // Dispose the ball after 2000 ms
+            var disposeTimeout = setTimeout(function () { shotBall.dispose(); }, 2000);
+            // Play sound if ball hits a brick
+            _this.scene.meshes
+                .filter(function (mesh) { return mesh.name === "brick"; })
+                .forEach(function (mesh) {
+                shotBall.physicsImpostor.registerOnPhysicsCollide(mesh.physicsImpostor, function () { _this.brickSound.play(); });
+            });
+            // Create action managers for targets
+            var createActionManager = function (target, url) {
+                target.actionManager = new BABYLON.ActionManager(_this.scene);
+                target.actionManager.registerAction(new BABYLON.ExecuteCodeAction({ trigger: BABYLON.ActionManager.OnIntersectionEnterTrigger, parameter: shotBall }, function () {
+                    window.open(url);
+                    clearTimeout(disposeTimeout);
+                    shotBall.dispose();
                 }));
-                // if we shoot the linkedin target with this ball
-                linkedin.actionManager = new BABYLON.ActionManager();
-                linkedin.actionManager.registerAction(new BABYLON.ExecuteCodeAction({
-                    trigger: BABYLON.ActionManager.OnIntersectionEnterTrigger,
-                    parameter: shootedball,
-                }, function (event) {
-                    window.open("https://www.linkedin.com/in/stefan-cernat/"); // open a new tab to my linkedin profile
-                    clearTimeout(dispose); // we dont wait to dispose the ball anymore
-                    shootedball.dispose(); // we just dispose of it
-                }));
-            }
-        }));
+            };
+            createActionManager(github, "https://github.com/Setin2");
+            createActionManager(linkedin, "https://www.linkedin.com/in/stefan-cernat/");
+        };
+        // Register the shooting action on key press
+        _this.scene.actionManager.registerAction(new BABYLON.ExecuteCodeAction({ trigger: BABYLON.ActionManager.OnKeyDownTrigger, parameter: 'e' }, handleShoot));
     };
     /**
-     * Set up a wall of bricks in the scene at a specified position
+     * Set up a wall of bricks in the scene at a specified position.
      */
-    Play.prototype.instantiateBricks = function (_this, x, y, z) {
+    Play.prototype.instantiateBricks = function (x, y, z) {
         var brickMass = 1;
-        var brickLength = 6 * 1.1;
-        var brickDepth = 3 * 1.1;
-        var brickHeight = brickLength * 0.5 * 1.1;
-        var numBricksLength = 6;
+        var brickScaleFactor = 1.1;
+        var brickLength = 6 * brickScaleFactor;
+        var brickDepth = 3 * brickScaleFactor;
+        var brickHeight = brickLength * 0.5 * brickScaleFactor;
+        var initialX = x;
         var numBricksHeight = 3;
         y = brickHeight * y;
-        // create the first brick object
-        var brick;
-        brick = BABYLON.MeshBuilder.CreateBox("brick", { width: brickLength, height: brickHeight, depth: brickDepth }, _this.scene);
-        brick.material = new BABYLON.StandardMaterial("brick", _this.scene);
-        changeBrickPropreties(brick, x, y, z);
+        // Create the initial brick
+        var brick = this.createBrick(brickLength, brickHeight, brickDepth);
+        // Place the initial brick
+        this.positionBrick(brick, x, y, z, brickMass);
         x += brickLength;
-        // create instances of the object to form a wall in a certain shape
+        // Create the wall of bricks
         for (var j = 0; j < numBricksHeight; j++) {
-            // the length of the first row is -1 because we already added a brick
-            if (j == 0)
-                numBricksLength = 5;
-            // the last row has 2 bricks missing
-            else if (j == numBricksHeight - 1) {
-                x += brickLength;
-                numBricksLength -= 2;
+            var numBricksLength = this.getBricksPerRow(j, numBricksHeight);
+            var startLengthIndex = 0;
+            if (j == numBricksHeight - 1) {
+                numBricksLength += 1;
+                startLengthIndex -= 1;
             }
-            else
-                numBricksLength = 6;
-            for (var i = 0; i < numBricksLength; i++) {
-                brick = brick.createInstance("brick");
-                changeBrickPropreties(brick, x, y, z);
+            for (var i = startLengthIndex; i < numBricksLength; i++) {
+                var brickInstance = brick.createInstance("brick".concat(j, "-").concat(i));
+                this.positionBrick(brickInstance, x, y, z, brickMass);
                 x += brickLength;
             }
             y += brickHeight;
-            x = -20;
-        }
-        function changeBrickPropreties(brick, x, y, z) {
-            brick.position = new BABYLON.Vector3(x, y, z);
-            brick.physicsImpostor = new BABYLON.PhysicsImpostor(brick, BABYLON.PhysicsImpostor.BoxImpostor, { mass: brickMass, friction: 0.3 }, _this.scene);
-            brick.physicsImpostor.registerOnPhysicsCollide(_this.tank.physicsImpostor, function () { _this.brickSound.play(); });
-            brick.physicsImpostor.physicsBody.linearDamping = 0.95;
+            x = initialX;
         }
     };
     /**
-     * We instantiate clones of the sakura tree instead of adding them from the get go. This way we save memory.
+     * Creates a brick mesh with the given dimensions.
+     */
+    Play.prototype.createBrick = function (length, height, depth) {
+        var brick = BABYLON.MeshBuilder.CreateBox("brick", { width: length, height: height, depth: depth }, this.scene);
+        brick.material = new BABYLON.StandardMaterial("brickMaterial", this.scene);
+        return brick;
+    };
+    /**
+     * Positions and sets up physics properties for a brick.
+     */
+    Play.prototype.positionBrick = function (brick, x, y, z, mass) {
+        var _this_1 = this;
+        brick.position = new BABYLON.Vector3(x, y, z);
+        brick.physicsImpostor = new BABYLON.PhysicsImpostor(brick, BABYLON.PhysicsImpostor.BoxImpostor, { mass: mass, friction: 0.3 }, this.scene);
+        brick.physicsImpostor.registerOnPhysicsCollide(this.tank.physicsImpostor, function () { _this_1.brickSound.play(); });
+        brick.physicsImpostor.physicsBody.linearDamping = 0.95;
+    };
+    /**
+     * Determines the number of bricks in the current row based on its index.
+     */
+    Play.prototype.getBricksPerRow = function (rowIndex, totalRows) {
+        if (rowIndex === 0) {
+            return 5; // First row has 5 bricks because the initial brick was added manually
+        }
+        else if (rowIndex === totalRows - 1) {
+            return 4; // Last row has 4 bricks
+        }
+        return 6; // All other rows have 6 bricks
+    };
+    /**
+     * Instantiates clones of the sakura tree to save memory and allow dynamic placement.
      */
     Play.prototype.instantiateTrees = function () {
-        // get the original tree objects from the scene
+        // Get the original tree objects from the scene
         var trunk = this.scene.getMeshByName("sakura_trunk1");
         var crown = this.scene.getMeshByName("sakura_crown1");
-        // this way we can add more trees to other locations if we want
-        var tree_coordinates = [
-            new BABYLON.Vector3(47.50430679321289, 5.184815406799316, -36.954864501953125),
-            new BABYLON.Vector3(-39.5430429077148, 5.184815406799316, -44.9434814453125),
-            new BABYLON.Vector3(-54.039398193359375, 5.184815406799316, -22.038150787353516),
-            new BABYLON.Vector3(57.13322830200195, 5.184815406799316, 77.02558898925781)
+        if (!trunk || !crown) {
+            console.error("Trunk or crown mesh not found in the scene");
+            return;
+        }
+        // Define the coordinates where the trees will be placed
+        var treeCoordinates = [
+            new BABYLON.Vector3(47.5043, 5.1848, -36.9549),
+            new BABYLON.Vector3(-39.5430, 5.1848, -44.9435),
+            new BABYLON.Vector3(-54.0394, 5.1848, -22.0382),
+            new BABYLON.Vector3(57.1332, 5.1848, 77.0256),
         ];
-        // create new instances of the trunk and crown of the tree
-        for (var i = 0; i < tree_coordinates.length; i++) {
-            var trunkClone = trunk.createInstance("trunk1");
-            trunkClone.position = tree_coordinates[i];
+        var crownRelativePosition = new BABYLON.Vector3(0.2540, 1.0641, 5.1796);
+        // Create new instances of the trunk and crown for each coordinate
+        for (var i = 0, len = treeCoordinates.length; i < len; i++) {
+            var trunkClone = trunk.createInstance("trunkClone".concat(i + 1));
+            trunkClone.position = treeCoordinates[i];
             trunkClone.physicsImpostor = new BABYLON.PhysicsImpostor(trunkClone, BABYLON.PhysicsImpostor.BoxImpostor, { mass: 0, restitution: 0 }, this.scene);
-            var crownClone = crown.createInstance("trunk1");
+            var crownClone = crown.createInstance("crownClone".concat(i + 1));
             crownClone.parent = trunkClone;
-            crownClone.position = new BABYLON.Vector3(0.25404930114746094, 1.0641212463378906, 5.179561138153076);
+            crownClone.position = crownRelativePosition.clone(); // Clone to avoid modifying the original vector
         }
     };
     /**
