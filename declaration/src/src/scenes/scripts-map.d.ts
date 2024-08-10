@@ -4,6 +4,7 @@ import { ScriptMap } from "./tools";
  */
 export interface ISceneScriptMap {
     "src/scenes/play.ts": ScriptMap;
+    "src/scenes/treeGenerator.ts": ScriptMap;
 }
 /**
  * Defines the map of all available scripts in the project.

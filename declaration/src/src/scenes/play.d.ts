@@ -8,6 +8,7 @@ export default class Play extends Node {
     private tankSound;
     private brickSound;
     private tank;
+    private divFps;
     protected constructor(name: string, scene: BABYLON.Scene);
     static createInstance(name: string, scene: BABYLON.Scene): Play;
     /**
@@ -28,9 +29,13 @@ export default class Play extends Node {
      */
     show_Control(): void;
     /**
-     * Initialize the movement of the player
+     * Initialize the movement of the player tank.
      */
     initializeTankMovement(_this: this, rotationSpeed: number): void;
+    /**
+     * Create and return splatter objects.
+     */
+    private createSplatterObjects;
     /**
      * Gives the player the ability to shoot with the tank.
      */
@@ -55,6 +60,7 @@ export default class Play extends Node {
      * Instantiates clones of the sakura tree to save memory and allow dynamic placement.
      */
     instantiateTrees(): void;
+    initializeShadows(): void;
     /**
      * Initialize all global variables that will be used in other functions
      */

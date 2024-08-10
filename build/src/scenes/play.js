@@ -20,6 +20,7 @@ var BABYLON = require("@babylonjs/core");
 var gui_1 = require("@babylonjs/gui");
 require("babylonjs-loaders");
 var babylonjs_1 = require("babylonjs");
+var treeGenerator_1 = require("./treeGenerator");
 var Play = /** @class */ (function (_super) {
     __extends(Play, _super);
     // @ts-ignore ignoring the super call as we don't want to re-init
@@ -40,12 +41,14 @@ var Play = /** @class */ (function (_super) {
         this.initializeGlobalVariables();
         this.initializeTextures();
         this.optimizeScene();
+        this.initializeShadows();
         // set phaysics
         this.camera.lockedTarget = this.tank;
         this.scene.enablePhysics();
         this.scene.getPhysicsEngine().setGravity(new BABYLON.Vector3(0, -40, 0)); // 9.81 = gravitational acceleration consant, too little
         this.easterEgg();
         this.play();
+        this.divFps = document.getElementById("fps");
         //this.scene.debugLayer.show();
     };
     /**
@@ -58,7 +61,7 @@ var Play = /** @class */ (function (_super) {
      * Initialize constant variables and functionalities of the game
      */
     Play.prototype.play = function () {
-        var rotationSpeed = 0.02;
+        var rotationSpeed = 0.07;
         var forward = new BABYLON.Vector3(0, 0, 1);
         //const backward = new BABYLON.Vector3(0, 0, -1);	
         this.instantiateTrees();
@@ -85,65 +88,63 @@ var Play = /** @class */ (function (_super) {
         }, 7500);
     };
     /**
-     * Initialize the movement of the player
+     * Initialize the movement of the player tank.
      */
     Play.prototype.initializeTankMovement = function (_this, rotationSpeed) {
-        var _this_1 = this;
-        // map the input so that we can press several keys at once to move the tank
+        // Initialize input map and action manager
         this.scene.actionManager = new BABYLON.ActionManager(this.scene);
         var inputMap = {};
-        var input1 = _this.scene.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnKeyDownTrigger, function (evt) {
-            inputMap[evt.sourceEvent.key.toLowerCase()] = evt.sourceEvent.type == "keydown";
-        }));
-        var input2 = _this.scene.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnKeyUpTrigger, function (evt) {
-            inputMap[evt.sourceEvent.key.toLowerCase()] = evt.sourceEvent.type == "keydown";
-        }));
-        // create instances of the splatter object to reduce memory usage
-        var splatterObjects = [];
-        splatterObjects.push(_this.scene.getMeshByName("splatter1"));
-        splatterObjects.push(splatterObjects[0].createInstance("i" + 1));
-        splatterObjects.push(splatterObjects[0].createInstance("i" + 2));
-        // we iterate through the splatter objects so we always move the last one in the order
+        // Handle key down and key up events to update inputMap
+        var handleKeyEvent = function (evt) {
+            inputMap[evt.sourceEvent.key.toLowerCase()] = evt.sourceEvent.type === "keydown";
+        };
+        this.scene.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnKeyDownTrigger, handleKeyEvent));
+        this.scene.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnKeyUpTrigger, handleKeyEvent));
+        // Create and manage splatter objects
+        var splatterObjects = this.createSplatterObjects();
         var currentSplatterIndex = 0;
         var tick = 0;
         var splatPos = new BABYLON.Vector3(0, 0, 0);
-        // function to change the position of the splatter objects as the tank moves
-        function splash() {
+        // Function to manage splatter positioning and rotation
+        var updateSplatter = function () {
             tick++;
-            if (tick == 35) {
+            if (tick === 35) {
                 splatPos = new BABYLON.Vector3(_this.tank.position.x, 0, _this.tank.position.z);
             }
-            else if (tick == 40) {
-                if (currentSplatterIndex == 3)
-                    currentSplatterIndex = 0;
+            else if (tick === 40) {
                 splatterObjects[currentSplatterIndex].position = splatPos;
-                splatterObjects[currentSplatterIndex].rotate(BABYLON.Axis.Y, Math.floor(Math.random() * (360 - 10 + 1) + 10), BABYLON.Space.WORLD);
-                currentSplatterIndex++;
+                splatterObjects[currentSplatterIndex].rotate(BABYLON.Axis.Y, Math.random() * 350 + 10, BABYLON.Space.WORLD);
+                currentSplatterIndex = (currentSplatterIndex + 1) % splatterObjects.length;
                 tick = 0;
                 _this.tankSound.play();
             }
-        }
-        var transformForce = function (mesh, vec) {
-            var mymatrix = new BABYLON.Matrix();
-            mesh.rotationQuaternion.toRotationMatrix(mymatrix);
-            return BABYLON.Vector3.TransformNormal(vec, mymatrix);
         };
-        var translate = function (mesh, direction, power) {
+        // Transform a vector by the mesh's rotation matrix
+        var transformForce = function (mesh, vec) {
+            var matrix = new BABYLON.Matrix();
+            mesh.rotationQuaternion.toRotationMatrix(matrix);
+            return BABYLON.Vector3.TransformNormal(vec, matrix);
+        };
+        // Apply velocity to a mesh
+        var applyMovement = function (mesh, direction, power) {
             mesh.physicsImpostor.setLinearVelocity(mesh.physicsImpostor.getLinearVelocity().add(transformForce(mesh, direction.scale(power))));
         };
-        // on w,a,s,d key pressed
-        _this.scene.registerBeforeRender(function () {
+        // Register before render callback for tank movement
+        this.scene.registerBeforeRender(function () {
+            _this.divFps.innerHTML = _this.getEngine().getFps().toFixed() + " fps";
             var keydown = false;
+            // Handle forward and backward movement
             if (inputMap["w"]) {
                 keydown = true;
-                translate(_this.tank, new BABYLON.Vector3(0, 0, 1), 10);
-                splash();
+                applyMovement(_this.tank, new BABYLON.Vector3(0, 0, 1), 22.5);
+                updateSplatter();
             }
             if (inputMap["s"]) {
                 keydown = true;
-                translate(_this.tank, new BABYLON.Vector3(0, 0, -1), 10);
-                splash();
+                applyMovement(_this.tank, new BABYLON.Vector3(0, 0, -1), 22.5);
+                updateSplatter();
             }
+            // Handle rotation
             if (inputMap["d"]) {
                 _this.tank.rotate(BABYLON.Axis.Y, rotationSpeed, BABYLON.Space.WORLD);
                 keydown = true;
@@ -152,10 +153,25 @@ var Play = /** @class */ (function (_super) {
                 _this.tank.rotate(BABYLON.Axis.Y, -rotationSpeed, BABYLON.Space.WORLD);
                 keydown = true;
             }
-            // make the camera move with the player, otherwise it only rotates
-            _this.camera.position.x = _this_1.tank.position.x + -80;
-            _this.camera.position.z = _this_1.tank.position.z + 60;
+            // Update camera position to follow the tank
+            _this.camera.position.x = _this.tank.position.x - 80;
+            _this.camera.position.z = _this.tank.position.z + 60;
         });
+    };
+    /**
+     * Create and return splatter objects.
+     */
+    Play.prototype.createSplatterObjects = function () {
+        var baseSplatter = this.scene.getMeshByName("splatter1");
+        if (!baseSplatter) {
+            console.error("Base splatter object not found in the scene");
+            return [];
+        }
+        return [
+            baseSplatter,
+            baseSplatter.createInstance("splatter_instance_1"),
+            baseSplatter.createInstance("splatter_instance_2"),
+        ];
     };
     /**
      * Gives the player the ability to shoot with the tank.
@@ -299,30 +315,44 @@ var Play = /** @class */ (function (_super) {
      * Instantiates clones of the sakura tree to save memory and allow dynamic placement.
      */
     Play.prototype.instantiateTrees = function () {
-        // Get the original tree objects from the scene
-        var trunk = this.scene.getMeshByName("sakura_trunk1");
-        var crown = this.scene.getMeshByName("sakura_crown1");
-        if (!trunk || !crown) {
-            console.error("Trunk or crown mesh not found in the scene");
-            return;
+        var _this_1 = this;
+        // Function to get a material by name
+        function getMaterialByName(scene, name) {
+            for (var _i = 0, _a = scene.materials; _i < _a.length; _i++) {
+                var material = _a[_i];
+                if (material.name === name) {
+                    return material;
+                }
+            }
+            console.warn("Material with name ".concat(name, " not found."));
+            return null;
         }
         // Define the coordinates where the trees will be placed
         var treeCoordinates = [
+            new BABYLON.Vector3(78.3985, 5.1848, -11.2018),
             new BABYLON.Vector3(47.5043, 5.1848, -36.9549),
             new BABYLON.Vector3(-39.5430, 5.1848, -44.9435),
             new BABYLON.Vector3(-54.0394, 5.1848, -22.0382),
             new BABYLON.Vector3(57.1332, 5.1848, 77.0256),
         ];
-        var crownRelativePosition = new BABYLON.Vector3(0.2540, 1.0641, 5.1796);
-        // Create new instances of the trunk and crown for each coordinate
-        for (var i = 0, len = treeCoordinates.length; i < len; i++) {
-            var trunkClone = trunk.createInstance("trunkClone".concat(i + 1));
-            trunkClone.position = treeCoordinates[i];
-            trunkClone.physicsImpostor = new BABYLON.PhysicsImpostor(trunkClone, BABYLON.PhysicsImpostor.BoxImpostor, { mass: 0, restitution: 0 }, this.scene);
-            var crownClone = crown.createInstance("crownClone".concat(i + 1));
-            crownClone.parent = trunkClone;
-            crownClone.position = crownRelativePosition.clone(); // Clone to avoid modifying the original vector
-        }
+        // Create trees and apply physics impostor
+        treeCoordinates.forEach(function (position) {
+            var tree = (0, treeGenerator_1.QuickTreeGenerator)(20, 15, 5, getMaterialByName(_this_1.scene, "default material"), getMaterialByName(_this_1.scene, "Feuille.002"), _this_1.scene);
+            if (tree) {
+                tree.position = position;
+            }
+        });
+    };
+    Play.prototype.initializeShadows = function () {
+        // Create a shadow generator
+        console.log("%c Very sly of you, but 4", "color: #CE718F");
+        var dir_light = this.scene.getLightByName("dir_light");
+        var shadowGenerator = new BABYLON.ShadowGenerator(1024, dir_light);
+        shadowGenerator.bias = 0.0001;
+        this.scene.meshes.forEach(function (mesh) {
+            shadowGenerator.addShadowCaster(mesh);
+            mesh.receiveShadows = true;
+        });
     };
     /**
      * Initialize all global variables that will be used in other functions
@@ -363,12 +393,16 @@ var Play = /** @class */ (function (_super) {
         this.scene.pointerUpPredicate = function () { return false; };
         // these only apply to static meshes
         var movableMeshes = ["tank", "amongus"];
+        var otherMeshes = [];
         this.scene.meshes
             .filter(function (mesh) { return !movableMeshes.includes(mesh.name); })
             .forEach(function (mesh) {
             mesh.isPickable = false;
             mesh.doNotSyncBoundingInfo = true; // disabling bounding info sync if no collisions must be calculated
             mesh.freezeWorldMatrix();
+            // Ensure all meshes have the same overrideMaterialSideOrientation
+            // mesh.overrideMaterialSideOrientation = BABYLON.Mesh.DEFAULTSIDE;
+            otherMeshes.push(mesh);
         });
     };
     return Play;

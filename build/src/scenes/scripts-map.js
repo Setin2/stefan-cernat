@@ -6,5 +6,6 @@ exports.scriptsMap = void 0;
  */
 exports.scriptsMap = {
     "src/scenes/play.ts": require("./play"),
+    "src/scenes/treeGenerator.ts": require("./treeGenerator"),
 };
 //# sourceMappingURL=scripts-map.js.map

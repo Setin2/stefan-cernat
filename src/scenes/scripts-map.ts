@@ -5,6 +5,7 @@ import { ScriptMap } from "./tools";
  */
 export interface ISceneScriptMap {
 	"src/scenes/play.ts": ScriptMap;
+	"src/scenes/treeGenerator.ts": ScriptMap;
 }
 
 /**
@@ -12,4 +13,5 @@ export interface ISceneScriptMap {
  */
 export const scriptsMap: ISceneScriptMap = {
 	"src/scenes/play.ts": require("./play"),
+	"src/scenes/treeGenerator.ts": require("./treeGenerator"),
 }
