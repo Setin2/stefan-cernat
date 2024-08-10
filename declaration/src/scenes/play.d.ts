@@ -9,8 +9,7 @@ export default class Play extends Node {
     private brickSound;
     private tank;
     private divFps;
-    protected constructor(name: string, scene: BABYLON.Scene);
-    static createInstance(name: string, scene: BABYLON.Scene): Play;
+    protected constructor();
     /**
      * Called on the node is being initialized.
      * This function is called immediatly after the constructor has been called.
@@ -43,7 +42,7 @@ export default class Play extends Node {
     /**
      * Set up a wall of bricks in the scene at a specified position.
      */
-    instantiateBricks(x: number, y: number, z: number): void;
+    instantiateBricks(x: number, y: number, z: number, numRows: number, numCols: number[]): void;
     /**
      * Creates a brick mesh with the given dimensions.
      */
@@ -53,14 +52,9 @@ export default class Play extends Node {
      */
     private positionBrick;
     /**
-     * Determines the number of bricks in the current row based on its index.
-     */
-    private getBricksPerRow;
-    /**
      * Instantiates clones of the sakura tree to save memory and allow dynamic placement.
      */
     instantiateTrees(): void;
-    initializeShadows(): void;
     /**
      * Initialize all global variables that will be used in other functions
      */

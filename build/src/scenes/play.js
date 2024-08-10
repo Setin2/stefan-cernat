@@ -24,15 +24,10 @@ var treeGenerator_1 = require("./treeGenerator");
 var Play = /** @class */ (function (_super) {
     __extends(Play, _super);
     // @ts-ignore ignoring the super call as we don't want to re-init
-    function Play(name, scene) {
+    function Play() {
         var _this_1 = this;
         return _this_1;
     }
-    Play.createInstance = function (name, scene) {
-        var instance = new Play(name, scene);
-        instance.onInitialize();
-        return instance;
-    };
     /**
      * Called on the node is being initialized.
      * This function is called immediatly after the constructor has been called.
@@ -41,7 +36,6 @@ var Play = /** @class */ (function (_super) {
         this.initializeGlobalVariables();
         this.initializeTextures();
         this.optimizeScene();
-        this.initializeShadows();
         // set phaysics
         this.camera.lockedTarget = this.tank;
         this.scene.enablePhysics();
@@ -65,7 +59,7 @@ var Play = /** @class */ (function (_super) {
         var forward = new BABYLON.Vector3(0, 0, 1);
         //const backward = new BABYLON.Vector3(0, 0, -1);	
         this.instantiateTrees();
-        this.instantiateBricks(-20, 0.5, -30);
+        this.instantiateBricks(-20, 0.5, -30, 3, [6, 6, 6]);
         this.initializeTankMovement(this, rotationSpeed);
         this.initializeShooting(this, forward);
         this.show_Control();
@@ -250,35 +244,32 @@ var Play = /** @class */ (function (_super) {
     /**
      * Set up a wall of bricks in the scene at a specified position.
      */
-    Play.prototype.instantiateBricks = function (x, y, z) {
+    Play.prototype.instantiateBricks = function (x, y, z, numRows, numCols) {
         var brickMass = 1;
         var brickScaleFactor = 1.1;
         var brickLength = 6 * brickScaleFactor;
         var brickDepth = 3 * brickScaleFactor;
         var brickHeight = brickLength * 0.5 * brickScaleFactor;
+        // Initialize position
         var initialX = x;
-        var numBricksHeight = 3;
-        y = brickHeight * y;
+        var initialY = y;
+        // Find the maximum number of bricks in any row
+        var maxCols = Math.max.apply(Math, numCols);
         // Create the initial brick
         var brick = this.createBrick(brickLength, brickHeight, brickDepth);
-        // Place the initial brick
-        this.positionBrick(brick, x, y, z, brickMass);
-        x += brickLength;
         // Create the wall of bricks
-        for (var j = 0; j < numBricksHeight; j++) {
-            var numBricksLength = this.getBricksPerRow(j, numBricksHeight);
-            var startLengthIndex = 0;
-            if (j == numBricksHeight - 1) {
-                numBricksLength += 1;
-                startLengthIndex -= 1;
-            }
-            for (var i = startLengthIndex; i < numBricksLength; i++) {
-                var brickInstance = brick.createInstance("brick".concat(j, "-").concat(i));
+        for (var row = 0; row < numRows; row++) {
+            var numBricksInRow = numCols[row];
+            var startLengthIndex = -Math.floor(numBricksInRow / 2);
+            // Position the bricks in the current row
+            for (var col = startLengthIndex; col < startLengthIndex + numBricksInRow; col++) {
+                var brickInstance = brick.createInstance("brick".concat(row, "-").concat(col));
                 this.positionBrick(brickInstance, x, y, z, brickMass);
                 x += brickLength;
             }
+            // Move to the next row
             y += brickHeight;
-            x = initialX;
+            x = initialX; // Reset x to initial position
         }
     };
     /**
@@ -298,18 +289,6 @@ var Play = /** @class */ (function (_super) {
         brick.physicsImpostor = new BABYLON.PhysicsImpostor(brick, BABYLON.PhysicsImpostor.BoxImpostor, { mass: mass, friction: 0.3 }, this.scene);
         brick.physicsImpostor.registerOnPhysicsCollide(this.tank.physicsImpostor, function () { _this_1.brickSound.play(); });
         brick.physicsImpostor.physicsBody.linearDamping = 0.95;
-    };
-    /**
-     * Determines the number of bricks in the current row based on its index.
-     */
-    Play.prototype.getBricksPerRow = function (rowIndex, totalRows) {
-        if (rowIndex === 0) {
-            return 5; // First row has 5 bricks because the initial brick was added manually
-        }
-        else if (rowIndex === totalRows - 1) {
-            return 4; // Last row has 4 bricks
-        }
-        return 6; // All other rows have 6 bricks
     };
     /**
      * Instantiates clones of the sakura tree to save memory and allow dynamic placement.
@@ -341,17 +320,6 @@ var Play = /** @class */ (function (_super) {
             if (tree) {
                 tree.position = position;
             }
-        });
-    };
-    Play.prototype.initializeShadows = function () {
-        // Create a shadow generator
-        console.log("%c Very sly of you, but 4", "color: #CE718F");
-        var dir_light = this.scene.getLightByName("dir_light");
-        var shadowGenerator = new BABYLON.ShadowGenerator(1024, dir_light);
-        shadowGenerator.bias = 0.0001;
-        this.scene.meshes.forEach(function (mesh) {
-            shadowGenerator.addShadowCaster(mesh);
-            mesh.receiveShadows = true;
         });
     };
     /**

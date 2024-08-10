@@ -20,13 +20,7 @@ export default class Play extends Node {
     private divFps;
 
     // @ts-ignore ignoring the super call as we don't want to re-init
-    protected constructor(name: string, scene: BABYLON.Scene) {}
-
-    public static createInstance(name: string, scene: BABYLON.Scene): Play {
-        const instance = new Play(name, scene);
-        instance.onInitialize();
-        return instance;
-    }
+    protected constructor() {}
 
     /**
      * Called on the node is being initialized.
@@ -36,7 +30,6 @@ export default class Play extends Node {
         this.initializeGlobalVariables();
         this.initializeTextures();
         this.optimizeScene();
-        this.initializeShadows();
 
         // set phaysics
         this.camera.lockedTarget = this.tank;
@@ -65,7 +58,8 @@ export default class Play extends Node {
         //const backward = new BABYLON.Vector3(0, 0, -1);	
 
         this.instantiateTrees();
-        this.instantiateBricks(-20, 0.5, -30);
+        this.instantiateBricks(-5, 8, -30, 4, [6, 6, 6, 4], 0);
+        this.instantiateBricks(130, 8, -50, 4, [6, 6, 6, 4], 300);
         this.initializeTankMovement(this, rotationSpeed);
         this.initializeShooting(this, forward);
         this.show_Control();
@@ -148,12 +142,12 @@ export default class Play extends Node {
             // Handle forward and backward movement
             if (inputMap["w"]) {
                 keydown = true;
-                applyMovement(_this.tank, new BABYLON.Vector3(0, 0, 1), 22.5);
+                applyMovement(_this.tank, new BABYLON.Vector3(0, 0, 1), 22.5 * _this.scene.deltaTime  / 40);
                 updateSplatter();
             }
             if (inputMap["s"]) {
                 keydown = true;
-                applyMovement(_this.tank, new BABYLON.Vector3(0, 0, -1), 22.5);
+                applyMovement(_this.tank, new BABYLON.Vector3(0, 0, -1), 22.5 * _this.scene.deltaTime / 40);
                 updateSplatter();
             }
 
@@ -294,14 +288,14 @@ export default class Play extends Node {
     /**
      * Set up a wall of bricks in the scene at a specified position.
      */
-    public instantiateBricks(x: number, y: number, z: number) {
+    public instantiateBricks(x: number, y: number, z: number, numRows: number, numCollumnsPerRow: number[], rotationX: number = 0): void {
         const brickMass = 1;
         const brickScaleFactor = 1.1;
         const brickLength = 6 * brickScaleFactor;
         const brickDepth = 3 * brickScaleFactor;
         const brickHeight = brickLength * 0.5 * brickScaleFactor;
         const initialX = x;
-        const numBricksHeight = 3;
+        const initialY = y;
 
         y = brickHeight * y;
 
@@ -312,24 +306,34 @@ export default class Play extends Node {
         this.positionBrick(brick, x, y, z, brickMass);
         x += brickLength;
 
-        // Create the wall of bricks
-        for (let j = 0; j < numBricksHeight; j++) {
-            let numBricksLength = this.getBricksPerRow(j, numBricksHeight);
-            let startLengthIndex = 0
-            if (j == numBricksHeight - 1){
-                numBricksLength += 1;
-                startLengthIndex -= 1;
-            }
+        // Define a small buffer to prevent collision
+        const buffer = 0.1; // Adjust this value as needed
 
-            for (let i = startLengthIndex; i < numBricksLength; i++) {
+        const wallParent = new BABYLON.TransformNode("wallParent", this.scene);
+        brick.parent = wallParent;
+        // Create the wall of bricks
+        for (let j = 0; j < numRows; j++) {
+            // Number of bricks in the current row
+            const numBricksInRow = numCollumnsPerRow[j];
+            
+            // Calculate the total width of the current row
+            const totalRowWidth = numBricksInRow * (brickLength + buffer);
+            
+            // Calculate the center position for the current row
+            const rowCenterX = initialX; // Assuming initialX is the central position of the wall
+
+            // Start placing bricks from the center
+            let x = rowCenterX - (totalRowWidth / 2); // Center the row
+            let y = initialY + (j * (brickHeight + buffer)); // Update y position for the current row
+            
+            for (let i = 0; i < numBricksInRow; i++) {
                 let brickInstance = brick.createInstance(`brick${j}-${i}`);
                 this.positionBrick(brickInstance, x, y, z, brickMass);
-                x += brickLength;
+                x += (brickLength + buffer); // Increment x position with buffer
+                brickInstance.parent = wallParent;
             }
-
-            y += brickHeight;
-            x = initialX;
         }
+        wallParent.rotate(BABYLON.Axis.Y, rotationX, BABYLON.Space.WORLD);
     }
 
     /**
@@ -349,18 +353,6 @@ export default class Play extends Node {
         brick.physicsImpostor = new BABYLON.PhysicsImpostor(brick, BABYLON.PhysicsImpostor.BoxImpostor, { mass: mass, friction: 0.3 }, this.scene);
         brick.physicsImpostor.registerOnPhysicsCollide(this.tank.physicsImpostor, () => { this.brickSound.play(); });
         brick.physicsImpostor.physicsBody.linearDamping = 0.95;
-    }
-
-    /**
-     * Determines the number of bricks in the current row based on its index.
-     */
-    private getBricksPerRow(rowIndex: number, totalRows: number): number {
-        if (rowIndex === 0) {
-            return 5; // First row has 5 bricks because the initial brick was added manually
-        } else if (rowIndex === totalRows - 1) {
-            return 4; // Last row has 4 bricks
-        }
-        return 6; // All other rows have 6 bricks
     }
 
 
@@ -395,21 +387,6 @@ export default class Play extends Node {
                 tree.position = position;
             }
         });
-    }
-
-    public initializeShadows(){
-        // Create a shadow generator
-        console.log("%c Very sly of you, but 4", "color: #CE718F");
-        var dir_light = this.scene.getLightByName("dir_light");
-
-        var shadowGenerator = new BABYLON.ShadowGenerator(1024, dir_light);
-        shadowGenerator.bias = 0.0001;
-
-        this.scene.meshes.forEach((mesh) => {
-            shadowGenerator.addShadowCaster(mesh);
-            mesh.receiveShadows = true;
-        });
-
     }
 
     /**
