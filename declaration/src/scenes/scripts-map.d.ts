@@ -5,6 +5,7 @@ import { ScriptMap } from "./tools";
 export interface ISceneScriptMap {
     "src/scenes/bricks.ts": ScriptMap;
     "src/scenes/play.ts": ScriptMap;
+    "src/scenes/tank.ts": ScriptMap;
     "src/scenes/trees.ts": ScriptMap;
 }
 /**

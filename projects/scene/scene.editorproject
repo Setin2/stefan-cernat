@@ -1,13 +1,13 @@
 {
 	"animationGroups": [
 		"EmptyAction.001.json",
-		"Meteor!Take 001!BaseLayer.json",
 		"grp_Rotate_Meteor!Take 001!BaseLayer.json",
 		"KeyAction.json",
-		"EmptyAction.001.json",
 		"3rd.json",
+		"grp_Rotate_Planet!Take 001!BaseLayer.json",
 		"grp_Planet_ALL!Take 001!BaseLayer.json",
-		"grp_Rotate_Planet!Take 001!BaseLayer.json"
+		"EmptyAction.001.json",
+		"Meteor!Take 001!BaseLayer.json"
 	],
 	"cameras": [
 		"free_camera-bdb64464-0893-4335-88e4-004300a59dbe.json"
