@@ -10,7 +10,6 @@
 
 # production
 /build
-dist/
 
 # Logs
 *.log
