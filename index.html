@@ -26,11 +26,25 @@
             touch-action: none;
             -ms-touch-action: none;
         }
+
+        #fps {
+                position: absolute;
+                background-color: black;
+                border: 2px solid red;
+                text-align: center;
+                font-size: 16px;
+                color: white;
+                top: 15px;
+                right: 10px;
+                width: 60px;
+                height: 20px;
+            }
     </style>
 </head>
 
 <body>
     <canvas id="renderCanvas"></canvas>
+    <div id="fps">0</div>
 
     <script type="text/javascript">
         window.game = new window.game.Game();

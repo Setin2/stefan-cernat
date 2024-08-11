@@ -5,7 +5,8 @@ exports.scriptsMap = void 0;
  * Defines the map of all available scripts in the project.
  */
 exports.scriptsMap = {
+    "src/scenes/bricks.ts": require("./bricks"),
     "src/scenes/play.ts": require("./play"),
-    "src/scenes/tank.ts": require("./tank"),
+    "src/scenes/trees.ts": require("./trees"),
 };
 //# sourceMappingURL=scripts-map.js.map

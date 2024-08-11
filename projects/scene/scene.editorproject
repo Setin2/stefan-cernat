@@ -1,13 +1,13 @@
 {
 	"animationGroups": [
-		"grp_Rotate_Planet!Take 001!BaseLayer.json",
-		"grp_Rotate_Meteor!Take 001!BaseLayer.json",
 		"EmptyAction.001.json",
 		"Meteor!Take 001!BaseLayer.json",
-		"3rd.json",
+		"grp_Rotate_Meteor!Take 001!BaseLayer.json",
+		"KeyAction.json",
 		"EmptyAction.001.json",
+		"3rd.json",
 		"grp_Planet_ALL!Take 001!BaseLayer.json",
-		"KeyAction.json"
+		"grp_Rotate_Planet!Take 001!BaseLayer.json"
 	],
 	"cameras": [
 		"free_camera-bdb64464-0893-4335-88e4-004300a59dbe.json"
@@ -41,7 +41,6 @@
 				"3cef0a65-68df-4084-88f0-64d5ccb48b7a",
 				"61615748-be61-4fb4-babb-174b67cd4d49",
 				"a74e77b0-ce8e-4097-996f-5efb41bd579a",
-				"31bb7f1f-8441-491e-8bb6-49aa5cd1fd59",
 				"4cbcc069-671d-443e-9779-57b795262c23",
 				"ade8233e-2e51-4454-bd6c-8e3061e1bc08"
 			],
@@ -119,8 +118,6 @@
 		"amongus.amongus-2fb514c6-817c-4aa4-b99a-1cefe00ea02b.json",
 		"amongus.amongus-a74e77b0-ce8e-4097-996f-5efb41bd579a.json",
 		"target_github-a408f14a-a4a1-4ad7-a2c7-d9557e97bc0a.json",
-		"sakura_trunk1-ba575e6d-4c9b-4a64-8a4d-deadc0505775.json",
-		"sakura_crown1-31bb7f1f-8441-491e-8bb6-49aa5cd1fd59.json",
 		"ground-4b09a0f5-b2e4-4d07-bba1-c86e361ac4dd.json",
 		"stlmesh-615d3b40-f115-4bbd-80b6-8d4740a78a7b.json",
 		"road2-3d83861f-fa04-4098-9960-7860939e147d.json",
@@ -440,7 +437,7 @@
 				},
 				"detached": false
 			},
-			"uniqueId": 4,
+			"uniqueId": 7,
 			"type": "UniversalCamera",
 			"inputsmgr": {
 				"FreeCameraKeyboardMoveInput": {
