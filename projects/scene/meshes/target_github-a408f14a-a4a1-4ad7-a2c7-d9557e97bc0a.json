@@ -47,13 +47,17 @@
 			"receiveShadows": false,
 			"billboardMode": 0,
 			"visibility": 1,
-			"checkCollisions": false,
+			"checkCollisions": true,
 			"isBlocker": false,
 			"overrideMaterialSideOrientation": 0,
 			"isUnIndexed": false,
 			"geometryId": "6c83f967-151f-4e05-9c55-80ca3f4ae9b5",
 			"subMeshes": null,
 			"materialId": "7de93d56-79d5-4c0e-b39f-8feea3fc5034",
+			"physicsMass": 1,
+			"physicsFriction": 0.2,
+			"physicsRestitution": 0.2,
+			"physicsImpostor": 0,
 			"metadata": {
 				"gltf": {
 					"pointers": [

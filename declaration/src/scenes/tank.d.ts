@@ -1,17 +1,9 @@
-import { Node } from "@babylonjs/core/node";
-export default class Tank extends Node {
-    private tank;
-    private scene;
-    private camera;
-    private bullet;
-    private tank_sound;
-    private brick_sound;
-    /**
-     * Override constructor.
-     * @warn do not fill.
-     */
-    protected constructor();
-    onInitialized(): void;
-    tankMovement(_this: any, forward: any, backward: any, rotationSpeed: any): void;
-    initializeShooting(_this: any, forward: any): void;
-}
+import * as BABYLON from "@babylonjs/core";
+/**
+ * Initialize the movement of the player tank.
+ */
+export declare function initializeTankMovement(_this: any, rotationSpeed: number): void;
+/**
+ * Gives the player the ability to shoot with the tank.
+ */
+export declare function initializeShooting(_this: any, forward: BABYLON.Vector3): void;

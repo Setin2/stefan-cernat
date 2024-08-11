@@ -1,6 +1,4 @@
 import { Node } from "@babylonjs/core/node";
-import * as BABYLON from "@babylonjs/core";
-import 'babylonjs-loaders';
 export default class Play extends Node {
     private scene;
     private camera;
@@ -27,34 +25,6 @@ export default class Play extends Node {
      * Add image telling the player how to control the tank (+ under developement text)
      */
     show_Control(): void;
-    /**
-     * Initialize the movement of the player tank.
-     */
-    initializeTankMovement(_this: this, rotationSpeed: number): void;
-    /**
-     * Create and return splatter objects.
-     */
-    private createSplatterObjects;
-    /**
-     * Gives the player the ability to shoot with the tank.
-     */
-    initializeShooting(_this: this, forward: BABYLON.Vector3): void;
-    /**
-     * Set up a wall of bricks in the scene at a specified position.
-     */
-    instantiateBricks(x: number, y: number, z: number, numRows: number, numCollumnsPerRow: number[], rotationX?: number): void;
-    /**
-     * Creates a brick mesh with the given dimensions.
-     */
-    private createBrick;
-    /**
-     * Positions and sets up physics properties for a brick.
-     */
-    private positionBrick;
-    /**
-     * Instantiates clones of the sakura tree to save memory and allow dynamic placement.
-     */
-    instantiateTrees(): void;
     /**
      * Initialize all global variables that will be used in other functions
      */
