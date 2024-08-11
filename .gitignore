@@ -35,7 +35,6 @@ yarn-error.log*
 .babelrc
 babel.config.js
 
-
 # IDE/editor-specific files
 .vscode/
 .idea/
@@ -44,7 +43,6 @@ babel.config.js
 .DS_Store
 Thumbs.db
 
-
 # Temporary files
 *.tmp
 *.swp
@@ -52,11 +50,12 @@ Thumbs.db
 # Coverage reports
 coverage/
 
-
 # Cypress
 cypress/
-
 
 #Terraform
 terraform/.terraform/*
 terraform/.terraform.lock.hcl
+*.tfvars
+*.terraform*
+*.tfstate

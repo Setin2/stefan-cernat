@@ -1,0 +1,10 @@
+# Deployment to github pages is taken care of automatically throught another set up. This will be modified later for deployment to AWS
+# name: Deploy to AWS
+#    - name: Deploy to AWS S3
+#      uses: jakejarvis/s3-sync-action@v0.5.7
+#      with:
+#        args: --acl public-read --delete ./dist s3://my-babylonjs-app-bucket/
+#      env:
+#        AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
+#        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
