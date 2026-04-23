@@ -3,10 +3,9 @@ import { Texture } from "@babylonjs/core/Materials/Textures/texture";
 import { Node } from "@babylonjs/core/node";
 import { Control, AdvancedDynamicTexture, Image } from "@babylonjs/gui";
 
-import { instantiateTrees } from './trees';
-import { instantiateBricks } from './bricks';
-import { initializeTankMovement, initializeShooting } from './tank';
-
+import { instantiateTrees } from "./trees";
+import { instantiateBricks } from "./bricks";
+import { initializeTankMovement, initializeShooting } from "./tank";
 
 export default class Play extends Node {
     private scene!: BABYLON.Scene;
@@ -17,12 +16,12 @@ export default class Play extends Node {
     private tank!: BABYLON.AbstractMesh;
     private divFps: HTMLElement | null = null;
 
-    // @ts-ignore ignoring the super call as we don't want to re-init
+    // @ts-ignore Babylon attaches script classes without calling Node's public constructor shape.
     protected constructor() {}
 
     /**
-     * Called on the node is being initialized.
-     * This function is called immediatly after the constructor has been called.
+     * Called when the node is being initialized.
+     * This function is called immediately after the constructor has been called.
      */
     public onInitialize(): void {
         this.initializeGlobalVariables();
@@ -62,7 +61,7 @@ export default class Play extends Node {
     }
 
     /**
-     * Add image telling the player how to control the tank (+ under developement text)
+     * Shows the control hint image for a few seconds.
      */
     public showControl(): void {
         const advancedTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
@@ -78,10 +77,8 @@ export default class Play extends Node {
             advancedTexture.dispose();
         }, 7500);
     }
-
-
     /**
-     * Initialize all global variables that will be used in other functions
+     * Initializes the shared scene objects used across the gameplay helpers.
      */
     public initializeGlobalVariables(): void {
         this.scene = this.getScene();
@@ -112,7 +109,7 @@ export default class Play extends Node {
     }
 
     /**
-     * We have to initialize textures manually inside code, otherwise they dont show up in production for some reason
+     * Initializes textures manually to keep them loading reliably in production builds.
      */
     public initializeTextures(): void {
         const fruitFactoryScreen = this.scene.getMeshByName("monitor");

@@ -24,8 +24,8 @@ export type ScriptMap = {
 };
 export interface IScript {
     /**
-     * Called on the node is being initialized.
-     * This function is called immediatly after the constructor has been called.
+     * Called when the node is being initialized.
+     * This function is called immediately after the constructor has been called.
      */
     onInitialize?(): void;
     /**
@@ -53,7 +53,7 @@ export interface IScript {
      */
     onMessage?(name: string, data: any, sender: any): void;
     /**
-     * In case the component is decorated @guiComponent this function iscalled once the GUI data
+     * In case the component is decorated @guiComponent this function is called once the GUI data
      * has been loaded and ready to be parsed. Returns the reference to the GUI advanced dynamic texture.
      * @param parsedData defines the reference to the GUI data to be parsed coming from the server.
      */
@@ -91,7 +91,7 @@ export declare function applyMeshColliders(scene: Scene): void;
 export declare function setupRenderingGroups(scene: Scene): void;
 /**
  * Meshes using pose matrices with skeletons can't be parsed directly as the pose matrix is
- * missing from the serialzied data of meshes. These matrices are stored in the meshes metadata
+ * missing from the serialized data of meshes. These matrices are stored in the meshes metadata
  * instead and can be applied by calling this function.
  * @param scene defines the scene containing the meshes to configure their pose matrix.
  */
@@ -102,7 +102,7 @@ export declare function applyMeshesPoseMatrices(scene: Scene): void;
  */
 export declare function attachTransformNodesToBones(scene: Scene): void;
 /**
- * Attaches the a script at runtime to the given node according to the given script's path.
+ * Attaches a script at runtime to the given node according to the given script's path.
  * @param scriptPath defines the path to the script to attach (available as a key in the exported "scriptsMap" map).
  * @param object defines the reference to the object (node or scene) to attach the script to.
  */

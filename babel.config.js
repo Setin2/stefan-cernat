@@ -1,12 +1,9 @@
 module.exports = {
   presets: [
-    ['@babel/preset-env', { targets: { node: 'current' } }], // Transpile ES6+ to ES5
-    '@babel/preset-typescript' // Support TypeScript
+    ['@babel/preset-env', { targets: { node: 'current' } }],
+    '@babel/preset-typescript'
   ],
   plugins: [
-    '@babel/plugin-transform-modules-commonjs' // Convert ES modules to CommonJS
-  ],
-  ignore: [
-    // Avoid ignoring files in node_modules; we will handle this in Jest config
+    '@babel/plugin-transform-modules-commonjs'
   ]
 };

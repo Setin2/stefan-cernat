@@ -41,8 +41,8 @@ export type ScriptMap = {
 
 export interface IScript {
     /**
-     * Called on the node is being initialized.
-     * This function is called immediatly after the constructor has been called.
+     * Called when the node is being initialized.
+     * This function is called immediately after the constructor has been called.
      */
     onInitialize?(): void;
     /**
@@ -72,7 +72,7 @@ export interface IScript {
     onMessage?(name: string, data: any, sender: any): void;
 
     /**
-     * In case the component is decorated @guiComponent this function iscalled once the GUI data
+     * In case the component is decorated @guiComponent this function is called once the GUI data
      * has been loaded and ready to be parsed. Returns the reference to the GUI advanced dynamic texture.
      * @param parsedData defines the reference to the GUI data to be parsed coming from the server.
      */
@@ -96,10 +96,10 @@ export async function appendScene(toScene: Scene, rootUrl: string, sceneFilename
 }
 
 /**
- * Returns wether or not the given constructor is an ES6 (or more) class.
+ * Returns whether or not the given constructor is an ES6 (or more) class.
  * @param ctor defines the reference to the constructor to test.
- * @param scene defines the reference the scene in case the tested script is a graph.
- * @returns wether or not the given constructor is 
+ * @param scene defines the reference to the scene in case the tested script is a graph.
+ * @returns whether or not the given constructor is a class.
  */
 function isEs6Class(ctor: any, scene: Scene): boolean {
     try {
@@ -172,7 +172,7 @@ async function loadGuiComponent(path: string, node: (Scene | Node | AbstractMesh
 }
 
 /**
- * Requires the nedded scripts for the given nodes array and attach them.
+ * Requires the needed scripts for the given nodes array and attaches them.
  * @param scene defines the reference to the scene that contains the given nodes.
  * @param scriptsMap defines the map that contains the scripts constructors ordered by script path.
  * @param nodes the array of nodes to attach script (if exists).
@@ -506,7 +506,7 @@ export function setupRenderingGroups(scene: Scene): void {
 
 /**
  * Meshes using pose matrices with skeletons can't be parsed directly as the pose matrix is
- * missing from the serialzied data of meshes. These matrices are stored in the meshes metadata
+ * missing from the serialized data of meshes. These matrices are stored in the meshes metadata
  * instead and can be applied by calling this function.
  * @param scene defines the scene containing the meshes to configure their pose matrix.
  */
@@ -544,7 +544,7 @@ export function attachTransformNodesToBones(scene: Scene): void {
 }
 
 /**
- * Attaches the a script at runtime to the given node according to the given script's path.
+ * Attaches a script at runtime to the given node according to the given script's path.
  * @param scriptPath defines the path to the script to attach (available as a key in the exported "scriptsMap" map).
  * @param object defines the reference to the object (node or scene) to attach the script to.
  */

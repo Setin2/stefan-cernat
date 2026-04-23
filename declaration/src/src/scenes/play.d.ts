@@ -9,8 +9,8 @@ export default class Play extends Node {
     private divFps;
     protected constructor();
     /**
-     * Called on the node is being initialized.
-     * This function is called immediatly after the constructor has been called.
+     * Called when the node is being initialized.
+     * This function is called immediately after the constructor has been called.
      */
     onInitialize(): void;
     /**
@@ -22,15 +22,15 @@ export default class Play extends Node {
      */
     play(): void;
     /**
-     * Add image telling the player how to control the tank (+ under developement text)
+     * Shows the control hint image for a few seconds.
      */
     showControl(): void;
     /**
-     * Initialize all global variables that will be used in other functions
+     * Initializes the shared scene objects used across the gameplay helpers.
      */
     initializeGlobalVariables(): void;
     /**
-     * We have to initialize textures manually inside code, otherwise they dont show up in production for some reason
+     * Initializes textures manually to keep them loading reliably in production builds.
      */
     initializeTextures(): void;
     optimizeScene(): void;
