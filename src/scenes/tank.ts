@@ -31,6 +31,7 @@ export function initializeTankMovement(_this: TankContext, rotationSpeed: number
     const angularVelocity = BABYLON.Vector3.Zero();
     const nextVelocity = BABYLON.Vector3.Zero();
     const cameraTargetPosition = BABYLON.Vector3.Zero();
+    const cameraFocusPoint = BABYLON.Vector3.Zero();
     const nextPosition = BABYLON.Vector3.Zero();
     const uprightRotation = BABYLON.Quaternion.Identity();
     const previousTankPosition = _this.tank.position.clone();
@@ -38,9 +39,9 @@ export function initializeTankMovement(_this: TankContext, rotationSpeed: number
     const cameraOffset = _this.camera.position.subtract(_this.tank.position);
     const baseTankY = _this.tank.position.y;
     const treeTrunks = _this.scene.meshes.filter((mesh) => mesh.name.startsWith("tree-trunk"));
-    const maxForwardSpeed = 34;
-    const maxReverseSpeed = 18;
-    const acceleration = 42;
+    const maxForwardSpeed = 38;
+    const maxReverseSpeed = 20;
+    const acceleration = 48;
     const deceleration = 44;
     const maxTurnSpeed = rotationSpeed * 60;
     const turnAcceleration = 12;
@@ -51,8 +52,11 @@ export function initializeTankMovement(_this: TankContext, rotationSpeed: number
     let currentMoveSpeed = 0;
     let didTranslateThisFrame = false;
 
-    cameraTargetPosition.copyFrom(_this.camera.position);
     _this.camera.lockedTarget = null;
+    _this.tank.computeWorldMatrix(true);
+    cameraFocusPoint.copyFrom(_this.tank.getBoundingInfo().boundingBox.centerWorld);
+    _this.camera.setTarget(cameraFocusPoint);
+    cameraTargetPosition.copyFrom(_this.camera.position);
 
     _this.camera.inputs.removeByType("FreeCameraKeyboardMoveInput");
 
