@@ -24,7 +24,8 @@ export function instantiateBricks(
     const brickDepth = 3 * brickScaleFactor;
     const brickHeight = brickLength * 0.5 * brickScaleFactor;
     const initialX = x;
-    const initialY = y * brickHeight;
+    const groundY = getGroundHeight(x, y, z);
+    const initialY = groundY + brickHeight / 2;
 
     // Create the initial brick
     const brick = createBrick(_this, brickLength, brickHeight, brickDepth);
@@ -110,5 +111,13 @@ export function instantiateBricks(
         if (physicsBody) {
             physicsBody.linearDamping = 0.95;
         }
+    }
+
+    function getGroundHeight(x: number, fallbackY: number, z: number): number {
+        const rayOrigin = new BABYLON.Vector3(x, fallbackY + 200, z);
+        const ray = new BABYLON.Ray(rayOrigin, BABYLON.Vector3.Down(), 400);
+        const hit = _this.scene.pickWithRay(ray, (mesh) => mesh.isEnabled() && mesh.isVisible);
+
+        return hit?.pickedPoint?.y ?? fallbackY;
     }
 }
