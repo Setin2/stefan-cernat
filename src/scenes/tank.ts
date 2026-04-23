@@ -244,6 +244,7 @@ export async function initializeShooting(_this: TankContext, forward: BABYLON.Ve
     const shotOffset = 5;
     const shotHeightOffset = 3;
     const shotRadius = 0.75;
+    const shotLifetimeMs = 2000;
     const targetHintRangeSquared = 42 * 42;
     const shotDirection = BABYLON.Vector3.Zero();
     const shotSpawnPosition = BABYLON.Vector3.Zero();
@@ -414,7 +415,7 @@ export async function initializeShooting(_this: TankContext, forward: BABYLON.Ve
             if (shotIndex !== -1) {
                 activeShots.splice(shotIndex, 1);
             }
-        }, 2000);
+        }, shotLifetimeMs);
 
         activeShots.push({ mesh: shotBall, dispose: disposeShot, disposeTimeout });
     };

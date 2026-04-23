@@ -215,6 +215,7 @@ export default class Play extends Node {
      */
     public initializeGlobalVariables(): void {
         this.scene = this.getScene();
+
         const camera = this.scene.getCameraByName("free_camera");
         if (!(camera instanceof BABYLON.FreeCamera)) {
             throw new Error("Missing required free_camera in the scene.");
