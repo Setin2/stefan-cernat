@@ -202,8 +202,8 @@ export default class Play extends Node {
 
         const physicsBody = this.tank.physicsImpostor.physicsBody;
         if (physicsBody) {
-            physicsBody.linearDamping = 0.999;
-            physicsBody.angularDamping = 1;
+            physicsBody.linearDamping = 0.6;
+            physicsBody.angularDamping = 0.98;
         }
     }
 

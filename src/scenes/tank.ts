@@ -27,13 +27,34 @@ type ActiveShot = {
 export function initializeTankMovement(_this: TankContext, rotationSpeed: number): void {
     const inputMap: Record<string, boolean> = {};
     const engine = _this.scene.getEngine();
-    const forwardDirection = new BABYLON.Vector3(0, 0, 1);
-    const backwardDirection = new BABYLON.Vector3(0, 0, -1);
-    const rotationMatrix = new BABYLON.Matrix();
-    const fallbackRotationQuaternion = BABYLON.Quaternion.Identity();
-    const transformedForce = BABYLON.Vector3.Zero();
+    const forwardDirection = BABYLON.Vector3.Zero();
+    const angularVelocity = BABYLON.Vector3.Zero();
     const nextVelocity = BABYLON.Vector3.Zero();
+    const cameraTargetPosition = BABYLON.Vector3.Zero();
+    const nextPosition = BABYLON.Vector3.Zero();
+    const uprightRotation = BABYLON.Quaternion.Identity();
+    const previousTankPosition = _this.tank.position.clone();
+    const translationDelta = BABYLON.Vector3.Zero();
+    const cameraOffset = _this.camera.position.subtract(_this.tank.position);
+    const baseTankY = _this.tank.position.y;
+    const treeTrunks = _this.scene.meshes.filter((mesh) => mesh.name.startsWith("tree-trunk"));
+    const maxForwardSpeed = 34;
+    const maxReverseSpeed = 18;
+    const acceleration = 42;
+    const deceleration = 44;
+    const maxTurnSpeed = rotationSpeed * 60;
+    const turnAcceleration = 12;
+    const cameraFollowSharpness = 6;
+    const tankCollisionRadius = getHorizontalRadius(_this.tank) * 0.55;
     let lastFpsUpdateTime = 0;
+    let currentTurnSpeed = 0;
+    let currentMoveSpeed = 0;
+    let didTranslateThisFrame = false;
+
+    cameraTargetPosition.copyFrom(_this.camera.position);
+    _this.camera.lockedTarget = null;
+
+    _this.camera.inputs.removeByType("FreeCameraKeyboardMoveInput");
 
     // Handle key down and key up events to update inputMap
     const handleKeyEvent = (evt: BABYLON.ActionEvent) => {
@@ -67,26 +88,38 @@ export function initializeTankMovement(_this: TankContext, rotationSpeed: number
         }
     };
 
-    const applyMovement = (mesh: BABYLON.AbstractMesh, direction: BABYLON.Vector3, power: number) => {
+    const applyMovement = (mesh: BABYLON.AbstractMesh, moveInput: number, deltaSeconds: number): number => {
         const physicsImpostor = mesh.physicsImpostor;
-        const currentVelocity = physicsImpostor?.getLinearVelocity();
-        if (!physicsImpostor || !currentVelocity) {
-            return;
+        if (!physicsImpostor) {
+            return 0;
         }
 
-        const rotationQuaternion = mesh.rotationQuaternion;
-        if (rotationQuaternion) {
-            rotationQuaternion.toRotationMatrix(rotationMatrix);
+        didTranslateThisFrame = false;
+
+        const desiredSpeed = moveInput > 0 ? maxForwardSpeed : moveInput < 0 ? -maxReverseSpeed : 0;
+        const speedDelta = (moveInput === 0 ? deceleration : acceleration) * deltaSeconds;
+        currentMoveSpeed = moveToward(currentMoveSpeed, desiredSpeed, speedDelta);
+
+        const yaw = getYaw(mesh);
+        forwardDirection.set(Math.sin(yaw), 0, Math.cos(yaw));
+        forwardDirection.normalize();
+
+        nextPosition.copyFrom(mesh.position);
+        nextPosition.y = baseTankY;
+        nextPosition.addInPlace(forwardDirection.scale(currentMoveSpeed * deltaSeconds));
+
+        if (collidesWithTree(nextPosition)) {
+            currentMoveSpeed = 0;
         } else {
-            BABYLON.Quaternion.RotationYawPitchRollToRef(mesh.rotation.y, mesh.rotation.x, mesh.rotation.z, fallbackRotationQuaternion);
-            fallbackRotationQuaternion.toRotationMatrix(rotationMatrix);
+            mesh.position.x = nextPosition.x;
+            mesh.position.z = nextPosition.z;
+            didTranslateThisFrame = Math.abs(currentMoveSpeed) > 0;
         }
 
-        BABYLON.Vector3.TransformNormalToRef(direction, rotationMatrix, transformedForce);
-        transformedForce.scaleInPlace(power);
-        currentVelocity.addToRef(transformedForce, nextVelocity);
-
+        nextVelocity.set(0, 0, 0);
         physicsImpostor.setLinearVelocity(nextVelocity);
+
+        return currentMoveSpeed;
     };
 
     _this.scene.registerBeforeRender(() => {
@@ -98,27 +131,84 @@ export function initializeTankMovement(_this: TankContext, rotationSpeed: number
             }
         }
 
-        const deltaTimeFactor = 22.5 * _this.scene.deltaTime / 40;
+        const deltaSeconds = engine.getDeltaTime() / 1000;
+        const moveInput = (inputMap["w"] ? 1 : 0) - (inputMap["s"] ? 1 : 0);
+        const turnInput = (inputMap["d"] ? 1 : 0) - (inputMap["a"] ? 1 : 0);
+        const currentForwardSpeed = applyMovement(_this.tank, moveInput, deltaSeconds);
 
-        if (inputMap["w"]) { // move forward
-            applyMovement(_this.tank, forwardDirection, deltaTimeFactor);
+        if (moveInput !== 0 && Math.abs(currentForwardSpeed) > 0.5) {
             updateSplatter();
         }
-        if (inputMap["s"]) { // move backwards
-            applyMovement(_this.tank, backwardDirection, deltaTimeFactor);
-            updateSplatter();
+
+        const desiredTurnSpeed = turnInput * maxTurnSpeed;
+        currentTurnSpeed = moveToward(currentTurnSpeed, desiredTurnSpeed, turnAcceleration * deltaSeconds);
+        if (_this.tank.physicsImpostor) {
+            angularVelocity.set(0, 0, 0);
+            _this.tank.physicsImpostor.setAngularVelocity(angularVelocity);
+        }
+        if (currentTurnSpeed !== 0) {
+            _this.tank.rotate(BABYLON.Axis.Y, currentTurnSpeed * deltaSeconds, BABYLON.Space.WORLD);
         }
 
-        if (inputMap["d"]) { // rotate right
-            _this.tank.rotate(BABYLON.Axis.Y, rotationSpeed, BABYLON.Space.WORLD);
-        }
-        if (inputMap["a"]) { // rotate left
-            _this.tank.rotate(BABYLON.Axis.Y, -rotationSpeed, BABYLON.Space.WORLD);
+        _this.tank.position.y = baseTankY;
+
+        const rotationQuaternion = _this.tank.rotationQuaternion;
+        if (rotationQuaternion) {
+            BABYLON.Quaternion.RotationYawPitchRollToRef(getYaw(_this.tank), 0, 0, uprightRotation);
+            rotationQuaternion.copyFrom(uprightRotation);
+        } else {
+            _this.tank.rotation.x = 0;
+            _this.tank.rotation.z = 0;
         }
 
-        _this.camera.position.x = _this.tank.position.x - 80;
-        _this.camera.position.z = _this.tank.position.z + 60;
+        if (didTranslateThisFrame) {
+            _this.tank.position.subtractToRef(previousTankPosition, translationDelta);
+            translationDelta.y = 0;
+            cameraTargetPosition.addInPlace(translationDelta);
+        }
+
+        BABYLON.Vector3.LerpToRef(
+            _this.camera.position,
+            cameraTargetPosition,
+            Math.min(1, cameraFollowSharpness * deltaSeconds),
+            _this.camera.position,
+        );
+
+        previousTankPosition.copyFrom(_this.tank.position);
     });
+
+    function moveToward(current: number, target: number, maxDelta: number): number {
+        if (Math.abs(target - current) <= maxDelta) {
+            return target;
+        }
+
+        return current + Math.sign(target - current) * maxDelta;
+    }
+
+    function getYaw(mesh: BABYLON.AbstractMesh): number {
+        return mesh.rotationQuaternion ? mesh.rotationQuaternion.toEulerAngles().y : mesh.rotation.y;
+    }
+
+    function getHorizontalRadius(mesh: BABYLON.AbstractMesh): number {
+        mesh.computeWorldMatrix(true);
+        const extent = mesh.getBoundingInfo().boundingBox.extendSizeWorld;
+        return Math.max(extent.x, extent.z);
+    }
+
+    function collidesWithTree(position: BABYLON.Vector3): boolean {
+        for (const trunk of treeTrunks) {
+            const trunkRadius = getHorizontalRadius(trunk);
+            const dx = position.x - trunk.absolutePosition.x;
+            const dz = position.z - trunk.absolutePosition.z;
+            const minimumDistance = tankCollisionRadius + trunkRadius;
+
+            if ((dx * dx) + (dz * dz) < minimumDistance * minimumDistance) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }
 
 /**

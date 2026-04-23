@@ -128,7 +128,12 @@ function instantiateTree(templates: TreeTemplates, position: BABYLON.Vector3, in
     tree.position.copyFrom(position);
 
     const leaves = index === 0 ? templates.leaves : templates.leaves.createInstance(`tree-leaves-${index}`);
-    const trunk = index === 0 ? templates.trunk : templates.trunk.createInstance(`tree-trunk-${index}`);
+    const trunk = index === 0 ? templates.trunk : templates.trunk.clone(`tree-trunk-${index}`);
+
+    if (!trunk) {
+        console.error(`Failed to create trunk mesh for tree ${index}`);
+        return;
+    }
 
     leaves.parent = tree;
     trunk.parent = tree;
