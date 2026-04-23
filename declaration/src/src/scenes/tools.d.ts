@@ -4,16 +4,16 @@
 import { Node } from "@babylonjs/core/node";
 import { Scene } from "@babylonjs/core/scene";
 import { Nullable } from "@babylonjs/core/types";
-import { Engine } from "@babylonjs/core/Engines/engine";
-import { MotionBlurPostProcess } from "@babylonjs/core/PostProcesses/motionBlurPostProcess";
-import { ScreenSpaceReflectionPostProcess } from "@babylonjs/core/PostProcesses/screenSpaceReflectionPostProcess";
-import { SSAO2RenderingPipeline } from "@babylonjs/core/PostProcesses/RenderPipeline/Pipelines/ssao2RenderingPipeline";
-import { DefaultRenderingPipeline } from "@babylonjs/core/PostProcesses/RenderPipeline/Pipelines/defaultRenderingPipeline";
-import { AdvancedDynamicTexture } from "@babylonjs/gui/2D/advancedDynamicTexture";
+import type { AdvancedDynamicTexture } from "@babylonjs/gui/2D/advancedDynamicTexture";
+import type { MotionBlurPostProcess } from "@babylonjs/core/PostProcesses/motionBlurPostProcess";
+import type { ScreenSpaceReflectionPostProcess } from "@babylonjs/core/PostProcesses/screenSpaceReflectionPostProcess";
+import type { SSAO2RenderingPipeline } from "@babylonjs/core/PostProcesses/RenderPipeline/Pipelines/ssao2RenderingPipeline";
+import type { DefaultRenderingPipeline } from "@babylonjs/core/PostProcesses/RenderPipeline/Pipelines/defaultRenderingPipeline";
 import "@babylonjs/core/Audio/audioSceneComponent";
 import "@babylonjs/core/Physics/physicsEngineComponent";
 import "@babylonjs/core/Engines/Extensions/engine.textureSelector";
 import "@babylonjs/core/Materials/Textures/Loaders/ktxTextureLoader";
+export { configureEngine, projectConfiguration } from "../engine-config";
 import { ISceneScriptMap } from "./scripts-map";
 export type NodeScriptConstructor = (new (...args: any[]) => Node);
 export type GraphScriptConstructor = (new (scene: Scene) => any);
@@ -59,16 +59,6 @@ export interface IScript {
      */
     onGuiInitialized?(parsedData: any): AdvancedDynamicTexture;
 }
-export declare const projectConfiguration: {
-    compressedTextures: {
-        supportedFormats: any[];
-    };
-};
-/**
- * Configures the given engine according to the current project configuration (compressed textures, etc.).
- * @param engine defines the reference to the engine to configure.
- */
-export declare function configureEngine(engine: Engine): void;
 /**
  * Loads the given scene file and appends it to the given scene reference (`toScene`).
  * @param toScene defines the instance of `Scene` to append to.
@@ -138,4 +128,4 @@ export declare let motionBlurPostProcessRef: Nullable<MotionBlurPostProcess>;
  * @param scene the scene where to create the post-processes and attach to its cameras.
  * @param rootUrl the root Url where to find extra assets used by pipelines. Should be the same as the scene.
  */
-export declare function configurePostProcesses(scene: Scene, rootUrl?: Nullable<string>): void;
+export declare function configurePostProcesses(scene: Scene, rootUrl?: Nullable<string>): Promise<void>;

@@ -1,12 +1,12 @@
 module.exports = {
   transform: {
-    '^.+\\.(ts|tsx|js|jsx|mjs)$': 'babel-jest', // Use babel-jest for transforming files
+    '^.+\\.(ts|tsx|js|jsx|mjs)$': 'babel-jest',
   },
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
   testMatch: ['**/tests/**/*.test.(ts|js)'],
+  testPathIgnorePatterns: ['/node_modules/', '/build/', '/declaration/', '/dist/'],
   transformIgnorePatterns: [
-    '/node_modules/(?!(babylonjs|@babylonjs)/)' // Ensure Babylon.js files are transformed
+    '/node_modules/(?!(babylonjs|@babylonjs)/)'
   ],
-  //testEnvironment: 'node', // Use node environment
-  testEnvironment: 'jest-environment-jsdom', // Specify the jsdom environment
+  testEnvironment: 'jest-environment-jsdom',
 };

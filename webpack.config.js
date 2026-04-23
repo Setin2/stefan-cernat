@@ -4,22 +4,30 @@ const editor = require("babylonjs-editor-webpack-progress");
 
 module.exports = (_, argv) => {
 	const entryPath = path.join(__dirname, "src/index.ts");
-	const package = require("./package.json");
+	const pkg = require("./package.json");
 
 	return {
 		// we output both a minified version & a non minified version on production build
 		entry: { "bundle": entryPath },
 		output: {
 			filename: `bundle.js`,
+			chunkFilename: `[name].[contenthash].js`,
 			path: path.join(__dirname, "dist"),
 			library: "game",
 			libraryTarget: "umd",
+			publicPath: "auto",
 		},
 		module: {
 			rules: [
 				{
 					test: /\.ts?$/,
 					loader: "ts-loader",
+					options: {
+						compilerOptions: {
+							module: "esnext",
+							moduleResolution: "node",
+						},
+					},
 					exclude: [
 						path.join(__dirname, "node_modules"),
 						path.join(__dirname, "dist"),
@@ -38,7 +46,7 @@ module.exports = (_, argv) => {
 		},
 		plugins: [
 			new webpack.BannerPlugin({
-				banner: `${package.name} ${package.version} ${new Date().toString()}`,
+				banner: `${pkg.name} ${pkg.version} ${new Date().toString()}`,
 			}),
 			new webpack.WatchIgnorePlugin({
 				paths: [/\.js$/, /\.d\.ts$/],
@@ -46,9 +54,9 @@ module.exports = (_, argv) => {
 			editor.createProgressPlugin(new webpack.ProgressPlugin()),
 		],
 		optimization: {
-			minimize: false,
+			minimize: argv.mode === "production",
 			usedExports: true,
 		},
-		devtool: "source-map",
+		devtool: argv.mode === "production" ? false : "source-map",
 	};
 };

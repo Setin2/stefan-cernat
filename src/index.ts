@@ -1,9 +1,6 @@
 import { BabylonFileLoaderConfiguration, Engine, Scene } from "@babylonjs/core";
-import "@babylonjs/materials";
 
-import * as CANNON from "cannon";
-
-import { appendScene } from "./scenes/tools";
+import { configureEngine } from "./engine-config";
 
 export class Game {
     /**
@@ -19,11 +16,17 @@ export class Game {
      * Constructor.
      */
     public constructor() {
-        this.engine = new Engine(document.getElementById("renderCanvas") as HTMLCanvasElement, true);
+        const canvas = document.getElementById("renderCanvas");
+        if (!(canvas instanceof HTMLCanvasElement)) {
+            throw new Error("Missing #renderCanvas element.");
+        }
+
+        this.engine = new Engine(canvas, true);
+        configureEngine(this.engine);
         this.scene = new Scene(this.engine);
 
         this._bindEvents();
-        this._loadScene();
+        void this._loadScene();
     }
 
     /**
@@ -31,6 +34,12 @@ export class Game {
      */
     private async _loadScene(): Promise<void> {
         const rootUrl = "./scenes/_assets/";
+
+        const [_, CANNON, { appendScene }] = await Promise.all([
+            import("@babylonjs/materials"),
+            import("cannon"),
+            import("./scenes/tools"),
+        ]);
 
         BabylonFileLoaderConfiguration.LoaderInjectedPhysicsEngine = CANNON;
 

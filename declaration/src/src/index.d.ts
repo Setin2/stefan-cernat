@@ -1,5 +1,4 @@
 import { Engine, Scene } from "@babylonjs/core";
-import "@babylonjs/materials";
 export declare class Game {
     /**
      * Defines the engine used to draw the game using Babylon.JS and WebGL.

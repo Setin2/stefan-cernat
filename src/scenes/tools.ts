@@ -12,27 +12,23 @@ import { Color3, Color4 } from "@babylonjs/core/Maths/math.color";
 import { EngineStore } from "@babylonjs/core/Engines/engineStore";
 import { SceneLoader } from "@babylonjs/core/Loading/sceneLoader";
 import { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
-import { ColorCurves } from "@babylonjs/core/Materials/colorCurves";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { Texture } from "@babylonjs/core/Materials/Textures/texture";
 import { InstancedMesh } from "@babylonjs/core/Meshes/instancedMesh";
 import { SerializationHelper } from "@babylonjs/core/Misc/decorators";
-import { ColorGradingTexture } from "@babylonjs/core/Materials/Textures/colorGradingTexture";
 import { Vector2, Vector3, Vector4, Matrix, Quaternion } from "@babylonjs/core/Maths/math.vector";
-
-import { MotionBlurPostProcess } from "@babylonjs/core/PostProcesses/motionBlurPostProcess";
-import { ScreenSpaceReflectionPostProcess } from "@babylonjs/core/PostProcesses/screenSpaceReflectionPostProcess";
-import { SSAO2RenderingPipeline } from "@babylonjs/core/PostProcesses/RenderPipeline/Pipelines/ssao2RenderingPipeline";
-import { DefaultRenderingPipeline } from "@babylonjs/core/PostProcesses/RenderPipeline/Pipelines/defaultRenderingPipeline";
-
-import { Image } from "@babylonjs/gui/2D/controls/image";
-import { AdvancedDynamicTexture } from "@babylonjs/gui/2D/advancedDynamicTexture";
+import type { AdvancedDynamicTexture } from "@babylonjs/gui/2D/advancedDynamicTexture";
+import type { MotionBlurPostProcess } from "@babylonjs/core/PostProcesses/motionBlurPostProcess";
+import type { ScreenSpaceReflectionPostProcess } from "@babylonjs/core/PostProcesses/screenSpaceReflectionPostProcess";
+import type { SSAO2RenderingPipeline } from "@babylonjs/core/PostProcesses/RenderPipeline/Pipelines/ssao2RenderingPipeline";
+import type { DefaultRenderingPipeline } from "@babylonjs/core/PostProcesses/RenderPipeline/Pipelines/defaultRenderingPipeline";
 
 import "@babylonjs/core/Audio/audioSceneComponent";
 import "@babylonjs/core/Physics/physicsEngineComponent";
 import "@babylonjs/core/Engines/Extensions/engine.textureSelector";
 import "@babylonjs/core/Materials/Textures/Loaders/ktxTextureLoader";
 
+export { configureEngine, projectConfiguration } from "../engine-config";
 import { ISceneScriptMap } from "./scripts-map";
 
 export type NodeScriptConstructor = (new (...args: any[]) => Node);
@@ -83,22 +79,6 @@ export interface IScript {
     onGuiInitialized?(parsedData: any): AdvancedDynamicTexture;
 }
 
-export const projectConfiguration = {
-	"compressedTextures": {
-		"supportedFormats": []
-	}
-};
-
-/**
- * Configures the given engine according to the current project configuration (compressed textures, etc.).
- * @param engine defines the reference to the engine to configure.
- */
-export function configureEngine(engine: Engine): void {
-    if (projectConfiguration.compressedTextures.supportedFormats.length) {
-        engine.setTextureFormatToUse(projectConfiguration.compressedTextures.supportedFormats);
-    }
-}
-
 /**
  * Loads the given scene file and appends it to the given scene reference (`toScene`).
  * @param toScene defines the instance of `Scene` to append to.
@@ -108,10 +88,9 @@ export function configureEngine(engine: Engine): void {
 export async function appendScene(toScene: Scene, rootUrl: string, sceneFilename: string): Promise<void> {
     await SceneLoader.AppendAsync(rootUrl, sceneFilename, toScene, null, ".babylon");
 
-    return new Promise<void>((resolve) => {
+    return new Promise<void>((resolve, reject) => {
         toScene.executeWhenReady(() => {
-            runScene(toScene, rootUrl);
-            resolve();
+            void runScene(toScene, rootUrl).then(resolve).catch(reject);
         });
     });
 }
@@ -179,7 +158,7 @@ async function loadGuiComponent(path: string, node: (Scene | Node | AbstractMesh
     }
 
     // Replace Urls for images to fit relative path
-    const images = ui.getControlsByType("Image") as Image[];
+    const images = ui.getControlsByType("Image") as Array<{ source?: string }>;
     const basePath = Tools.GetFolderPath(path);
 
     images.forEach((i) => {
@@ -465,7 +444,7 @@ export async function runScene(scene: Scene, rootUrl?: string): Promise<void> {
     attachScripts(scriptsMap, scene);
 
     // Configure post-processes
-    configurePostProcesses(scene, rootUrl);
+    await configurePostProcesses(scene, rootUrl);
 
     // Rendering groups
     setupRenderingGroups(scene);
@@ -603,13 +582,25 @@ export let motionBlurPostProcessRef: Nullable<MotionBlurPostProcess> = null;
  * @param scene the scene where to create the post-processes and attach to its cameras.
  * @param rootUrl the root Url where to find extra assets used by pipelines. Should be the same as the scene.
  */
-export function configurePostProcesses(scene: Scene, rootUrl: Nullable<string> = null): void {
+export async function configurePostProcesses(scene: Scene, rootUrl: Nullable<string> = null): Promise<void> {
     if (rootUrl === null || !scene.metadata?.postProcesses) { return; }
 
     // Load  post-processes configuration
     const data = scene.metadata.postProcesses;
 
+    const [ssaoModule, ssrModule, defaultPipelineModule, colorCurvesModule, colorGradingModule, motionBlurModule] = await Promise.all([
+        data.ssao && !ssao2RenderingPipelineRef ? import("@babylonjs/core/PostProcesses/RenderPipeline/Pipelines/ssao2RenderingPipeline") : Promise.resolve(null),
+        data.screenSpaceReflections?.json && !screenSpaceReflectionPostProcessRef ? import("@babylonjs/core/PostProcesses/screenSpaceReflectionPostProcess") : Promise.resolve(null),
+        data.default && !defaultRenderingPipelineRef ? import("@babylonjs/core/PostProcesses/RenderPipeline/Pipelines/defaultRenderingPipeline") : Promise.resolve(null),
+        data.default?.json?.imageProcessing?.colorCurves ? import("@babylonjs/core/Materials/colorCurves") : Promise.resolve(null),
+        data.default?.json?.imageProcessing?.colorGradingTexture ? import("@babylonjs/core/Materials/Textures/colorGradingTexture") : Promise.resolve(null),
+        data.motionBlur?.json ? import("@babylonjs/core/PostProcesses/motionBlurPostProcess") : Promise.resolve(null),
+    ]);
+
     if (data.ssao && !ssao2RenderingPipelineRef) {
+        const SSAO2RenderingPipeline = ssaoModule?.SSAO2RenderingPipeline;
+        if (!SSAO2RenderingPipeline) { return; }
+
         ssao2RenderingPipelineRef = SSAO2RenderingPipeline.Parse(data.ssao.json, scene, rootUrl);
         if (data.ssao.enabled) {
             scene.postProcessRenderPipelineManager.attachCamerasToRenderPipeline(ssao2RenderingPipelineRef.name, scene.cameras);
@@ -617,7 +608,9 @@ export function configurePostProcesses(scene: Scene, rootUrl: Nullable<string> =
     }
 
     if (data.screenSpaceReflections?.json && !screenSpaceReflectionPostProcessRef) {
-        // screenSpaceReflectionPostProcessRef = ScreenSpaceReflectionPostProcess._Parse(data.screenSpaceReflections.json, scene.activeCamera!, scene, "");
+        const ScreenSpaceReflectionPostProcess = ssrModule?.ScreenSpaceReflectionPostProcess;
+        if (!ScreenSpaceReflectionPostProcess) { return; }
+
         screenSpaceReflectionPostProcessRef = new ScreenSpaceReflectionPostProcess("ssr", scene, 1.0, scene.activeCamera!);
         screenSpaceReflectionPostProcessRef.step = data.screenSpaceReflections.json.step;
         screenSpaceReflectionPostProcessRef.strength = data.screenSpaceReflections.json.strength;
@@ -629,6 +622,9 @@ export function configurePostProcesses(scene: Scene, rootUrl: Nullable<string> =
     }
 
     if (data.default && !defaultRenderingPipelineRef) {
+        const DefaultRenderingPipeline = defaultPipelineModule?.DefaultRenderingPipeline;
+        if (!DefaultRenderingPipeline) { return; }
+
         defaultRenderingPipelineRef = new DefaultRenderingPipeline(data.default.json.name, true, scene);
 
         defaultRenderingPipelineRef.fxaaEnabled = data.default.json.fxaa.enabled;
@@ -646,10 +642,16 @@ export function configurePostProcesses(scene: Scene, rootUrl: Nullable<string> =
         defaultRenderingPipelineRef.imageProcessing.colorGradingEnabled = data.default.json.imageProcessing.colorGradingEnabled ?? defaultRenderingPipelineRef.imageProcessing.colorGradingEnabled;
 
         if (data.default.json.imageProcessing.colorCurves) {
+            const ColorCurves = colorCurvesModule?.ColorCurves;
+            if (!ColorCurves) { return; }
+
             defaultRenderingPipelineRef.imageProcessing.colorCurves = ColorCurves.Parse(data.default.json.imageProcessing.colorCurves);
         }
 
         if (data.default.json.imageProcessing.colorGradingTexture) {
+            const ColorGradingTexture = colorGradingModule?.ColorGradingTexture;
+            if (!ColorGradingTexture) { return; }
+
             data.default.json.imageProcessing.colorGradingTexture.name = rootUrl + data.default.json.imageProcessing.colorGradingTexture.name;
             defaultRenderingPipelineRef.imageProcessing.colorGradingTexture = ColorGradingTexture.Parse(data.default.json.imageProcessing.colorGradingTexture, scene);
         }
@@ -704,7 +706,9 @@ export function configurePostProcesses(scene: Scene, rootUrl: Nullable<string> =
     }
 
     if (data.motionBlur?.json) {
-        // motionBlurPostProcessRef = MotionBlurPostProcess._Parse(data.motionBlur.json, scene.activeCamera!, scene, "");
+        const MotionBlurPostProcess = motionBlurModule?.MotionBlurPostProcess;
+        if (!MotionBlurPostProcess) { return; }
+
         motionBlurPostProcessRef = new MotionBlurPostProcess(data.motionBlur.json.name, scene, 1.0, scene.activeCamera!);
         motionBlurPostProcessRef.isObjectBased = data.motionBlur.json.isObjectBased;
         motionBlurPostProcessRef.motionStrength = data.motionBlur.json.motionStrength;

@@ -2,19 +2,22 @@
 
 import * as BABYLON from "@babylonjs/core";
 
-/**
- * Instantiates clones of the sakura tree to save memory and allow dynamic placement.
- */
-export function instantiateTrees(_this: any) {
-    // Function to get a material by name
-    function getMaterialByName(scene: BABYLON.Scene, name: string): BABYLON.Material | null {
-        for (const material of scene.materials) {
-            if (material.name === name) {
-                return material;
-            }
-        }
-        console.warn(`Material with name ${name} not found.`);
-        return null;
+type TreeContext = {
+    scene: BABYLON.Scene;
+};
+
+type TreeTemplates = {
+    leaves: BABYLON.Mesh;
+    trunk: BABYLON.Mesh;
+};
+
+export function instantiateTrees(_this: TreeContext): void {
+    const trunkMaterial = _this.scene.getMaterialByName("default material");
+    const leafMaterial = _this.scene.getMaterialByName("Feuille.002");
+
+    if (!trunkMaterial || !leafMaterial) {
+        console.warn("Tree materials are missing from the scene.");
+        return;
     }
 
     // Define the coordinates where the trees will be placed
@@ -26,38 +29,26 @@ export function instantiateTrees(_this: any) {
         new BABYLON.Vector3(57.1332, 5.1848, 77.0256),
     ];
 
-    // Create trees and apply physics impostor
-    treeCoordinates.forEach(position => {
-        const tree = QuickTreeGenerator(20, 15, 5, getMaterialByName(_this.scene, "default material"), getMaterialByName(_this.scene, "Feuille.002"), _this.scene);
-        if (tree) {
-            tree.position = position;
-        }
+    const treeTemplates = createTreeTemplates(20, 15, 5, trunkMaterial, leafMaterial, _this.scene);
+    if (!treeTemplates) {
+        return;
+    }
+
+    treeCoordinates.forEach((position, index) => {
+        instantiateTree(treeTemplates, position, index, _this.scene);
     });
 }
 
-function QuickTreeGenerator(
+function createTreeTemplates(
     sizeBranch: number,
     sizeTrunk: number,
     radius: number,
     trunkMaterial: BABYLON.Material,
     leafMaterial: BABYLON.Material,
     scene: BABYLON.Scene
-): BABYLON.Mesh | null {
-    if (!BABYLON.MeshBuilder || !BABYLON.Vector3 || !BABYLON.VertexBuffer || !BABYLON.VertexData) {
-        console.error("Babylon.js or required components are not loaded.");
-        return null;
-    }
+): TreeTemplates | null {
+    const leaves = BABYLON.MeshBuilder.CreateSphere("tree-leaves", { segments: 2, diameter: sizeBranch }, scene);
 
-    const tree = new BABYLON.Mesh("tree", scene);
-
-    const leaves = BABYLON.MeshBuilder.CreateSphere("sphere", { segments: 2, diameter: sizeBranch }, scene);
-
-    if (!leaves) {
-        console.error("Failed to create leaves mesh.");
-        return null;
-    }
-
-    // Explicitly cast positions to number[]
     const positions = leaves.getVerticesData(BABYLON.VertexBuffer.PositionKind) as number[];
     const indices = leaves.getIndices();
     if (!positions || !indices) {
@@ -66,29 +57,22 @@ function QuickTreeGenerator(
     }
 
     const numberOfPoints = positions.length / 3;
-    const map: Array<[BABYLON.Vector3, number]> = [];
-    const v3 = BABYLON.Vector3;
-    const max: BABYLON.Vector3[] = [];
+    const pointMap: Array<{ point: BABYLON.Vector3; indices: number[] }> = [];
 
     for (let i = 0; i < numberOfPoints; i++) {
-        const p = new v3(positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2]);
-
-        if (p.y >= sizeBranch / 2) {
-            max.push(p);
-        }
+        const p = new BABYLON.Vector3(positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2]);
 
         let found = false;
-        for (let index = 0; index < map.length && !found; index++) {
-            const array = map[index];
-            const p0 = array[0];
-            if (p0.equals(p) || (p0.subtract(p)).lengthSquared() < 0.01) {
-                array.push(i * 3);
+        for (let index = 0; index < pointMap.length && !found; index++) {
+            const current = pointMap[index];
+            if (current.point.equals(p) || current.point.subtract(p).lengthSquared() < 0.01) {
+                current.indices.push(i * 3);
                 found = true;
             }
         }
+
         if (!found) {
-            let array: [BABYLON.Vector3, number] = [p, i * 3];
-            map.push(array);
+            pointMap.push({ point: p, indices: [i * 3] });
         }
     }
 
@@ -98,17 +82,14 @@ function QuickTreeGenerator(
         return (random * (max - min)) + min;
     };
 
-    map.forEach(array => {
+    pointMap.forEach(({ indices: indicesArray }) => {
         const min = -sizeBranch / 10;
         const max = sizeBranch / 10;
         const rx = randomNumber(min, max);
         const ry = randomNumber(min, max);
         const rz = randomNumber(min, max);
 
-        // Ensure the first element of `array` is a `Vector3` and subsequent elements are `number`
-        const [_, ...indicesArray] = array;
-        indicesArray.forEach(i => {
-            // Ensure indices are within the bounds of the positions array
+        indicesArray.forEach((i) => {
             if (i + 2 < positions.length) {
                 positions[i] += rx;
                 positions[i + 1] += ry;
@@ -123,34 +104,36 @@ function QuickTreeGenerator(
     leaves.setVerticesData(BABYLON.VertexBuffer.NormalKind, normals);
     leaves.convertToFlatShadedMesh();
     leaves.material = leafMaterial;
-    
-    // Enable collisions on leaves
-    leaves.checkCollisions = true;
+    leaves.isPickable = false;
 
-    const trunk = BABYLON.MeshBuilder.CreateCylinder("trunk", {
+    const trunk = BABYLON.MeshBuilder.CreateCylinder("tree-trunk", {
         height: sizeTrunk,
         diameterTop: Math.max(radius - 2, 1),
         diameterBottom: radius,
         tessellation: 10,
         subdivisions: 2
     }, scene);
-    trunk.physicsImpostor = new BABYLON.PhysicsImpostor(trunk, BABYLON.PhysicsImpostor.BoxImpostor, { mass: 0, restitution: 0 }, scene);
-
-    if (!trunk) {
-        console.error("Failed to create trunk mesh.");
-        return null;
-    }
 
     trunk.material = trunkMaterial;
     trunk.convertToFlatShadedMesh();
-
-    // Enable collisions on trunk
-    trunk.checkCollisions = true;
-
-    leaves.parent = tree;
-    trunk.parent = tree;
+    trunk.isPickable = false;
 
     leaves.position.y = (sizeTrunk + sizeBranch) / 2 - 2;
 
-    return tree;
+    return { leaves, trunk };
+}
+
+function instantiateTree(templates: TreeTemplates, position: BABYLON.Vector3, index: number, scene: BABYLON.Scene): void {
+    const tree = new BABYLON.TransformNode(`tree-${index}`, scene);
+    tree.position.copyFrom(position);
+
+    const leaves = index === 0 ? templates.leaves : templates.leaves.createInstance(`tree-leaves-${index}`);
+    const trunk = index === 0 ? templates.trunk : templates.trunk.createInstance(`tree-trunk-${index}`);
+
+    leaves.parent = tree;
+    trunk.parent = tree;
+    leaves.computeWorldMatrix(true);
+    trunk.computeWorldMatrix(true);
+
+    trunk.physicsImpostor = new BABYLON.PhysicsImpostor(trunk, BABYLON.PhysicsImpostor.BoxImpostor, { mass: 0, restitution: 0 }, scene);
 }

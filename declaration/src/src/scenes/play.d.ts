@@ -24,7 +24,7 @@ export default class Play extends Node {
     /**
      * Add image telling the player how to control the tank (+ under developement text)
      */
-    show_Control(): void;
+    showControl(): void;
     /**
      * Initialize all global variables that will be used in other functions
      */

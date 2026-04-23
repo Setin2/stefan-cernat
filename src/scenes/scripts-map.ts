@@ -1,4 +1,4 @@
-import { ScriptMap } from "./tools";
+import type { ScriptMap } from "./tools";
 
 /**
  * Defines the interface that exposes all exported scripts in this project.

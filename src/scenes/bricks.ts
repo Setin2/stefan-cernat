@@ -1,10 +1,16 @@
 import * as BABYLON from "@babylonjs/core";
 
+type BrickContext = {
+    scene: BABYLON.Scene;
+    tank: BABYLON.AbstractMesh;
+    brickSound: BABYLON.Sound;
+};
+
 /**
  * Set up a wall of bricks in the scene at a specified position.
  */
 export function instantiateBricks(
-    _this: any,
+    _this: BrickContext,
     x: number,
     y: number,
     z: number,
@@ -22,6 +28,8 @@ export function instantiateBricks(
 
     // Create the initial brick
     const brick = createBrick(_this, brickLength, brickHeight, brickDepth);
+    brick.isVisible = false;
+    brick.isPickable = false;
     
     // Define a small buffer to prevent collision
     const buffer = 0; // Adjust this value as needed
@@ -32,7 +40,7 @@ export function instantiateBricks(
     // Create the wall of bricks
     for (let j = 0; j < numRows; j++) {
         // Number of bricks in the current row
-        const numBricksInRow = numColumnsPerRow[j];
+        const numBricksInRow = numColumnsPerRow[j] ?? 0;
         
         // Calculate the total width of the current row
         const totalRowWidth = numBricksInRow * (brickLength + buffer);
@@ -57,7 +65,7 @@ export function instantiateBricks(
      * Create a brick mesh.
      */
     function createBrick(
-        _this: any,
+        _this: BrickContext,
         length: number,
         height: number,
         depth: number
@@ -75,7 +83,7 @@ export function instantiateBricks(
      * Position a brick mesh and set up its physics.
      */
     function positionBrick(
-        _this: any,
+        _this: BrickContext,
         brick: BABYLON.Mesh | BABYLON.InstancedMesh,
         x: number,
         y: number,
@@ -97,6 +105,10 @@ export function instantiateBricks(
                 _this.brickSound.play();
             }
         );
-        brick.physicsImpostor.physicsBody.linearDamping = 0.95;
+
+        const physicsBody = brick.physicsImpostor.physicsBody;
+        if (physicsBody) {
+            physicsBody.linearDamping = 0.95;
+        }
     }
 }
