@@ -108,7 +108,6 @@ export default class Play extends Node {
             "splatter3",
             "ffdescription",
             "monitor",
-            "tree-leaves",
         ]);
 
         const receiverNames = new Set([
@@ -142,6 +141,7 @@ export default class Play extends Node {
             return normalizedName.includes("tank") ||
                 normalizedName.includes("brick") ||
                 normalizedName.includes("tree-trunk") ||
+                normalizedName.includes("tree-leaves") ||
                 normalizedName.includes("target") ||
                 normalizedName.includes("amongus") ||
                 normalizedName.includes("table") ||
