@@ -32,7 +32,7 @@ export default class Play extends Node {
     /**
      * Shows the control hint image for a few seconds.
      */
-    showControl(): void;
+    showControl(): Promise<void>;
     configureFpsCounter(): void;
     /**
      * Initializes the shared scene objects used across the gameplay helpers.

@@ -1,7 +1,6 @@
 import * as BABYLON from "@babylonjs/core";
 import { Texture } from "@babylonjs/core/Materials/Textures/texture";
 import { Node } from "@babylonjs/core/node";
-import { Control, AdvancedDynamicTexture, Image } from "@babylonjs/gui";
 
 import { instantiateTrees } from "./trees";
 import { instantiateBricks } from "./bricks";
@@ -15,7 +14,7 @@ export default class Play extends Node {
     private brickSound!: BABYLON.Sound;
     private tank!: BABYLON.AbstractMesh;
     private divFps: HTMLElement | null = null;
-    private controlOverlayTexture: AdvancedDynamicTexture | null = null;
+    private controlOverlayTexture: { dispose: () => void } | null = null;
     private controlDismissTimer: ReturnType<typeof setTimeout> | null = null;
     private previousPointerDownHandler: BABYLON.Nullable<typeof this.scene.onPointerDown> = null;
     private readonly dismissControlOnKeyDown = (event: KeyboardEvent) => {
@@ -74,8 +73,8 @@ export default class Play extends Node {
             console.error("Shadow initialization failed", error);
         }
         initializeTankMovement({ scene: this.scene, tank: this.tank, camera: this.camera, divFps: this.divFps, tankSound: this.tankSound, bullet: this.bullet }, rotationSpeed);
-        initializeShooting({ scene: this.scene, tank: this.tank, camera: this.camera, divFps: this.divFps, tankSound: this.tankSound, bullet: this.bullet }, forward);
-        this.showControl();
+        void initializeShooting({ scene: this.scene, tank: this.tank, camera: this.camera, divFps: this.divFps, tankSound: this.tankSound, bullet: this.bullet }, forward);
+        void this.showControl();
     }
 
     /**
@@ -175,7 +174,9 @@ export default class Play extends Node {
     /**
      * Shows the control hint image for a few seconds.
      */
-    public showControl(): void {
+    public async showControl(): Promise<void> {
+        const { Control, AdvancedDynamicTexture, Image } = await import("@babylonjs/gui");
+
         this.disposeControlOverlay();
 
         const advancedTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");

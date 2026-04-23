@@ -14,5 +14,5 @@ export declare function initializeTankMovement(_this: TankContext, rotationSpeed
 /**
  * Gives the player the ability to shoot with the tank.
  */
-export declare function initializeShooting(_this: TankContext, forward: BABYLON.Vector3): void;
+export declare function initializeShooting(_this: TankContext, forward: BABYLON.Vector3): Promise<void>;
 export {};

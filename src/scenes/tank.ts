@@ -1,4 +1,7 @@
 import * as BABYLON from "@babylonjs/core";
+import type { AdvancedDynamicTexture, Rectangle, TextBlock } from "@babylonjs/gui";
+
+type GuiModule = typeof import("@babylonjs/gui");
 
 type TankContext = {
     scene: BABYLON.Scene;
@@ -10,9 +13,10 @@ type TankContext = {
 };
 
 type TargetLink = {
-    mesh: BABYLON.Mesh | BABYLON.InstancedMesh;
+    mesh: BABYLON.Mesh;
     hitRadiusSquared: number;
     url: string;
+    label: string;
 };
 
 type ActiveShot = {
@@ -235,22 +239,26 @@ function createSplatterObjects(_this: TankContext): BABYLON.AbstractMesh[] {
 /**
  * Gives the player the ability to shoot with the tank.
  */
-export function initializeShooting(_this: TankContext, forward: BABYLON.Vector3): void {
+export async function initializeShooting(_this: TankContext, forward: BABYLON.Vector3): Promise<void> {
     const activeShots: ActiveShot[] = [];
     const shotOffset = 5;
     const shotHeightOffset = 3;
     const shotRadius = 0.75;
+    const targetHintRangeSquared = 42 * 42;
     const shotDirection = BABYLON.Vector3.Zero();
     const shotSpawnPosition = BABYLON.Vector3.Zero();
+    const targetPosition = BABYLON.Vector3.Zero();
     const targetConfigs = [
         {
             name: "linkedin",
+            label: "LinkedIn",
             position: new BABYLON.Vector3(69.8356, 4.4086, 46.3030),
             scaling: new BABYLON.Vector3(1.75, 1.75, 1.75),
             url: "https://www.linkedin.com/in/stefan-cernat/",
         },
         {
             name: "twitter",
+            label: "X / Twitter",
             position: new BABYLON.Vector3(69.8356, 2.1121, 17.2901),
             scaling: new BABYLON.Vector3(1.5, 1.5, 1.5),
             url: "https://x.com/Setin2",
@@ -268,18 +276,40 @@ export function initializeShooting(_this: TankContext, forward: BABYLON.Vector3)
         githubMaterial.albedoTexture = new BABYLON.Texture("assets/models/target/target (Base Color).png", _this.scene);
     }
 
-    const getHitRadiusSquared = (mesh: BABYLON.Mesh | BABYLON.InstancedMesh): number => {
+    const gui = await import("@babylonjs/gui");
+    if (_this.scene.isDisposed) {
+        return;
+    }
+
+    const highlightLayer = new BABYLON.HighlightLayer("target-highlight", _this.scene, {
+        blurHorizontalSize: 0.6,
+        blurVerticalSize: 0.6,
+    });
+    const targetUi = gui.AdvancedDynamicTexture.CreateFullscreenUI("target-hints", true, _this.scene);
+    const objectiveHint = createObjectiveHint(gui, targetUi);
+
+    const getHitRadiusSquared = (mesh: BABYLON.Mesh): number => {
         mesh.computeWorldMatrix(true);
         const radius = mesh.getBoundingInfo().boundingSphere.radiusWorld + shotRadius;
         return radius * radius;
     };
 
-    const targets: TargetLink[] = [{ mesh: github, hitRadiusSquared: getHitRadiusSquared(github), url: "https://github.com/Setin2" }];
-    targetConfigs.forEach(({ name, position, scaling, url }) => {
-        const target = github.createInstance(`target_${name}`);
+    const targetLabels = new Map<BABYLON.Mesh, Rectangle>();
+    const targets: TargetLink[] = [{ mesh: github, hitRadiusSquared: getHitRadiusSquared(github), url: "https://github.com/Setin2", label: "GitHub" }];
+    targetConfigs.forEach(({ name, label, position, scaling, url }) => {
+        const target = github.clone(`target_${name}`);
+        if (!(target instanceof BABYLON.Mesh)) {
+            return;
+        }
+
         target.position.copyFrom(position);
         target.scaling.copyFrom(scaling);
-        targets.push({ mesh: target, hitRadiusSquared: getHitRadiusSquared(target), url });
+        targets.push({ mesh: target, hitRadiusSquared: getHitRadiusSquared(target), url, label });
+    });
+
+    targets.forEach((target) => {
+        highlightLayer.addMesh(target.mesh, BABYLON.Color3.FromHexString("#f7b955"));
+        targetLabels.set(target.mesh, createTargetLabel(gui, targetUi, target.mesh, target.label));
     });
 
     const applyVelocity = (mesh: BABYLON.InstancedMesh, direction: BABYLON.Vector3, power: number) => {
@@ -296,8 +326,36 @@ export function initializeShooting(_this: TankContext, forward: BABYLON.Vector3)
     ball.isVisible = false;
     ball.isPickable = false;
     let canShoot = true;
+    let currentObjectiveText = objectiveHint.text;
 
     const shotObserver = _this.scene.onBeforeRenderObservable.add(() => {
+        let nearbyTargetLabel = "";
+        let nearestTargetDistanceSquared = Number.POSITIVE_INFINITY;
+
+        for (const target of targets) {
+            targetPosition.copyFrom(target.mesh.absolutePosition);
+            const distanceSquared = BABYLON.Vector3.DistanceSquared(_this.tank.absolutePosition, targetPosition);
+            const label = targetLabels.get(target.mesh);
+
+            if (label) {
+                label.isVisible = distanceSquared <= targetHintRangeSquared;
+            }
+
+            if (distanceSquared < nearestTargetDistanceSquared) {
+                nearestTargetDistanceSquared = distanceSquared;
+                nearbyTargetLabel = target.label;
+            }
+        }
+
+        const nextObjectiveText = nearestTargetDistanceSquared <= targetHintRangeSquared
+            ? `Nearby target: ${nearbyTargetLabel}. Press E to shoot and open the link.`
+            : "Drive with WASD. Press E to shoot the glowing targets and open social links.";
+
+        if (nextObjectiveText !== currentObjectiveText) {
+            objectiveHint.text = nextObjectiveText;
+            currentObjectiveText = nextObjectiveText;
+        }
+
         if (!activeShots.length) {
             return;
         }
@@ -309,6 +367,8 @@ export function initializeShooting(_this: TankContext, forward: BABYLON.Vector3)
             for (const target of targets) {
                 if (BABYLON.Vector3.DistanceSquared(shotPosition, target.mesh.absolutePosition) <= target.hitRadiusSquared) {
                     window.open(target.url, "_blank", "noopener,noreferrer");
+                    currentObjectiveText = `Opening ${target.label}.`;
+                    objectiveHint.text = currentObjectiveText;
                     clearTimeout(activeShot.disposeTimeout);
                     activeShot.dispose();
                     activeShots.splice(shotIndex, 1);
@@ -374,8 +434,75 @@ export function initializeShooting(_this: TankContext, forward: BABYLON.Vector3)
         });
         activeShots.length = 0;
 
+        targetUi.dispose();
+        highlightLayer.dispose();
+
         if (!ball.isDisposed()) {
             ball.dispose();
         }
     });
+}
+
+function createObjectiveHint(gui: GuiModule, ui: AdvancedDynamicTexture): TextBlock {
+    const container = new gui.Rectangle("objective-hint");
+    container.width = "420px";
+    container.height = "1px";
+    container.adaptHeightToChildren = true;
+    container.thickness = 1;
+    container.cornerRadius = 18;
+    container.color = "rgba(255,255,255,0.18)";
+    container.background = "rgba(8, 10, 16, 0.68)";
+    container.horizontalAlignment = gui.Control.HORIZONTAL_ALIGNMENT_LEFT;
+    container.verticalAlignment = gui.Control.VERTICAL_ALIGNMENT_TOP;
+    container.paddingTop = "18px";
+    container.paddingLeft = "18px";
+    container.zIndex = 2;
+
+    const text = new gui.TextBlock("objective-hint-text");
+    text.text = "Drive with WASD. Press E to shoot the glowing targets and open social links.";
+    text.color = "#f4f7ff";
+    text.fontSize = 15;
+    text.fontFamily = "Inter, Segoe UI, sans-serif";
+    text.textWrapping = true;
+    text.resizeToFit = true;
+    text.paddingLeft = "16px";
+    text.paddingRight = "16px";
+    text.paddingTop = "12px";
+    text.paddingBottom = "12px";
+
+    container.addControl(text);
+    ui.addControl(container);
+
+    return text;
+}
+
+function createTargetLabel(
+    gui: GuiModule,
+    ui: AdvancedDynamicTexture,
+    mesh: BABYLON.AbstractMesh,
+    label: string,
+): Rectangle {
+    const container = new gui.Rectangle(`label-${mesh.name}`);
+    container.width = "128px";
+    container.height = "42px";
+    container.thickness = 1;
+    container.cornerRadius = 14;
+    container.color = "rgba(255,255,255,0.26)";
+    container.background = "rgba(7, 9, 14, 0.74)";
+    container.linkOffsetY = -80;
+    container.isPointerBlocker = false;
+    container.isVisible = false;
+
+    const text = new gui.TextBlock(`label-text-${mesh.name}`);
+    text.text = `${label}\nShoot to open`;
+    text.color = "#fff3cf";
+    text.fontSize = 13;
+    text.fontFamily = "Inter, Segoe UI, sans-serif";
+    text.textWrapping = true;
+
+    container.addControl(text);
+    container.linkWithMesh(mesh);
+    ui.addControl(container);
+
+    return container;
 }
