@@ -297,7 +297,7 @@ export function initializeShooting(_this: TankContext, forward: BABYLON.Vector3)
     ball.isPickable = false;
     let canShoot = true;
 
-    _this.scene.onBeforeRenderObservable.add(() => {
+    const shotObserver = _this.scene.onBeforeRenderObservable.add(() => {
         if (!activeShots.length) {
             return;
         }
@@ -365,4 +365,17 @@ export function initializeShooting(_this: TankContext, forward: BABYLON.Vector3)
             handleShoot
         )
     );
+
+    _this.scene.onDisposeObservable.addOnce(() => {
+        _this.scene.onBeforeRenderObservable.remove(shotObserver);
+        activeShots.forEach((activeShot) => {
+            clearTimeout(activeShot.disposeTimeout);
+            activeShot.dispose();
+        });
+        activeShots.length = 0;
+
+        if (!ball.isDisposed()) {
+            ball.dispose();
+        }
+    });
 }

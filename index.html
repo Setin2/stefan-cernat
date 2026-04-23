@@ -4,6 +4,7 @@
 <head>
     <link rel="shortcut icon" href="#">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>&#129430;</title>
 
     <script src="./dist/bundle.js" type="text/javascript"></script>
@@ -16,6 +17,9 @@
             height: 100%;
             margin: 0;
             padding: 0;
+            background: #08090d;
+            color: #f5f7ff;
+            font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         }
 
         #renderCanvas {
@@ -27,23 +31,85 @@
             -ms-touch-action: none;
         }
 
+        #statusOverlay {
+            position: fixed;
+            inset: 0;
+            display: grid;
+            place-items: center;
+            padding: 24px;
+            background: radial-gradient(circle at top, rgba(56, 70, 115, 0.55), rgba(8, 9, 13, 0.96));
+            z-index: 20;
+        }
+
+        #statusOverlay[hidden] {
+            display: none;
+        }
+
+        .status-card {
+            width: min(100%, 420px);
+            padding: 20px 22px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 16px;
+            background: rgba(10, 12, 18, 0.82);
+            box-shadow: 0 22px 60px rgba(0, 0, 0, 0.35);
+            backdrop-filter: blur(10px);
+        }
+
+        #statusOverlay[data-state="error"] .status-card {
+            border-color: rgba(255, 110, 110, 0.4);
+        }
+
+        .status-label {
+            margin: 0 0 10px;
+            font-size: 12px;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.62);
+        }
+
+        #statusTitle {
+            margin: 0;
+            font-size: clamp(24px, 5vw, 34px);
+            line-height: 1.05;
+        }
+
+        #statusMessage {
+            margin: 12px 0 0;
+            font-size: 15px;
+            line-height: 1.5;
+            color: rgba(255, 255, 255, 0.76);
+        }
+
         #fps {
             position: absolute;
-            background-color: black;
-            border: 2px solid red;
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 999px;
             text-align: center;
-            font-size: 16px;
+            font-size: 13px;
+            line-height: 28px;
             color: white;
             top: 15px;
-            right: 10px;
-            width: 60px;
-            height: 20px;
+            right: 12px;
+            min-width: 72px;
+            height: 28px;
+            padding: 0 10px;
+            box-sizing: border-box;
+            z-index: 10;
+            pointer-events: none;
         }
     </style>
 </head>
 
 <body>
     <canvas id="renderCanvas"></canvas>
+    <div id="statusOverlay">
+        <section class="status-card" aria-live="polite">
+            <p class="status-label">Interactive Portfolio</p>
+            <h1 id="statusTitle">Loading scene</h1>
+            <p id="statusMessage">Loading assets and interactive scene data.</p>
+        </section>
+    </div>
     <div id="fps">0</div>
 
     <script type="text/javascript">

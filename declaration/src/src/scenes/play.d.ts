@@ -7,6 +7,10 @@ export default class Play extends Node {
     private brickSound;
     private tank;
     private divFps;
+    private controlOverlayTexture;
+    private controlDismissTimer;
+    private previousPointerDownHandler;
+    private readonly dismissControlOnKeyDown;
     protected constructor();
     /**
      * Called when the node is being initialized.
@@ -29,6 +33,7 @@ export default class Play extends Node {
      * Shows the control hint image for a few seconds.
      */
     showControl(): void;
+    configureFpsCounter(): void;
     /**
      * Initializes the shared scene objects used across the gameplay helpers.
      */
@@ -38,4 +43,5 @@ export default class Play extends Node {
      */
     initializeTextures(): void;
     optimizeScene(): void;
+    private disposeControlOverlay;
 }

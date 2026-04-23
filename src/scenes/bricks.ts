@@ -26,6 +26,12 @@ export function instantiateBricks(
     const initialX = x;
     const groundY = getGroundHeight(x, y, z);
     const initialY = groundY + brickHeight / 2;
+    const tankImpostor = _this.tank.physicsImpostor;
+
+    if (!tankImpostor) {
+        console.warn("Tank physics impostor is missing. Skipping brick collision audio setup.");
+        return;
+    }
 
     // Create the initial brick
     const brick = createBrick(_this, brickLength, brickHeight, brickDepth);
@@ -101,7 +107,7 @@ export function instantiateBricks(
 
         // Play sound on collision with the tank
         brick.physicsImpostor.registerOnPhysicsCollide(
-            _this.tank.physicsImpostor,
+            tankImpostor,
             () => {
                 _this.brickSound.play();
             }

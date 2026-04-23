@@ -15,6 +15,14 @@ export default class Play extends Node {
     private brickSound!: BABYLON.Sound;
     private tank!: BABYLON.AbstractMesh;
     private divFps: HTMLElement | null = null;
+    private controlOverlayTexture: AdvancedDynamicTexture | null = null;
+    private controlDismissTimer: ReturnType<typeof setTimeout> | null = null;
+    private previousPointerDownHandler: BABYLON.Nullable<typeof this.scene.onPointerDown> = null;
+    private readonly dismissControlOnKeyDown = (event: KeyboardEvent) => {
+        if (["w", "a", "s", "d", "e", "Escape", " "].includes(event.key.toLowerCase())) {
+            this.disposeControlOverlay();
+        }
+    };
 
     // @ts-ignore Babylon attaches script classes without calling Node's public constructor shape.
     protected constructor() {}
@@ -27,6 +35,7 @@ export default class Play extends Node {
         this.initializeGlobalVariables();
         this.initializeTextures();
         this.divFps = document.getElementById("fps");
+        this.configureFpsCounter();
 
         // Set physics after the required scene nodes are available.
         this.camera.lockedTarget = this.tank;
@@ -36,6 +45,10 @@ export default class Play extends Node {
         this.easterEgg();
         this.play();
         this.optimizeScene();
+
+        this.onDisposeObservable.addOnce(() => {
+            this.disposeControlOverlay();
+        });
     }
 
     /**
@@ -163,18 +176,38 @@ export default class Play extends Node {
      * Shows the control hint image for a few seconds.
      */
     public showControl(): void {
+        this.disposeControlOverlay();
+
         const advancedTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
         const image = new Image("control", "assets/textures/control_final.png");
         image.width = "250px";
         image.height = "100px";
         image.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
         image.paddingBottomInPixels = 40;
+        image.alpha = 0.92;
         advancedTexture.addControl(image);
+        this.controlOverlayTexture = advancedTexture;
 
-        setTimeout(() => {
-            advancedTexture.removeControl(image);
-            advancedTexture.dispose();
+        this.previousPointerDownHandler = this.scene.onPointerDown;
+        this.scene.onPointerDown = (evt, pickInfo, type) => {
+            this.previousPointerDownHandler?.(evt, pickInfo, type);
+            this.disposeControlOverlay();
+        };
+
+        window.addEventListener("keydown", this.dismissControlOnKeyDown);
+
+        this.controlDismissTimer = setTimeout(() => {
+            this.disposeControlOverlay();
         }, 7500);
+    }
+
+    public configureFpsCounter(): void {
+        if (!this.divFps) {
+            return;
+        }
+
+        const isTouchDevice = window.matchMedia("(pointer: coarse)").matches;
+        this.divFps.hidden = isTouchDevice;
     }
     /**
      * Initializes the shared scene objects used across the gameplay helpers.
@@ -248,5 +281,23 @@ export default class Play extends Node {
                 mesh.doNotSyncBoundingInfo = true;
                 mesh.freezeWorldMatrix();
             });
+    }
+
+    private disposeControlOverlay(): void {
+        if (this.controlDismissTimer) {
+            clearTimeout(this.controlDismissTimer);
+            this.controlDismissTimer = null;
+        }
+
+        window.removeEventListener("keydown", this.dismissControlOnKeyDown);
+
+        if (this.scene.onPointerDown !== this.previousPointerDownHandler) {
+            this.scene.onPointerDown = this.previousPointerDownHandler;
+        }
+
+        if (this.controlOverlayTexture) {
+            this.controlOverlayTexture.dispose();
+            this.controlOverlayTexture = null;
+        }
     }
 }
