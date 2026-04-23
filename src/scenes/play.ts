@@ -137,26 +137,29 @@ export default class Play extends Node {
             }
 
             const normalizedName = mesh.name.toLowerCase();
+            const sourceName = mesh instanceof BABYLON.InstancedMesh ? mesh.sourceMesh.name.toLowerCase() : "";
+            const searchableName = `${normalizedName} ${sourceName}`;
 
-            return normalizedName.includes("tank") ||
-                normalizedName.includes("brick") ||
-                normalizedName.includes("tree-trunk") ||
-                normalizedName.includes("tree-leaves") ||
-                normalizedName.includes("target") ||
-                normalizedName.includes("amongus") ||
-                normalizedName.includes("table") ||
-                normalizedName.includes("desk") ||
-                normalizedName.includes("chair");
+            return searchableName.includes("tank") ||
+                searchableName.includes("brick") ||
+                searchableName.includes("tree-trunk") ||
+                searchableName.includes("tree-leaves") ||
+                searchableName.includes("target") ||
+                searchableName.includes("amongus") ||
+                searchableName.includes("statue") ||
+                searchableName.includes("table") ||
+                searchableName.includes("desk") ||
+                searchableName.includes("chair");
         };
 
         this.scene.meshes.forEach((mesh) => {
-            if (!mesh.isEnabled() || !mesh.isVisible || !mesh.material) {
+            if (!mesh.isEnabled() || !mesh.isVisible) {
                 return;
             }
 
-            if (mesh instanceof BABYLON.Mesh && shouldReceiveShadow(mesh)) {
+            if (mesh instanceof BABYLON.Mesh && mesh.material && shouldReceiveShadow(mesh)) {
                 mesh.receiveShadows = true;
-            } else if (mesh instanceof BABYLON.InstancedMesh && shouldReceiveShadow(mesh)) {
+            } else if (mesh instanceof BABYLON.InstancedMesh && mesh.sourceMesh.material && shouldReceiveShadow(mesh)) {
                 mesh.sourceMesh.receiveShadows = true;
             }
 

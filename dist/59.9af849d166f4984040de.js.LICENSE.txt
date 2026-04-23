@@ -1,1 +1,0 @@
-/*! babylonjs-editor-generated-template 4.1.0 Thu Apr 23 2026 09:53:08 GMT+0200 (Central European Summer Time) */

@@ -12,6 +12,7 @@ module.exports = (_, argv) => {
 		output: {
 			filename: `bundle.js`,
 			chunkFilename: `[name].[contenthash].js`,
+			clean: true,
 			path: path.join(__dirname, "dist"),
 			library: "game",
 			libraryTarget: "umd",
