@@ -22,6 +22,10 @@ export default class Play extends Node {
      */
     play(): void;
     /**
+     * Creates a dedicated shadow-casting light and applies shadows to visible scene meshes.
+     */
+    initializeShadows(): void;
+    /**
      * Shows the control hint image for a few seconds.
      */
     showControl(): void;

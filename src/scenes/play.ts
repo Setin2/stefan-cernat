@@ -26,7 +26,6 @@ export default class Play extends Node {
     public onInitialize(): void {
         this.initializeGlobalVariables();
         this.initializeTextures();
-        this.optimizeScene();
         this.divFps = document.getElementById("fps");
 
         // Set physics after the required scene nodes are available.
@@ -36,6 +35,7 @@ export default class Play extends Node {
 
         this.easterEgg();
         this.play();
+        this.optimizeScene();
     }
 
     /**
@@ -55,9 +55,115 @@ export default class Play extends Node {
         instantiateTrees({ scene: this.scene });
         instantiateBricks({ scene: this.scene, tank: this.tank, brickSound: this.brickSound }, -5, 8, -30, 3, [6, 6, 4, 2], 0);
         instantiateBricks({ scene: this.scene, tank: this.tank, brickSound: this.brickSound }, 130, 8, -50, 4, [6, 6, 6, 4], 300);
+        try {
+            this.initializeShadows();
+        } catch (error) {
+            console.error("Shadow initialization failed", error);
+        }
         initializeTankMovement({ scene: this.scene, tank: this.tank, camera: this.camera, divFps: this.divFps, tankSound: this.tankSound, bullet: this.bullet }, rotationSpeed);
         initializeShooting({ scene: this.scene, tank: this.tank, camera: this.camera, divFps: this.divFps, tankSound: this.tankSound, bullet: this.bullet }, forward);
         this.showControl();
+    }
+
+    /**
+     * Creates a dedicated shadow-casting light and applies shadows to visible scene meshes.
+     */
+    public initializeShadows(): void {
+        const lightDirection = new BABYLON.Vector3(-1, -2, -1).normalize();
+
+        const shadowLight = new BABYLON.DirectionalLight(
+            "shadow_sun",
+            lightDirection,
+            this.scene,
+        );
+        shadowLight.position = new BABYLON.Vector3(60, 220, 40);
+        shadowLight.intensity = 0.65;
+        shadowLight.shadowMinZ = 1;
+        shadowLight.shadowMaxZ = 500;
+        shadowLight.autoCalcShadowZBounds = false;
+        shadowLight.autoUpdateExtends = false;
+        shadowLight.orthoLeft = -220;
+        shadowLight.orthoRight = 220;
+        shadowLight.orthoTop = 220;
+        shadowLight.orthoBottom = -220;
+
+        const shadowGenerator = new BABYLON.ShadowGenerator(2048, shadowLight);
+        shadowGenerator.usePercentageCloserFiltering = true;
+        shadowGenerator.filteringQuality = BABYLON.ShadowGenerator.QUALITY_HIGH;
+        shadowGenerator.bias = 0.0015;
+        shadowGenerator.normalBias = 0.05;
+        shadowGenerator.depthScale = 25;
+        shadowGenerator.forceBackFacesOnly = true;
+        shadowGenerator.setDarkness(0.25);
+
+        const shadowMap = shadowGenerator.getShadowMap();
+        if (!shadowMap) {
+            return;
+        }
+
+        const excludedShadowMeshes = new Set([
+            "ball",
+            "splatter1",
+            "splatter2",
+            "splatter3",
+            "ffdescription",
+            "monitor",
+            "tree-leaves",
+        ]);
+
+        const receiverNames = new Set([
+            "ground",
+            "terrain",
+            "floor",
+            "road",
+            "table",
+            "desk",
+        ]);
+
+        const shouldReceiveShadow = (mesh: BABYLON.AbstractMesh): boolean => {
+            const normalizedName = mesh.name.toLowerCase();
+
+            return receiverNames.has(normalizedName) ||
+                normalizedName.includes("ground") ||
+                normalizedName.includes("floor") ||
+                normalizedName.includes("terrain") ||
+                normalizedName.includes("road") ||
+                normalizedName.includes("table") ||
+                normalizedName.includes("desk");
+        };
+
+        const shouldCastShadow = (mesh: BABYLON.AbstractMesh): boolean => {
+            if (excludedShadowMeshes.has(mesh.name)) {
+                return false;
+            }
+
+            const normalizedName = mesh.name.toLowerCase();
+
+            return normalizedName.includes("tank") ||
+                normalizedName.includes("brick") ||
+                normalizedName.includes("tree-trunk") ||
+                normalizedName.includes("target") ||
+                normalizedName.includes("amongus") ||
+                normalizedName.includes("table") ||
+                normalizedName.includes("desk") ||
+                normalizedName.includes("chair");
+        };
+
+        this.scene.meshes.forEach((mesh) => {
+            if (!mesh.isEnabled() || !mesh.isVisible || !mesh.material) {
+                return;
+            }
+
+            if (mesh instanceof BABYLON.Mesh && shouldReceiveShadow(mesh)) {
+                mesh.receiveShadows = true;
+            } else if (mesh instanceof BABYLON.InstancedMesh && shouldReceiveShadow(mesh)) {
+                mesh.sourceMesh.receiveShadows = true;
+            }
+
+            if (shouldCastShadow(mesh)) {
+                shadowGenerator.addShadowCaster(mesh, false);
+            }
+        });
     }
 
     /**

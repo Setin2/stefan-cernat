@@ -43,7 +43,11 @@ export class Game {
 
         BabylonFileLoaderConfiguration.LoaderInjectedPhysicsEngine = CANNON;
 
-        await appendScene(this.scene, rootUrl, "../scene/scene.babylon");
+        try {
+            await appendScene(this.scene, rootUrl, "../scene/scene.babylon");
+        } catch (error) {
+            console.error("Failed to finish scene initialization", error);
+        }
 
         // Attach camera.
         if (!this.scene.activeCamera) {
