@@ -123,6 +123,9 @@ export default class Play extends Node {
                 searchableName.includes("brick") ||
                 searchableName.includes("tree-trunk") ||
                 searchableName.includes("tree-leaves") ||
+                searchableName.includes("text") ||
+                searchableName.includes("arrow") ||
+                searchableName.includes("project") ||
                 searchableName.includes("target") ||
                 searchableName.includes("podium") ||
                 searchableName.includes("practice") ||
