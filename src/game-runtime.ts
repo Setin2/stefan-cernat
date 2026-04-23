@@ -40,8 +40,7 @@ export class GameRuntime {
         const rootUrl = "./scenes/_assets/";
 
         try {
-            const [_, CANNON, { appendScene }] = await Promise.all([
-                import("@babylonjs/materials"),
+            const [CANNON, { appendScene }] = await Promise.all([
                 import("cannon"),
                 import("./scenes/tools"),
             ]);

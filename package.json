@@ -41,7 +41,6 @@
         "webpack-cli": "4.9.1"
     },
     "dependencies": {
-        "@babylonjs/materials": "5.9.0",
         "cannon": "^0.6.2",
         "earcut": "2.2.3",
         "rimraf": "3.0.2"
