@@ -110,27 +110,6 @@ export default class Play extends Node {
             "monitor",
         ]);
 
-        const receiverNames = new Set([
-            "ground",
-            "terrain",
-            "floor",
-            "road",
-            "table",
-            "desk",
-        ]);
-
-        const shouldReceiveShadow = (mesh: BABYLON.AbstractMesh): boolean => {
-            const normalizedName = mesh.name.toLowerCase();
-
-            return receiverNames.has(normalizedName) ||
-                normalizedName.includes("ground") ||
-                normalizedName.includes("floor") ||
-                normalizedName.includes("terrain") ||
-                normalizedName.includes("road") ||
-                normalizedName.includes("table") ||
-                normalizedName.includes("desk");
-        };
-
         const shouldCastShadow = (mesh: BABYLON.AbstractMesh): boolean => {
             if (excludedShadowMeshes.has(mesh.name)) {
                 return false;
@@ -145,8 +124,16 @@ export default class Play extends Node {
                 searchableName.includes("tree-trunk") ||
                 searchableName.includes("tree-leaves") ||
                 searchableName.includes("target") ||
+                searchableName.includes("podium") ||
+                searchableName.includes("practice") ||
+                searchableName.includes("github") ||
+                searchableName.includes("linkedin") ||
+                searchableName.includes("twitter") ||
                 searchableName.includes("amongus") ||
                 searchableName.includes("statue") ||
+                searchableName.includes("berserk") ||
+                searchableName.includes("guts") ||
+                searchableName.includes("monument") ||
                 searchableName.includes("table") ||
                 searchableName.includes("desk") ||
                 searchableName.includes("chair");
@@ -157,9 +144,9 @@ export default class Play extends Node {
                 return;
             }
 
-            if (mesh instanceof BABYLON.Mesh && mesh.material && shouldReceiveShadow(mesh)) {
+            if (mesh instanceof BABYLON.Mesh && mesh.material) {
                 mesh.receiveShadows = true;
-            } else if (mesh instanceof BABYLON.InstancedMesh && mesh.sourceMesh.material && shouldReceiveShadow(mesh)) {
+            } else if (mesh instanceof BABYLON.InstancedMesh && mesh.sourceMesh.material) {
                 mesh.sourceMesh.receiveShadows = true;
             }
 
