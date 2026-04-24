@@ -1,5 +1,5 @@
 import * as BABYLON from "@babylonjs/core";
-import type { AdvancedDynamicTexture, Rectangle, TextBlock } from "@babylonjs/gui";
+import type { AdvancedDynamicTexture, Ellipse, Rectangle, TextBlock } from "@babylonjs/gui";
 
 type GuiModule = typeof import("@babylonjs/gui");
 
@@ -245,10 +245,18 @@ export async function initializeShooting(_this: TankContext, forward: BABYLON.Ve
     const shotHeightOffset = 3;
     const shotRadius = 0.75;
     const shotLifetimeMs = 2000;
+    const shotCooldownMs = 400;
     const targetHintRangeSquared = 42 * 42;
+    const targetAimRangeSquared = 52 * 52;
+    const aimLockThreshold = 0.965;
+    const recoilRecoverSpeed = 11;
     const shotDirection = BABYLON.Vector3.Zero();
     const shotSpawnPosition = BABYLON.Vector3.Zero();
     const targetPosition = BABYLON.Vector3.Zero();
+    const tankForward = BABYLON.Vector3.Zero();
+    const toTarget = BABYLON.Vector3.Zero();
+    const recoilOffset = BABYLON.Vector3.Zero();
+    const recoilStep = BABYLON.Vector3.Zero();
     const targetConfigs = [
         {
             name: "linkedin",
@@ -288,6 +296,9 @@ export async function initializeShooting(_this: TankContext, forward: BABYLON.Ve
     });
     const targetUi = gui.AdvancedDynamicTexture.CreateFullscreenUI("target-hints", true, _this.scene);
     const objectiveHint = createObjectiveHint(gui, targetUi);
+    const reticle = createReticle(gui, targetUi);
+    const hitFeedback = createHitFeedback(gui, targetUi);
+    const impactBurst = createImpactBurst(gui, targetUi);
 
     const getHitRadiusSquared = (mesh: BABYLON.Mesh): number => {
         mesh.computeWorldMatrix(true);
@@ -327,12 +338,32 @@ export async function initializeShooting(_this: TankContext, forward: BABYLON.Ve
     ball.isVisible = false;
     ball.isPickable = false;
     let canShoot = true;
+    let shotCooldownUntil = 0;
+    let hitFeedbackUntil = 0;
+    let impactBurstUntil = 0;
     let currentStatusUntil = 0;
     let currentObjectiveText = objectiveHint.text;
+    let hitTarget: BABYLON.Mesh | null = null;
+    let impactTarget: BABYLON.Mesh | null = null;
+    const discoveredTargets = new Set<string>();
+    const totalTargetCount = targets.length;
+    const baseCameraPosition = _this.camera.position.clone();
 
     const shotObserver = _this.scene.onBeforeRenderObservable.add(() => {
+        const now = performance.now();
+        const deltaSeconds = _this.scene.getEngine().getDeltaTime() / 1000;
         let nearbyTargetLabel = "";
         let nearestTargetDistanceSquared = Number.POSITIVE_INFINITY;
+        let aimedTargetLabel = "";
+        let aimedTargetDistanceSquared = Number.POSITIVE_INFINITY;
+        let bestAimDot = aimLockThreshold;
+
+        recoilStep.copyFrom(recoilOffset).scaleInPlace(Math.min(1, recoilRecoverSpeed * deltaSeconds));
+        recoilOffset.subtractInPlace(recoilStep);
+        _this.camera.position.copyFrom(baseCameraPosition).addInPlace(recoilOffset);
+
+        _this.tank.getDirectionToRef(forward, tankForward);
+        tankForward.normalize();
 
         for (const target of targets) {
             targetPosition.copyFrom(target.mesh.absolutePosition);
@@ -347,13 +378,61 @@ export async function initializeShooting(_this: TankContext, forward: BABYLON.Ve
                 nearestTargetDistanceSquared = distanceSquared;
                 nearbyTargetLabel = target.label;
             }
+
+            if (distanceSquared <= targetHintRangeSquared && !discoveredTargets.has(target.mesh.name)) {
+                discoveredTargets.add(target.mesh.name);
+                currentObjectiveText = `New link discovered: ${target.label}. ${discoveredTargets.size} of ${totalTargetCount} found.`;
+                objectiveHint.text = currentObjectiveText;
+                currentStatusUntil = now + 2400;
+            }
+
+            if (distanceSquared > targetAimRangeSquared) {
+                continue;
+            }
+
+            toTarget.copyFrom(target.mesh.absolutePosition).subtractInPlace(_this.tank.absolutePosition);
+            toTarget.normalize();
+            const aimDot = BABYLON.Vector3.Dot(tankForward, toTarget);
+            if (aimDot >= bestAimDot) {
+                bestAimDot = aimDot;
+                aimedTargetLabel = target.label;
+                aimedTargetDistanceSquared = distanceSquared;
+            }
         }
 
-        const nextObjectiveText = nearestTargetDistanceSquared <= targetHintRangeSquared
-            ? `Target in range: ${nearbyTargetLabel} (${formatDistance(Math.sqrt(nearestTargetDistanceSquared))}). Shoot to open the link.`
-            : "Explore the island to discover glowing targets, projects, and social links.";
+        if (hitTarget && now >= hitFeedbackUntil) {
+            hitFeedback.container.isVisible = false;
+            hitTarget = null;
+        }
 
-        if (performance.now() >= currentStatusUntil && nextObjectiveText !== currentObjectiveText) {
+        if (impactTarget && now >= impactBurstUntil) {
+            impactBurst.container.isVisible = false;
+            impactTarget = null;
+        }
+
+        const cooldownProgress = Math.min(1, Math.max(0, (shotCooldownUntil - now) / shotCooldownMs));
+        reticle.cooldown.alpha = cooldownProgress > 0 ? 0.95 : 0;
+        reticle.cooldown.width = `${Math.max(16, cooldownProgress * 56)}px`;
+        reticle.cooldown.height = `${Math.max(16, cooldownProgress * 56)}px`;
+        reticle.cooldown.color = hasRecentHit(now, hitFeedbackUntil) ? "rgba(141,247,176,0.4)" : "rgba(247,185,85,0.28)";
+
+        const hasAimLock = aimedTargetLabel !== "";
+        reticle.frame.color = hasAimLock ? "#f7b955" : "rgba(255,255,255,0.52)";
+        reticle.frame.thickness = hasAimLock ? 2 : 1;
+        reticle.dot.background = hasAimLock ? "#f7b955" : "rgba(255,255,255,0.85)";
+        reticle.label.text = hasAimLock
+            ? `LOCKED: ${aimedTargetLabel}`
+            : nearestTargetDistanceSquared <= targetHintRangeSquared
+                ? `NEARBY: ${nearbyTargetLabel}`
+                : `${discoveredTargets.size}/${totalTargetCount} LINKS FOUND`;
+
+        const nextObjectiveText = hasAimLock
+            ? `Target locked: ${aimedTargetLabel} (${formatDistance(Math.sqrt(aimedTargetDistanceSquared))}). Press E to fire.`
+            : nearestTargetDistanceSquared <= targetHintRangeSquared
+                ? `Target in range: ${nearbyTargetLabel} (${formatDistance(Math.sqrt(nearestTargetDistanceSquared))}). Turn toward it to lock on.`
+                : `Explore the island to discover glowing targets, projects, and social links. ${discoveredTargets.size} of ${totalTargetCount} links found.`;
+
+        if (now >= currentStatusUntil && nextObjectiveText !== currentObjectiveText) {
             objectiveHint.text = nextObjectiveText;
             currentObjectiveText = nextObjectiveText;
         }
@@ -371,7 +450,18 @@ export async function initializeShooting(_this: TankContext, forward: BABYLON.Ve
                     window.open(target.url, "_blank", "noopener,noreferrer");
                     currentObjectiveText = `Direct hit. Opening ${target.label} in a new tab.`;
                     objectiveHint.text = currentObjectiveText;
-                    currentStatusUntil = performance.now() + 2200;
+                    currentStatusUntil = now + 2200;
+                    hitTarget = target.mesh;
+                    hitFeedback.container.linkWithMesh(target.mesh);
+                    hitFeedback.container.isVisible = true;
+                    hitFeedbackUntil = now + 900;
+                    impactTarget = target.mesh;
+                    impactBurst.container.linkWithMesh(target.mesh);
+                    impactBurst.container.isVisible = true;
+                    impactBurstUntil = now + 420;
+                    reticle.frame.color = "#8df7b0";
+                    reticle.dot.background = "#8df7b0";
+                    reticle.label.text = `DIRECT HIT: ${target.label}`;
                     clearTimeout(activeShot.disposeTimeout);
                     activeShot.dispose();
                     activeShots.splice(shotIndex, 1);
@@ -387,10 +477,12 @@ export async function initializeShooting(_this: TankContext, forward: BABYLON.Ve
         }
 
         canShoot = false;
+        shotCooldownUntil = performance.now() + shotCooldownMs;
         _this.bullet.play();
 
         _this.tank.getDirectionToRef(forward, shotDirection);
         shotDirection.normalize();
+        recoilOffset.addInPlaceFromFloats(-shotDirection.x * 0.22, 0.18, -shotDirection.z * 0.22);
         const shotBall = ball.createInstance("ball");
         shotBall.parent = null;
 
@@ -402,7 +494,7 @@ export async function initializeShooting(_this: TankContext, forward: BABYLON.Ve
         shotBall.physicsImpostor = new BABYLON.PhysicsImpostor(shotBall, BABYLON.PhysicsImpostor.SphereImpostor, { mass: 0.5, restitution: 0 }, _this.scene);
         applyVelocity(shotBall, shotDirection, 200);
 
-        setTimeout(() => { canShoot = true; }, 400);
+        setTimeout(() => { canShoot = true; }, shotCooldownMs);
 
         const disposeShot = () => {
             shotBall.physicsImpostor?.dispose();
@@ -477,6 +569,112 @@ function createObjectiveHint(gui: GuiModule, ui: AdvancedDynamicTexture): TextBl
     ui.addControl(container);
 
     return text;
+}
+
+function createReticle(
+    gui: GuiModule,
+    ui: AdvancedDynamicTexture,
+): { frame: Rectangle; dot: Rectangle; label: TextBlock; cooldown: Ellipse } {
+    const frame = new gui.Rectangle("reticle-frame");
+    frame.width = "28px";
+    frame.height = "28px";
+    frame.thickness = 1;
+    frame.cornerRadius = 8;
+    frame.color = "rgba(255,255,255,0.52)";
+    frame.background = "rgba(10, 12, 18, 0.12)";
+    frame.horizontalAlignment = gui.Control.HORIZONTAL_ALIGNMENT_CENTER;
+    frame.verticalAlignment = gui.Control.VERTICAL_ALIGNMENT_CENTER;
+    frame.isPointerBlocker = false;
+
+    const dot = new gui.Rectangle("reticle-dot");
+    dot.width = "4px";
+    dot.height = "4px";
+    dot.thickness = 0;
+    dot.cornerRadius = 999;
+    dot.background = "rgba(255,255,255,0.85)";
+    frame.addControl(dot);
+
+    const cooldown = new gui.Ellipse("reticle-cooldown");
+    cooldown.width = "16px";
+    cooldown.height = "16px";
+    cooldown.thickness = 2;
+    cooldown.color = "rgba(247,185,85,0.28)";
+    cooldown.alpha = 0;
+    cooldown.isPointerBlocker = false;
+    ui.addControl(cooldown);
+
+    const label = new gui.TextBlock("reticle-label");
+    label.text = "0/0 LINKS FOUND";
+    label.color = "rgba(255,255,255,0.72)";
+    label.fontSize = 12;
+    label.fontFamily = "Inter, Segoe UI, sans-serif";
+    label.top = "28px";
+    label.horizontalAlignment = gui.Control.HORIZONTAL_ALIGNMENT_CENTER;
+    label.verticalAlignment = gui.Control.VERTICAL_ALIGNMENT_CENTER;
+    label.isPointerBlocker = false;
+
+    ui.addControl(frame);
+    ui.addControl(label);
+
+    return { frame, dot, label, cooldown };
+}
+
+function createHitFeedback(
+    gui: GuiModule,
+    ui: AdvancedDynamicTexture,
+): { container: Rectangle; text: TextBlock } {
+    const container = new gui.Rectangle("hit-feedback");
+    container.width = "116px";
+    container.height = "34px";
+    container.thickness = 1;
+    container.cornerRadius = 16;
+    container.color = "rgba(141,247,176,0.55)";
+    container.background = "rgba(10, 28, 18, 0.78)";
+    container.linkOffsetY = -92;
+    container.isPointerBlocker = false;
+    container.isVisible = false;
+
+    const text = new gui.TextBlock("hit-feedback-text");
+    text.text = "Direct hit";
+    text.color = "#8df7b0";
+    text.fontSize = 13;
+    text.fontFamily = "Inter, Segoe UI, sans-serif";
+    container.addControl(text);
+
+    ui.addControl(container);
+
+    return { container, text };
+}
+
+function createImpactBurst(
+    gui: GuiModule,
+    ui: AdvancedDynamicTexture,
+): { container: Rectangle; ring: Ellipse } {
+    const container = new gui.Rectangle("impact-burst-anchor");
+    container.width = "1px";
+    container.height = "1px";
+    container.thickness = 0;
+    container.background = "transparent";
+    container.linkOffsetY = -92;
+    container.isPointerBlocker = false;
+    container.isVisible = false;
+
+    const ring = new gui.Ellipse("impact-burst-ring");
+    ring.width = "82px";
+    ring.height = "82px";
+    ring.thickness = 3;
+    ring.color = "rgba(141,247,176,0.75)";
+    ring.background = "rgba(141,247,176,0.1)";
+    ring.alpha = 0.9;
+    container.addControl(ring);
+
+    ui.addControl(container);
+
+    return { container, ring };
+}
+
+function hasRecentHit(now: number, hitFeedbackUntil: number): boolean {
+    return now < hitFeedbackUntil;
 }
 
 function formatDistance(distance: number): string {
