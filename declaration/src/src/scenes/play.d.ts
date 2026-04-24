@@ -8,9 +8,11 @@ export default class Play extends Node {
     private tank;
     private divFps;
     private controlOverlayTexture;
+    private controlOverlayPanel;
+    private controlOverlayHint;
     private controlDismissTimer;
-    private previousPointerDownHandler;
-    private readonly dismissControlOnKeyDown;
+    private isAudioMuted;
+    private readonly handleControlHotkeys;
     protected constructor();
     /**
      * Called when the node is being initialized.
@@ -30,7 +32,7 @@ export default class Play extends Node {
      */
     initializeShadows(): void;
     /**
-     * Shows the control hint image for a few seconds.
+     * Creates the reusable help overlay and shows it on first load.
      */
     showControl(): Promise<void>;
     configureFpsCounter(): void;
@@ -44,4 +46,8 @@ export default class Play extends Node {
     initializeTextures(): void;
     optimizeScene(): void;
     private disposeControlOverlay;
+    private toggleControlOverlay;
+    private hideControlOverlay;
+    private toggleAudioMute;
+    private updateControlHint;
 }

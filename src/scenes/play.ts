@@ -1,6 +1,7 @@
 import * as BABYLON from "@babylonjs/core";
 import { Texture } from "@babylonjs/core/Materials/Textures/texture";
 import { Node } from "@babylonjs/core/node";
+import type { AdvancedDynamicTexture, Rectangle, TextBlock } from "@babylonjs/gui";
 
 import { instantiateTrees } from "./trees";
 import { instantiateBricks } from "./bricks";
@@ -14,12 +15,29 @@ export default class Play extends Node {
     private brickSound!: BABYLON.Sound;
     private tank!: BABYLON.AbstractMesh;
     private divFps: HTMLElement | null = null;
-    private controlOverlayTexture: { dispose: () => void } | null = null;
+    private controlOverlayTexture: AdvancedDynamicTexture | null = null;
+    private controlOverlayPanel: Rectangle | null = null;
+    private controlOverlayHint: TextBlock | null = null;
     private controlDismissTimer: ReturnType<typeof setTimeout> | null = null;
-    private previousPointerDownHandler: BABYLON.Nullable<typeof this.scene.onPointerDown> = null;
-    private readonly dismissControlOnKeyDown = (event: KeyboardEvent) => {
-        if (["w", "a", "s", "d", "e", "Escape", " "].includes(event.key.toLowerCase())) {
-            this.disposeControlOverlay();
+    private isAudioMuted = false;
+    private readonly handleControlHotkeys = (event: KeyboardEvent) => {
+        if (event.repeat) {
+            return;
+        }
+
+        const key = event.key.toLowerCase();
+        if (key === "h") {
+            this.toggleControlOverlay();
+            return;
+        }
+
+        if (key === "escape") {
+            this.hideControlOverlay();
+            return;
+        }
+
+        if (key === "m") {
+            this.toggleAudioMute();
         }
     };
 
@@ -172,34 +190,35 @@ export default class Play extends Node {
     }
 
     /**
-     * Shows the control hint image for a few seconds.
+     * Creates the reusable help overlay and shows it on first load.
      */
     public async showControl(): Promise<void> {
-        const { Control, AdvancedDynamicTexture, Image } = await import("@babylonjs/gui");
+        const gui = await import("@babylonjs/gui");
+
+        if (this.scene.isDisposed) {
+            return;
+        }
 
         this.disposeControlOverlay();
 
-        const advancedTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
-        const image = new Image("control", "assets/textures/control_final.png");
-        image.width = "250px";
-        image.height = "100px";
-        image.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
-        image.paddingBottomInPixels = 40;
-        image.alpha = 0.92;
-        advancedTexture.addControl(image);
+        const advancedTexture = gui.AdvancedDynamicTexture.CreateFullscreenUI("control-overlay", true, this.scene);
+        const { panel, hint } = createControlOverlay(gui, advancedTexture, {
+            onToggle: () => this.toggleControlOverlay(),
+            onClose: () => this.hideControlOverlay(),
+            onToggleMute: () => this.toggleAudioMute(),
+            isTouchDevice: window.matchMedia("(pointer: coarse)").matches,
+        });
+
         this.controlOverlayTexture = advancedTexture;
+        this.controlOverlayPanel = panel;
+        this.controlOverlayHint = hint;
+        this.updateControlHint();
 
-        this.previousPointerDownHandler = this.scene.onPointerDown;
-        this.scene.onPointerDown = (evt, pickInfo, type) => {
-            this.previousPointerDownHandler?.(evt, pickInfo, type);
-            this.disposeControlOverlay();
-        };
-
-        window.addEventListener("keydown", this.dismissControlOnKeyDown);
+        window.addEventListener("keydown", this.handleControlHotkeys);
 
         this.controlDismissTimer = setTimeout(() => {
-            this.disposeControlOverlay();
-        }, 7500);
+            this.hideControlOverlay();
+        }, 10000);
     }
 
     public configureFpsCounter(): void {
@@ -291,15 +310,194 @@ export default class Play extends Node {
             this.controlDismissTimer = null;
         }
 
-        window.removeEventListener("keydown", this.dismissControlOnKeyDown);
-
-        if (this.scene.onPointerDown !== this.previousPointerDownHandler) {
-            this.scene.onPointerDown = this.previousPointerDownHandler;
-        }
+        window.removeEventListener("keydown", this.handleControlHotkeys);
 
         if (this.controlOverlayTexture) {
             this.controlOverlayTexture.dispose();
             this.controlOverlayTexture = null;
         }
+
+        this.controlOverlayPanel = null;
+        this.controlOverlayHint = null;
     }
+
+    private toggleControlOverlay(): void {
+        if (!this.controlOverlayPanel) {
+            return;
+        }
+
+        this.controlOverlayPanel.isVisible = !this.controlOverlayPanel.isVisible;
+        this.updateControlHint();
+    }
+
+    private hideControlOverlay(): void {
+        if (!this.controlOverlayPanel || !this.controlOverlayPanel.isVisible) {
+            return;
+        }
+
+        this.controlOverlayPanel.isVisible = false;
+        this.updateControlHint();
+    }
+
+    private toggleAudioMute(): void {
+        this.isAudioMuted = !this.isAudioMuted;
+        BABYLON.Engine.audioEngine?.setGlobalVolume(this.isAudioMuted ? 0 : 1);
+        this.updateControlHint();
+    }
+
+    private updateControlHint(): void {
+        if (!this.controlOverlayHint) {
+            return;
+        }
+
+        const soundAction = this.isAudioMuted ? "Unmute" : "Mute";
+        const helpAction = this.controlOverlayPanel?.isVisible ? "Hide help" : "Show help";
+        this.controlOverlayHint.text = `H ${helpAction}   M ${soundAction}`;
+    }
+}
+
+type GuiModule = typeof import("@babylonjs/gui");
+
+function createControlOverlay(
+    gui: GuiModule,
+    ui: AdvancedDynamicTexture,
+    options: {
+        onToggle: () => void;
+        onClose: () => void;
+        onToggleMute: () => void;
+        isTouchDevice: boolean;
+    },
+): { panel: Rectangle; hint: TextBlock } {
+    const panel = new gui.Rectangle("controls-panel");
+    panel.width = options.isTouchDevice ? "92%" : "380px";
+    panel.height = "1px";
+    panel.adaptHeightToChildren = true;
+    panel.thickness = 1;
+    panel.cornerRadius = 18;
+    panel.color = "rgba(255,255,255,0.14)";
+    panel.background = "rgba(7, 9, 14, 0.78)";
+    panel.horizontalAlignment = gui.Control.HORIZONTAL_ALIGNMENT_RIGHT;
+    panel.verticalAlignment = gui.Control.VERTICAL_ALIGNMENT_BOTTOM;
+    panel.paddingRight = options.isTouchDevice ? "16px" : "22px";
+    panel.paddingBottom = "20px";
+    panel.isPointerBlocker = true;
+
+    const stack = new gui.StackPanel("controls-panel-stack");
+    stack.isVertical = true;
+    stack.width = 1;
+    stack.paddingTop = "18px";
+    stack.paddingBottom = "18px";
+    panel.addControl(stack);
+
+    const eyebrow = new gui.TextBlock("controls-eyebrow");
+    eyebrow.text = "Controls";
+    eyebrow.color = "#f7b955";
+    eyebrow.fontSize = 12;
+    eyebrow.fontFamily = "Inter, Segoe UI, sans-serif";
+    eyebrow.height = "18px";
+    eyebrow.textHorizontalAlignment = gui.Control.HORIZONTAL_ALIGNMENT_LEFT;
+    eyebrow.paddingLeft = "18px";
+    eyebrow.paddingRight = "18px";
+    stack.addControl(eyebrow);
+
+    const title = new gui.TextBlock("controls-title");
+    title.text = options.isTouchDevice ? "Desktop gives the full experience" : "Drive, aim, and explore";
+    title.color = "#f5f7ff";
+    title.fontSize = 24;
+    title.height = "34px";
+    title.textHorizontalAlignment = gui.Control.HORIZONTAL_ALIGNMENT_LEFT;
+    title.paddingTop = "4px";
+    title.paddingLeft = "18px";
+    title.paddingRight = "18px";
+    stack.addControl(title);
+
+    const description = new gui.TextBlock("controls-description");
+    description.text = options.isTouchDevice
+        ? "This portfolio is built around keyboard driving. You can still look around, but movement and shooting are best on desktop."
+        : "Use the tank to move between projects and shoot glowing targets to open links.";
+    description.color = "rgba(255,255,255,0.76)";
+    description.fontSize = 14;
+    description.textWrapping = true;
+    description.resizeToFit = true;
+    description.textHorizontalAlignment = gui.Control.HORIZONTAL_ALIGNMENT_LEFT;
+    description.paddingTop = "10px";
+    description.paddingLeft = "18px";
+    description.paddingRight = "18px";
+    description.paddingBottom = "8px";
+    stack.addControl(description);
+
+    [
+        "W A S D  Move tank",
+        "E  Shoot glowing targets",
+        "H  Reopen or hide this help",
+        "M  Mute or unmute sound",
+        "Esc  Close the help panel",
+    ].forEach((line, index) => {
+        const item = new gui.TextBlock(`controls-line-${index}`);
+        item.text = line;
+        item.color = "#f4f7ff";
+        item.fontSize = 15;
+        item.height = "26px";
+        item.textHorizontalAlignment = gui.Control.HORIZONTAL_ALIGNMENT_LEFT;
+        item.paddingLeft = "18px";
+        item.paddingRight = "18px";
+        stack.addControl(item);
+    });
+
+    const actionRow = new gui.StackPanel("controls-actions");
+    actionRow.isVertical = false;
+    actionRow.height = "42px";
+    actionRow.paddingTop = "14px";
+    actionRow.paddingLeft = "18px";
+    actionRow.paddingRight = "18px";
+    stack.addControl(actionRow);
+
+    const muteButton = gui.Button.CreateSimpleButton("controls-mute", "Toggle sound");
+    muteButton.width = "132px";
+    muteButton.height = "38px";
+    muteButton.thickness = 0;
+    muteButton.cornerRadius = 18;
+    muteButton.color = "#0b0d12";
+    muteButton.background = "#f7b955";
+    muteButton.fontSize = 14;
+    muteButton.onPointerClickObservable.add(() => options.onToggleMute());
+    actionRow.addControl(muteButton);
+
+    const closeButton = gui.Button.CreateSimpleButton("controls-close", "Close");
+    closeButton.width = "92px";
+    closeButton.height = "38px";
+    closeButton.thickness = 1;
+    closeButton.cornerRadius = 18;
+    closeButton.color = "#f5f7ff";
+    closeButton.background = "rgba(255,255,255,0.08)";
+    closeButton.fontSize = 14;
+    closeButton.paddingLeft = "10px";
+    closeButton.onPointerClickObservable.add(() => options.onClose());
+    actionRow.addControl(closeButton);
+
+    const hintBadge = new gui.Rectangle("controls-hint-badge");
+    hintBadge.width = options.isTouchDevice ? "210px" : "198px";
+    hintBadge.height = "36px";
+    hintBadge.thickness = 1;
+    hintBadge.cornerRadius = 18;
+    hintBadge.color = "rgba(255,255,255,0.16)";
+    hintBadge.background = "rgba(8, 10, 16, 0.58)";
+    hintBadge.horizontalAlignment = gui.Control.HORIZONTAL_ALIGNMENT_RIGHT;
+    hintBadge.verticalAlignment = gui.Control.VERTICAL_ALIGNMENT_TOP;
+    hintBadge.paddingTop = "52px";
+    hintBadge.paddingRight = "12px";
+    hintBadge.isPointerBlocker = true;
+
+    const hintText = new gui.TextBlock("controls-hint-text");
+    hintText.color = "#f4f7ff";
+    hintText.fontSize = 13;
+    hintText.fontFamily = "Inter, Segoe UI, sans-serif";
+    hintBadge.addControl(hintText);
+
+    hintBadge.onPointerClickObservable.add(() => options.onToggle());
+
+    ui.addControl(panel);
+    ui.addControl(hintBadge);
+
+    return { panel, hint: hintText };
 }

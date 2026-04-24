@@ -14,6 +14,7 @@ export class GameRuntime {
     private readonly statusOverlay: HTMLElement | null;
     private readonly statusTitle: HTMLElement | null;
     private readonly statusMessage: HTMLElement | null;
+    private readonly statusRetryButton: HTMLButtonElement | null;
     private sceneReady = false;
     private readonly renderScene = () => this.scene.render();
 
@@ -26,6 +27,7 @@ export class GameRuntime {
         this.statusOverlay = document.getElementById("statusOverlay");
         this.statusTitle = document.getElementById("statusTitle");
         this.statusMessage = document.getElementById("statusMessage");
+        this.statusRetryButton = document.getElementById("statusRetryButton") as HTMLButtonElement | null;
 
         this.engine = new Engine(canvas, true);
         configureEngine(this.engine);
@@ -40,6 +42,8 @@ export class GameRuntime {
         const rootUrl = "./scenes/_assets/";
 
         try {
+            this._hideRetryAction();
+
             const [CANNON, { appendScene }] = await Promise.all([
                 import("cannon"),
                 import("./scenes/tools"),
@@ -63,6 +67,7 @@ export class GameRuntime {
                 "Refresh the page to try again. If the problem persists, check the browser console for details.",
                 true,
             );
+            this._showRetryAction();
         }
     }
 
@@ -81,6 +86,8 @@ export class GameRuntime {
             this.statusOverlay.hidden = true;
             delete this.statusOverlay.dataset.state;
         }
+
+        this._hideRetryAction();
     }
 
     private _getInitialStatusMessage(): string {
@@ -105,6 +112,19 @@ export class GameRuntime {
         window.addEventListener("resize", this._handleResize);
         document.addEventListener("visibilitychange", this._handleVisibilityChange);
         window.addEventListener("beforeunload", this._handleBeforeUnload);
+        this.statusRetryButton?.addEventListener("click", this._handleRetryClick);
+    }
+
+    private _showRetryAction(): void {
+        if (this.statusRetryButton) {
+            this.statusRetryButton.hidden = false;
+        }
+    }
+
+    private _hideRetryAction(): void {
+        if (this.statusRetryButton) {
+            this.statusRetryButton.hidden = true;
+        }
     }
 
     private readonly _handleResize = (): void => {
@@ -115,10 +135,15 @@ export class GameRuntime {
         this._syncRenderLoop();
     };
 
+    private readonly _handleRetryClick = (): void => {
+        window.location.reload();
+    };
+
     private readonly _handleBeforeUnload = (): void => {
         window.removeEventListener("resize", this._handleResize);
         document.removeEventListener("visibilitychange", this._handleVisibilityChange);
         window.removeEventListener("beforeunload", this._handleBeforeUnload);
+        this.statusRetryButton?.removeEventListener("click", this._handleRetryClick);
         this.engine.stopRenderLoop(this.renderScene);
         this.scene.dispose();
         this.engine.dispose();

@@ -80,6 +80,36 @@
             color: rgba(255, 255, 255, 0.76);
         }
 
+        .status-actions {
+            display: flex;
+            margin-top: 18px;
+        }
+
+        .status-button {
+            appearance: none;
+            border: 0;
+            border-radius: 999px;
+            padding: 11px 16px;
+            background: linear-gradient(135deg, #f7b955, #ff8c5a);
+            color: #0b0d12;
+            font: inherit;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.16s ease, opacity 0.16s ease;
+        }
+
+        .status-button:hover {
+            transform: translateY(-1px);
+        }
+
+        .status-button:active {
+            transform: translateY(0);
+        }
+
+        .status-button[hidden] {
+            display: none;
+        }
+
         #fps {
             position: absolute;
             background: rgba(0, 0, 0, 0.7);
@@ -108,6 +138,9 @@
             <p class="status-label">Interactive Portfolio</p>
             <h1 id="statusTitle">Loading scene</h1>
             <p id="statusMessage">Loading assets and interactive scene data.</p>
+            <div class="status-actions">
+                <button id="statusRetryButton" class="status-button" type="button" hidden>Retry loading</button>
+            </div>
         </section>
     </div>
     <div id="fps">0</div>

@@ -327,6 +327,7 @@ export async function initializeShooting(_this: TankContext, forward: BABYLON.Ve
     ball.isVisible = false;
     ball.isPickable = false;
     let canShoot = true;
+    let currentStatusUntil = 0;
     let currentObjectiveText = objectiveHint.text;
 
     const shotObserver = _this.scene.onBeforeRenderObservable.add(() => {
@@ -349,10 +350,10 @@ export async function initializeShooting(_this: TankContext, forward: BABYLON.Ve
         }
 
         const nextObjectiveText = nearestTargetDistanceSquared <= targetHintRangeSquared
-            ? `Nearby target: ${nearbyTargetLabel}. Press E to shoot and open the link.`
-            : "Drive with WASD. Press E to shoot the glowing targets and open social links.";
+            ? `Target in range: ${nearbyTargetLabel} (${formatDistance(Math.sqrt(nearestTargetDistanceSquared))}). Shoot to open the link.`
+            : "Explore the island to discover glowing targets, projects, and social links.";
 
-        if (nextObjectiveText !== currentObjectiveText) {
+        if (performance.now() >= currentStatusUntil && nextObjectiveText !== currentObjectiveText) {
             objectiveHint.text = nextObjectiveText;
             currentObjectiveText = nextObjectiveText;
         }
@@ -368,8 +369,9 @@ export async function initializeShooting(_this: TankContext, forward: BABYLON.Ve
             for (const target of targets) {
                 if (BABYLON.Vector3.DistanceSquared(shotPosition, target.mesh.absolutePosition) <= target.hitRadiusSquared) {
                     window.open(target.url, "_blank", "noopener,noreferrer");
-                    currentObjectiveText = `Opening ${target.label}.`;
+                    currentObjectiveText = `Direct hit. Opening ${target.label} in a new tab.`;
                     objectiveHint.text = currentObjectiveText;
+                    currentStatusUntil = performance.now() + 2200;
                     clearTimeout(activeShot.disposeTimeout);
                     activeShot.dispose();
                     activeShots.splice(shotIndex, 1);
@@ -460,7 +462,7 @@ function createObjectiveHint(gui: GuiModule, ui: AdvancedDynamicTexture): TextBl
     container.zIndex = 2;
 
     const text = new gui.TextBlock("objective-hint-text");
-    text.text = "Drive with WASD. Press E to shoot the glowing targets and open social links.";
+    text.text = "Explore the island to discover glowing targets, projects, and social links.";
     text.color = "#f4f7ff";
     text.fontSize = 15;
     text.fontFamily = "Inter, Segoe UI, sans-serif";
@@ -475,6 +477,10 @@ function createObjectiveHint(gui: GuiModule, ui: AdvancedDynamicTexture): TextBl
     ui.addControl(container);
 
     return text;
+}
+
+function formatDistance(distance: number): string {
+    return `${Math.max(1, Math.round(distance))}m away`;
 }
 
 function createTargetLabel(
