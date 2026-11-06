@@ -13,7 +13,11 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   instantiateBricks: () => (/* binding */ instantiateBricks)
 /* harmony export */ });
 /* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core */ "./node_modules/@babylonjs/core/index.js");
+/* harmony import */ var _toyStyle__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./toyStyle */ "./src/scenes/toyStyle.ts");
 
+
+/** Earthy toy-block colours (brick red, mustard, teal, slate blue, sand); neighbours differ. */
+var BRICK_COLORS = ["#B9553F", "#D9A13B", "#3F8C84", "#456F99", "#DCC9A8"];
 /** Shared by every wall, since they all play the same sound. */
 var brickSoundCooldownMs = 150;
 var lastBrickSoundTime = 0;
@@ -37,10 +41,9 @@ function instantiateBricks(_this, x, y, z, numRows, numColumnsPerRow, rotationY)
         console.warn("Tank physics impostor is missing. Skipping brick collision audio setup.");
         return;
     }
-    // Create the initial brick
-    var brick = createBrick(_this, brickLength, brickHeight, brickDepth);
-    brick.isVisible = false;
-    brick.isPickable = false;
+    // One hidden template per colour; the visible bricks are instances of these.
+    var brickTemplates = createBrickTemplates(_this, brickLength, brickHeight, brickDepth);
+    var colorOffset = Math.abs(Math.round(x + z)) % BRICK_COLORS.length;
     // Define a small buffer to prevent collision
     var buffer = 0; // Adjust this value as needed
     // The wall is built in the parent's local space (centered on x = 0, z = 0) so that
@@ -49,7 +52,6 @@ function instantiateBricks(_this, x, y, z, numRows, numColumnsPerRow, rotationY)
     wallParent.position.set(x, 0, z);
     wallParent.rotation.y = rotationY;
     wallParent.computeWorldMatrix(true);
-    brick.parent = wallParent;
     // Create the wall of bricks
     for (var j = 0; j < numRows; j++) {
         // Number of bricks in the current row
@@ -60,7 +62,9 @@ function instantiateBricks(_this, x, y, z, numRows, numColumnsPerRow, rotationY)
         var localX = -(totalRowWidth / 2);
         var localY = initialY + j * (brickHeight + buffer);
         for (var i = 0; i < numBricksInRow; i++) {
-            var brickInstance = brick.createInstance("brick".concat(j, "-").concat(i));
+            // Stepping by 2 per brick and 3 per row keeps side-by-side and stacked bricks different.
+            var template = brickTemplates[(colorOffset + (i * 2) + (j * 3)) % brickTemplates.length];
+            var brickInstance = template.createInstance("brick".concat(j, "-").concat(i));
             positionBrick(_this, brickInstance, localX, localY, 0, brickMass);
             // Parent only after the impostor exists: Babylon skips creating the physics
             // body for meshes that already have a parent.
@@ -69,12 +73,13 @@ function instantiateBricks(_this, x, y, z, numRows, numColumnsPerRow, rotationY)
         }
     }
     /**
-     * Create a brick mesh.
+     * Create the hidden, rounded toy-block templates (one per colour).
      */
-    function createBrick(_this, length, height, depth) {
-        var brick = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateBox("brick", { width: length, height: height, depth: depth }, _this.scene);
-        brick.material = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.StandardMaterial("brickMaterial", _this.scene);
-        return brick;
+    function createBrickTemplates(_this, length, height, depth) {
+        return BRICK_COLORS.map(function (hex, i) {
+            var material = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(_this.scene, "toy-brick-".concat(i), hex, { roughness: 0.5, clearCoat: 0.4 });
+            return (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createTemplate)((0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRoundedBox)("brick-template-".concat(i), length, height, depth, 0.38, _this.scene, 3), material);
+        });
     }
     /**
      * Position a brick mesh and set up its physics.
@@ -334,7 +339,7 @@ var Play = /** @class */ (function (_super) {
             "monitor",
         ]);
         var shadowCasterKeywords = [
-            "tank", "brick", "tree-trunk", "tree-leaves", "text", "arrow", "project", "target",
+            "tank", "brick", "tree-", "text", "arrow", "project", "target",
             "podium", "practice", "github", "linkedin", "twitter", "amongus", "statue", "berserk",
             "guts", "monument", "table", "desk", "chair",
         ];
@@ -486,7 +491,7 @@ var Play = /** @class */ (function (_super) {
         this.scene.pointerUpPredicate = function () { return false; };
         var movableMeshes = new Set(["tank", "tank_holder", "amongus", "splatter1", "splatter2", "splatter3"]);
         this.scene.meshes
-            .filter(function (mesh) { return !mesh.physicsImpostor && !movableMeshes.has(mesh.name) && !mesh.isDescendantOf(_this.tank); })
+            .filter(function (mesh) { var _a; return !mesh.physicsImpostor && !movableMeshes.has(mesh.name) && !mesh.isDescendantOf(_this.tank) && !((_a = mesh.metadata) === null || _a === void 0 ? void 0 : _a.keepUnfrozen); })
             .forEach(function (mesh) {
             mesh.isPickable = false;
             mesh.doNotSyncBoundingInfo = true;
@@ -2199,15 +2204,22 @@ function configurePostProcesses(scene_3) {
 
 /***/ },
 
-/***/ "./src/scenes/toyTank.ts"
-/*!*******************************!*\
-  !*** ./src/scenes/toyTank.ts ***!
-  \*******************************/
+/***/ "./src/scenes/toyStyle.ts"
+/*!********************************!*\
+  !*** ./src/scenes/toyStyle.ts ***!
+  \********************************/
 (__unused_webpack_module, __webpack_exports__, __webpack_require__) {
 
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   createToyTank: () => (/* binding */ createToyTank)
+/* harmony export */   buildMesh: () => (/* binding */ buildMesh),
+/* harmony export */   clamp: () => (/* binding */ clamp),
+/* harmony export */   createRandom: () => (/* binding */ createRandom),
+/* harmony export */   createRoundedBox: () => (/* binding */ createRoundedBox),
+/* harmony export */   createTemplate: () => (/* binding */ createTemplate),
+/* harmony export */   createToyMaterial: () => (/* binding */ createToyMaterial),
+/* harmony export */   pushOrientedTriangle: () => (/* binding */ pushOrientedTriangle)
 /* harmony export */ });
+/* unused harmony export getToyEnvironment */
 /* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core */ "./node_modules/@babylonjs/core/index.js");
 var __spreadArray = (undefined && undefined.__spreadArray) || function (to, from, pack) {
     if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
@@ -2218,6 +2230,259 @@ var __spreadArray = (undefined && undefined.__spreadArray) || function (to, from
     }
     return to.concat(ar || Array.prototype.slice.call(from));
 };
+
+var environments = new WeakMap();
+/** One shared environment texture per scene. */
+function getToyEnvironment(scene) {
+    var environment = environments.get(scene);
+    if (!environment) {
+        environment = createToyEnvironment(scene);
+        environments.set(scene, environment);
+    }
+    return environment;
+}
+/** Plastic-looking PBR material; `hex` is an sRGB colour like "#F67FAA". */
+function createToyMaterial(scene, name, hex, options) {
+    var _a, _b, _c;
+    if (options === void 0) { options = {}; }
+    var material = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.PBRMaterial(name, scene);
+    material.albedoColor = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.FromHexString(hex).toLinearSpace();
+    material.metallic = (_a = options.metallic) !== null && _a !== void 0 ? _a : 0;
+    material.roughness = (_b = options.roughness) !== null && _b !== void 0 ? _b : 0.45;
+    material.reflectionTexture = getToyEnvironment(scene);
+    material.environmentIntensity = 0.6;
+    var clearCoat = (_c = options.clearCoat) !== null && _c !== void 0 ? _c : 0;
+    if (clearCoat > 0) {
+        // Glossy varnish layer: crisp highlights on top of the softer plastic underneath.
+        material.clearCoat.isEnabled = true;
+        material.clearCoat.intensity = clearCoat;
+        material.clearCoat.roughness = 0.12;
+    }
+    return material;
+}
+/**
+ * The scene has no environment map, so PBR plastic would only be lit by the direct lights and
+ * look flat. This builds a tiny sky-to-ground gradient cube map for the toy materials (tank, trees, bricks):
+ * it gives the plastic soft sky-coloured fill from above, darker undersides, and reflections for
+ * the glossy highlights. It only depends on height, so face orientation doesn't matter.
+ */
+function createToyEnvironment(scene) {
+    var size = 32;
+    var zenith = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.FromHexString("#D6E4FF");
+    var sky = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.FromHexString("#F4F1FF");
+    var horizon = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.FromHexString("#FFE6D2");
+    var ground = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.FromHexString("#5E7552");
+    var color = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3();
+    var faceNames = ["right", "left", "up", "down", "front", "back"];
+    var faceAxes = {
+        right: [new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(1, 0, 0), new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, 0, -1), new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, -1, 0)],
+        left: [new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(-1, 0, 0), new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, 0, 1), new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, -1, 0)],
+        up: [new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, 1, 0), new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(1, 0, 0), new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, 0, 1)],
+        down: [new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, -1, 0), new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(1, 0, 0), new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, 0, -1)],
+        front: [new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, 0, 1), new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(1, 0, 0), new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, -1, 0)],
+        back: [new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, 0, -1), new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(-1, 0, 0), new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, -1, 0)],
+    };
+    var faces = faceNames.map(function (faceName) {
+        var _a = faceAxes[faceName], normal = _a[0], axisX = _a[1], axisY = _a[2];
+        var data = new Uint8Array(size * size * 4);
+        for (var py = 0; py < size; py++) {
+            for (var px = 0; px < size; px++) {
+                var u = (((px + 0.5) / size) * 2) - 1;
+                var v = (((py + 0.5) / size) * 2) - 1;
+                var dirY = (normal.y + (axisX.y * u) + (axisY.y * v)) / Math.hypot(normal.x + (axisX.x * u) + (axisY.x * v), normal.y + (axisX.y * u) + (axisY.y * v), normal.z + (axisX.z * u) + (axisY.z * v));
+                if (dirY >= 0) {
+                    _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.LerpToRef(horizon, sky, Math.min(1, dirY * 2.5), color);
+                    _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.LerpToRef(color, zenith, Math.max(0, (dirY - 0.4) / 0.6), color);
+                    if (dirY > 0.82) {
+                        // Bright "studio light" cap for crisp highlights on top surfaces.
+                        _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.LerpToRef(color, _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.White(), Math.min(1, (dirY - 0.82) / 0.08), color);
+                    }
+                }
+                else {
+                    _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.LerpToRef(horizon, ground, Math.min(1, -dirY * 4), color);
+                }
+                var offset = ((py * size) + px) * 4;
+                data[offset] = Math.round(color.r * 255);
+                data[offset + 1] = Math.round(color.g * 255);
+                data[offset + 2] = Math.round(color.b * 255);
+                data[offset + 3] = 255;
+            }
+        }
+        return data;
+    });
+    var texture = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.RawCubeTexture(scene, faces, size, _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Constants.TEXTUREFORMAT_RGBA, _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Constants.TEXTURETYPE_UNSIGNED_BYTE, true);
+    texture.gammaSpace = true;
+    texture.name = "toy-environment";
+    // Diffuse image-based lighting needs spherical harmonics; compute them from the same data on
+    // the CPU instead of reading the texture back from the GPU.
+    texture.sphericalPolynomial = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.CubeMapToSphericalPolynomialTools.ConvertCubeMapToSphericalPolynomial({
+        size: size,
+        right: faces[0],
+        left: faces[1],
+        up: faces[2],
+        down: faces[3],
+        front: faces[4],
+        back: faces[5],
+        format: _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Constants.TEXTUREFORMAT_RGBA,
+        type: _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Constants.TEXTURETYPE_UNSIGNED_BYTE,
+        gammaSpace: true,
+    });
+    return texture;
+}
+/** Hidden source mesh for instances. */
+function createTemplate(mesh, material) {
+    mesh.material = material;
+    mesh.isVisible = false;
+    mesh.isPickable = false;
+    return mesh;
+}
+/**
+ * Box with all edges and corners rounded by `radius`: each face is a grid that is extra dense
+ * near the edges, and every vertex is pushed onto the rounded surface. `taper` below 1 makes the
+ * top narrower than the bottom (above 1, wider).
+ */
+function createRoundedBox(name, width, height, depth, radius, scene, segments, taper) {
+    if (segments === void 0) { segments = 4; }
+    if (taper === void 0) { taper = 1; }
+    var half = [width / 2, height / 2, depth / 2];
+    var r = Math.min.apply(Math, __spreadArray([radius], half, false));
+    var inner = half.map(function (h) { return h - r; });
+    var samples = half.map(function (h, axis) {
+        var i = inner[axis];
+        var values = [];
+        for (var k = 0; k <= segments; k++) {
+            values.push(-h + ((h - i) * k / segments));
+        }
+        for (var k = 0; k <= segments; k++) {
+            var value = i + ((h - i) * k / segments);
+            if (value > values[values.length - 1] + 1e-6) {
+                values.push(value);
+            }
+        }
+        return values;
+    });
+    var positions = [];
+    var normals = [];
+    var indices = [];
+    var point = [0, 0, 0];
+    var _loop_1 = function (axis) {
+        var _loop_2 = function (sign) {
+            var uAxis = (axis + 1) % 3;
+            var vAxis = (axis + 2) % 3;
+            var uValues = samples[uAxis];
+            var vValues = samples[vAxis];
+            var start = positions.length / 3;
+            for (var _b = 0, uValues_1 = uValues; _b < uValues_1.length; _b++) {
+                var u = uValues_1[_b];
+                var _loop_3 = function (v) {
+                    point[axis] = sign * half[axis];
+                    point[uAxis] = u;
+                    point[vAxis] = v;
+                    var nearest = point.map(function (value, i) { return clamp(value, -inner[i], inner[i]); });
+                    var offset = point.map(function (value, i) { return value - nearest[i]; });
+                    var length_1 = Math.hypot(offset[0], offset[1], offset[2]);
+                    var normal = length_1 > 1e-9 ? offset.map(function (value) { return value / length_1; }) : [0, 0, 0].map(function (_, i) { return (i === axis ? sign : 0); });
+                    var x = nearest[0] + (normal[0] * r);
+                    var y = nearest[1] + (normal[1] * r);
+                    var z = nearest[2] + (normal[2] * r);
+                    // Taper: scale x and z linearly with height, from 1 at the bottom to `taper` at
+                    // the top. Normals follow the inverse transpose of that deformation.
+                    var scale = 1 - ((1 - taper) * ((y + half[1]) / (2 * half[1])));
+                    var scaleSlope = -(1 - taper) / (2 * half[1]);
+                    var nx = normal[0] / scale;
+                    var ny = normal[1] - ((x * scaleSlope * normal[0]) / scale) - ((z * scaleSlope * normal[2]) / scale);
+                    var nz = normal[2] / scale;
+                    var normalLength = Math.hypot(nx, ny, nz);
+                    positions.push(x * scale, y, z * scale);
+                    normals.push(nx / normalLength, ny / normalLength, nz / normalLength);
+                };
+                for (var _c = 0, vValues_1 = vValues; _c < vValues_1.length; _c++) {
+                    var v = vValues_1[_c];
+                    _loop_3(v);
+                }
+            }
+            var columns = vValues.length;
+            for (var ui = 0; ui < uValues.length - 1; ui++) {
+                for (var vi = 0; vi < columns - 1; vi++) {
+                    var a = start + (ui * columns) + vi;
+                    var b = start + ((ui + 1) * columns) + vi;
+                    var c = start + ((ui + 1) * columns) + vi + 1;
+                    var d = start + (ui * columns) + vi + 1;
+                    pushOrientedTriangle(indices, positions, normals, a, b, c);
+                    pushOrientedTriangle(indices, positions, normals, a, c, d);
+                }
+            }
+        };
+        for (var _i = 0, _a = [-1, 1]; _i < _a.length; _i++) {
+            var sign = _a[_i];
+            _loop_2(sign);
+        }
+    };
+    for (var axis = 0; axis < 3; axis++) {
+        _loop_1(axis);
+    }
+    return buildMesh(name, positions, normals, indices, scene);
+}
+/**
+ * Adds a triangle wound the way Babylon expects for a front face whose outward normal is the
+ * vertex normal (Babylon's front faces have (b - a) x (c - a) pointing away from the normal).
+ */
+function pushOrientedTriangle(indices, positions, normals, a, b, c) {
+    var ax = positions[a * 3], ay = positions[(a * 3) + 1], az = positions[(a * 3) + 2];
+    var e1x = positions[b * 3] - ax, e1y = positions[(b * 3) + 1] - ay, e1z = positions[(b * 3) + 2] - az;
+    var e2x = positions[c * 3] - ax, e2y = positions[(c * 3) + 1] - ay, e2z = positions[(c * 3) + 2] - az;
+    var cx = (e1y * e2z) - (e1z * e2y);
+    var cy = (e1z * e2x) - (e1x * e2z);
+    var cz = (e1x * e2y) - (e1y * e2x);
+    var nx = normals[a * 3] + normals[b * 3] + normals[c * 3];
+    var ny = normals[(a * 3) + 1] + normals[(b * 3) + 1] + normals[(c * 3) + 1];
+    var nz = normals[(a * 3) + 2] + normals[(b * 3) + 2] + normals[(c * 3) + 2];
+    if ((cx * nx) + (cy * ny) + (cz * nz) > 0) {
+        indices.push(a, c, b);
+    }
+    else {
+        indices.push(a, b, c);
+    }
+}
+function buildMesh(name, positions, normals, indices, scene) {
+    var mesh = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Mesh(name, scene);
+    var vertexData = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.VertexData();
+    vertexData.positions = positions;
+    vertexData.normals = normals;
+    vertexData.indices = indices;
+    vertexData.applyToMesh(mesh);
+    return mesh;
+}
+function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+}
+/** Small deterministic random generator, so procedural shapes look the same on every visit. */
+function createRandom(seed) {
+    var state = seed >>> 0;
+    return function () {
+        state = (state + 0x6D2B79F5) >>> 0;
+        var t = state;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+}
+
+
+/***/ },
+
+/***/ "./src/scenes/toyTank.ts"
+/*!*******************************!*\
+  !*** ./src/scenes/toyTank.ts ***!
+  \*******************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   createToyTank: () => (/* binding */ createToyTank)
+/* harmony export */ });
+/* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core */ "./node_modules/@babylonjs/core/index.js");
+/* harmony import */ var _toyStyle__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./toyStyle */ "./src/scenes/toyStyle.ts");
+
 
 var HOLDER_SIZE = 12;
 // Track layout
@@ -2239,13 +2504,16 @@ var TURRET_TAPER = 0.85;
 var BARREL_Y = 6.9;
 var BARREL_START_Z = 3.6;
 var BARREL_LENGTH = 7.5;
+// Slate blue body with sakura pink accents (pink comes from the cherry trees, blue is its
+// complement), warm sand details and brass fittings.
 var PALETTE = {
-    body: "#F67FAA",
-    bodyDark: "#D9568A",
-    cream: "#FFF4E2",
-    gold: "#F7B955",
-    rubber: "#2E2B33",
-    cleat: "#4A4652",
+    body: "#4F6F8F",
+    bodyDark: "#344B63",
+    cream: "#E8DCC6",
+    gold: "#C9A35B",
+    accent: "#E8869F",
+    rubber: "#2A2C30",
+    cleat: "#45484E",
     lens: "#FFE7A8",
 };
 function createToyTank(scene, holder) {
@@ -2268,21 +2536,21 @@ function createToyTank(scene, holder) {
     bodyContent.parent = body;
     bodyContent.position.y = -bodyPivotY;
     // ---------------------------------------------------------------- Hull
-    var lowerHull = track(createRoundedBox("toy-tank-lower-hull", 6.6, 2.4, 12.4, 0.55, scene, 4, 1.06));
+    var lowerHull = track((0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRoundedBox)("toy-tank-lower-hull", 6.6, 2.4, 12.4, 0.55, scene, 4, 1.06));
     lowerHull.material = materials.bodyDark;
     lowerHull.parent = bodyContent;
     lowerHull.position.set(0, 2.5, 0);
-    var deck = track(createRoundedBox("toy-tank-deck", 12.4, 1.2, 12.8, 0.5, scene, 4, 0.95));
+    var deck = track((0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRoundedBox)("toy-tank-deck", 12.4, 1.2, 12.8, 0.5, scene, 4, 0.95));
     deck.material = materials.body;
     deck.parent = bodyContent;
     deck.position.set(0, 4.55, 0);
-    var glacis = track(createRoundedBox("toy-tank-glacis", 6.4, 0.9, 3.0, 0.4, scene));
+    var glacis = track((0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRoundedBox)("toy-tank-glacis", 6.4, 0.9, 3.0, 0.4, scene));
     glacis.material = materials.body;
     glacis.parent = bodyContent;
     glacis.position.set(0, 3.25, 6.0);
     glacis.rotation.x = 0.55;
     // Rivets along the fenders for that snap-together toy look.
-    var rivetTemplate = createTemplate(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateSphere("toy-tank-rivet", { diameter: 0.38, segments: 8 }, scene), materials.cream);
+    var rivetTemplate = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createTemplate)(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateSphere("toy-tank-rivet", { diameter: 0.38, segments: 8 }, scene), materials.cream);
     [-1, 1].forEach(function (side) {
         for (var i = 0; i < 6; i++) {
             var rivet = track(rivetTemplate.createInstance("toy-tank-rivet-".concat(side, "-").concat(i)));
@@ -2335,7 +2603,7 @@ function createToyTank(scene, holder) {
     turretRing.material = materials.cream;
     turretRing.parent = turret;
     turretRing.position.y = 0.25;
-    var turretShell = track(createRoundedBox("toy-tank-turret-shell", 6.8, 2.6, 7.2, 0.75, scene, 5, TURRET_TAPER));
+    var turretShell = track((0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRoundedBox)("toy-tank-turret-shell", 6.8, 2.6, 7.2, 0.75, scene, 5, TURRET_TAPER));
     turretShell.material = materials.body;
     turretShell.parent = turret;
     turretShell.position.y = 1.8;
@@ -2348,7 +2616,7 @@ function createToyTank(scene, holder) {
     hatch.parent = turret;
     hatch.scaling.y = 0.55;
     hatch.position.set(-1.4, 3.6, -1.4);
-    var periscope = track(createRoundedBox("toy-tank-periscope", 1.2, 0.7, 0.9, 0.2, scene));
+    var periscope = track((0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRoundedBox)("toy-tank-periscope", 1.2, 0.7, 0.9, 0.2, scene));
     periscope.material = materials.cream;
     periscope.parent = turret;
     periscope.position.set(1.6, 3.3, 1.2);
@@ -2377,11 +2645,11 @@ function createToyTank(scene, holder) {
     antennaRod.parent = antenna;
     antennaRod.position.y = 2.1;
     var antennaTip = track(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateSphere("toy-tank-antenna-tip", { diameter: 0.55, segments: 12 }, scene));
-    antennaTip.material = materials.gold;
+    antennaTip.material = materials.accent;
     antennaTip.parent = antenna;
     antennaTip.position.y = 4.25;
     // ---------------------------------------------------------------- Gun
-    var mantlet = track(createRoundedBox("toy-tank-mantlet", 3.4, 2.0, 1.4, 0.55, scene, 4, 0.88));
+    var mantlet = track((0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRoundedBox)("toy-tank-mantlet", 3.4, 2.0, 1.4, 0.55, scene, 4, 0.88));
     mantlet.material = materials.bodyDark;
     mantlet.parent = turret;
     mantlet.position.set(0, BARREL_Y - turret.position.y, BARREL_START_Z - turret.position.z - 0.3);
@@ -2416,7 +2684,7 @@ function createToyTank(scene, holder) {
     var roadWheel = createWheelTemplates(scene, "road", ROAD_WHEEL_RADIUS, 2.0, materials);
     var endWheel = createWheelTemplates(scene, "end", END_WHEEL_RADIUS, 2.2, materials);
     var roller = createWheelTemplates(scene, "roller", RETURN_ROLLER_RADIUS, 1.6, materials);
-    var cleatTemplate = createTemplate(createRoundedBox("toy-tank-cleat", TRACK_WIDTH + 0.2, 0.26, 0.5, 0.1, scene, 2), materials.cleat);
+    var cleatTemplate = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createTemplate)((0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRoundedBox)("toy-tank-cleat", TRACK_WIDTH + 0.2, 0.26, 0.5, 0.1, scene, 2), materials.cleat);
     [-1, 1].forEach(function (side) {
         var trackGroup = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.TransformNode("toy-tank-track-".concat(side), scene);
         trackGroup.parent = root;
@@ -2519,9 +2787,9 @@ function createToyTank(scene, holder) {
         }
         // Suspension: the nose lifts when accelerating, dips when braking, and the body leans
         // out of turns. Slightly under-damped so it settles with a little bounce.
-        var clampedAcceleration = clamp(acceleration, -80, 80);
-        var pitchTarget = clamp(-clampedAcceleration * 0.0011, -0.06, 0.06);
-        var rollTarget = clamp(speed * yawRate * 0.0022, -0.05, 0.05);
+        var clampedAcceleration = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.clamp)(acceleration, -80, 80);
+        var pitchTarget = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.clamp)(-clampedAcceleration * 0.0011, -0.06, 0.06);
+        var rollTarget = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.clamp)(speed * yawRate * 0.0022, -0.05, 0.05);
         stepSpring(sway, "pitch", "pitchVelocity", pitchTarget, 140, 9, deltaSeconds);
         stepSpring(sway, "roll", "rollVelocity", rollTarget, 140, 9, deltaSeconds);
         body.rotation.x = sway.pitch;
@@ -2531,8 +2799,8 @@ function createToyTank(scene, holder) {
         var rattle = Math.min(1, Math.abs(speed) / 10) * 0.06;
         body.position.y = bodyPivotY + (Math.sin(travelled * 1.7) * rattle);
         // Antenna whips back when accelerating and swings out in turns.
-        stepSpring(antennaSway, "x", "xVelocity", clamp(-clampedAcceleration * 0.004, -0.3, 0.3), 70, 2.2, deltaSeconds);
-        stepSpring(antennaSway, "z", "zVelocity", clamp(speed * yawRate * 0.01, -0.25, 0.25), 70, 2.2, deltaSeconds);
+        stepSpring(antennaSway, "x", "xVelocity", (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.clamp)(-clampedAcceleration * 0.004, -0.3, 0.3), 70, 2.2, deltaSeconds);
+        stepSpring(antennaSway, "z", "zVelocity", (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.clamp)(speed * yawRate * 0.01, -0.25, 0.25), 70, 2.2, deltaSeconds);
         antenna.rotation.x = antennaSway.x;
         antenna.rotation.z = antennaSway.z;
         keyAngle += speed * 0.12 * deltaSeconds;
@@ -2561,23 +2829,10 @@ function createToyTank(scene, holder) {
     };
 }
 function createMaterials(scene) {
-    var environment = createToyEnvironment(scene);
     var plastic = function (name, hex, roughness, metallic, clearCoat) {
         if (metallic === void 0) { metallic = 0; }
         if (clearCoat === void 0) { clearCoat = 0; }
-        var material = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.PBRMaterial("toy-tank-".concat(name), scene);
-        material.albedoColor = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.FromHexString(hex).toLinearSpace();
-        material.metallic = metallic;
-        material.roughness = roughness;
-        material.reflectionTexture = environment;
-        material.environmentIntensity = 0.6;
-        if (clearCoat > 0) {
-            // Glossy varnish layer: crisp highlights on top of the softer plastic underneath.
-            material.clearCoat.isEnabled = true;
-            material.clearCoat.intensity = clearCoat;
-            material.clearCoat.roughness = 0.12;
-        }
-        return material;
+        return (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-tank-".concat(name), hex, { roughness: roughness, metallic: metallic, clearCoat: clearCoat });
     };
     var lens = plastic("lens", PALETTE.lens, 0.2);
     lens.emissiveColor = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.FromHexString(PALETTE.lens).toLinearSpace().scale(0.9);
@@ -2586,91 +2841,16 @@ function createMaterials(scene) {
     flash.emissiveColor = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.FromHexString("#FFD27A");
     flash.alpha = 0.85;
     return {
-        body: plastic("body", PALETTE.body, 0.45, 0, 0.8),
-        bodyDark: plastic("body-dark", PALETTE.bodyDark, 0.5, 0, 0.6),
-        cream: plastic("cream", PALETTE.cream, 0.45, 0, 0.7),
-        gold: plastic("gold", PALETTE.gold, 0.28, 0.55, 0.5),
+        body: plastic("body", PALETTE.body, 0.5, 0, 0.55),
+        bodyDark: plastic("body-dark", PALETTE.bodyDark, 0.55, 0, 0.4),
+        cream: plastic("cream", PALETTE.cream, 0.55, 0, 0.35),
+        gold: plastic("gold", PALETTE.gold, 0.32, 0.65, 0.3),
+        accent: plastic("accent", PALETTE.accent, 0.45, 0, 0.5),
         rubber: plastic("rubber", PALETTE.rubber, 0.85),
         cleat: plastic("cleat", PALETTE.cleat, 0.75),
         lens: lens,
         flash: flash,
     };
-}
-/**
- * The scene has no environment map, so PBR plastic would only be lit by the direct lights and
- * look flat. This builds a tiny sky-to-ground gradient cube map just for the toy tank's materials:
- * it gives the plastic soft sky-coloured fill from above, darker undersides, and reflections for
- * the glossy highlights. It only depends on height, so face orientation doesn't matter.
- */
-function createToyEnvironment(scene) {
-    var size = 32;
-    var zenith = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.FromHexString("#D6E4FF");
-    var sky = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.FromHexString("#F4F1FF");
-    var horizon = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.FromHexString("#FFE6D2");
-    var ground = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.FromHexString("#5E7552");
-    var color = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3();
-    var faceNames = ["right", "left", "up", "down", "front", "back"];
-    var faceAxes = {
-        right: [new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(1, 0, 0), new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, 0, -1), new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, -1, 0)],
-        left: [new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(-1, 0, 0), new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, 0, 1), new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, -1, 0)],
-        up: [new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, 1, 0), new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(1, 0, 0), new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, 0, 1)],
-        down: [new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, -1, 0), new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(1, 0, 0), new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, 0, -1)],
-        front: [new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, 0, 1), new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(1, 0, 0), new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, -1, 0)],
-        back: [new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, 0, -1), new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(-1, 0, 0), new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, -1, 0)],
-    };
-    var faces = faceNames.map(function (faceName) {
-        var _a = faceAxes[faceName], normal = _a[0], axisX = _a[1], axisY = _a[2];
-        var data = new Uint8Array(size * size * 4);
-        for (var py = 0; py < size; py++) {
-            for (var px = 0; px < size; px++) {
-                var u = (((px + 0.5) / size) * 2) - 1;
-                var v = (((py + 0.5) / size) * 2) - 1;
-                var dirY = (normal.y + (axisX.y * u) + (axisY.y * v)) / Math.hypot(normal.x + (axisX.x * u) + (axisY.x * v), normal.y + (axisX.y * u) + (axisY.y * v), normal.z + (axisX.z * u) + (axisY.z * v));
-                if (dirY >= 0) {
-                    _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.LerpToRef(horizon, sky, Math.min(1, dirY * 2.5), color);
-                    _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.LerpToRef(color, zenith, Math.max(0, (dirY - 0.4) / 0.6), color);
-                    if (dirY > 0.82) {
-                        // Bright "studio light" cap for crisp highlights on top surfaces.
-                        _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.LerpToRef(color, _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.White(), Math.min(1, (dirY - 0.82) / 0.08), color);
-                    }
-                }
-                else {
-                    _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.LerpToRef(horizon, ground, Math.min(1, -dirY * 4), color);
-                }
-                var offset = ((py * size) + px) * 4;
-                data[offset] = Math.round(color.r * 255);
-                data[offset + 1] = Math.round(color.g * 255);
-                data[offset + 2] = Math.round(color.b * 255);
-                data[offset + 3] = 255;
-            }
-        }
-        return data;
-    });
-    var texture = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.RawCubeTexture(scene, faces, size, _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Constants.TEXTUREFORMAT_RGBA, _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Constants.TEXTURETYPE_UNSIGNED_BYTE, true);
-    texture.gammaSpace = true;
-    texture.name = "toy-tank-environment";
-    // Diffuse image-based lighting needs spherical harmonics; compute them from the same data on
-    // the CPU instead of reading the texture back from the GPU.
-    texture.sphericalPolynomial = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.CubeMapToSphericalPolynomialTools.ConvertCubeMapToSphericalPolynomial({
-        size: size,
-        right: faces[0],
-        left: faces[1],
-        up: faces[2],
-        down: faces[3],
-        front: faces[4],
-        back: faces[5],
-        format: _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Constants.TEXTUREFORMAT_RGBA,
-        type: _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Constants.TEXTURETYPE_UNSIGNED_BYTE,
-        gammaSpace: true,
-    });
-    return texture;
-}
-/** Hidden source mesh for instances. */
-function createTemplate(mesh, material) {
-    mesh.material = material;
-    mesh.isVisible = false;
-    mesh.isPickable = false;
-    return mesh;
 }
 /**
  * Wheel templates with their axle along X: a cream wheel body, and a gold hub cap with bolts on
@@ -2686,7 +2866,7 @@ function createWheelTemplates(scene, name, radius, width, materials) {
     }
     body.bakeTransformIntoVertices(axleAlongX);
     body.name = "toy-tank-".concat(name, "-wheel");
-    createTemplate(body, materials.cream);
+    (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createTemplate)(body, materials.cream);
     var hubParts = [];
     var cap = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder("toy-tank-".concat(name, "-cap"), { diameter: radius * 0.75, height: 0.2, tessellation: 20 }, scene);
     cap.position.y = (width / 2) + 0.12;
@@ -2705,7 +2885,7 @@ function createWheelTemplates(scene, name, radius, width, materials) {
     // Cylinder axis is Y; rotating -90° around Z points the +Y face toward +X.
     hub.bakeTransformIntoVertices(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Matrix.RotationZ(-Math.PI / 2));
     hub.name = "toy-tank-".concat(name, "-hub");
-    createTemplate(hub, materials.gold);
+    (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createTemplate)(hub, materials.gold);
     return { body: body, hub: hub };
 }
 /**
@@ -2810,130 +2990,13 @@ function createTrackBelt(name, scene) {
             var bIndex = (nextI * profileCount) + j;
             var c = (nextI * profileCount) + nextJ;
             var d = (i * profileCount) + nextJ;
-            pushOrientedTriangle(indices, positions, normals, a, bIndex, c);
-            pushOrientedTriangle(indices, positions, normals, a, c, d);
+            (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.pushOrientedTriangle)(indices, positions, normals, a, bIndex, c);
+            (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.pushOrientedTriangle)(indices, positions, normals, a, c, d);
         }
     }
-    return buildMesh(name, positions, normals, indices, scene);
+    return (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.buildMesh)(name, positions, normals, indices, scene);
 }
-/**
- * Box with all edges and corners rounded by `radius`: each face is a grid that is extra dense
- * near the edges, and every vertex is pushed onto the rounded surface. `taper` below 1 makes the
- * top narrower than the bottom (above 1, wider).
- */
-function createRoundedBox(name, width, height, depth, radius, scene, segments, taper) {
-    if (segments === void 0) { segments = 4; }
-    if (taper === void 0) { taper = 1; }
-    var half = [width / 2, height / 2, depth / 2];
-    var r = Math.min.apply(Math, __spreadArray([radius], half, false));
-    var inner = half.map(function (h) { return h - r; });
-    var samples = half.map(function (h, axis) {
-        var i = inner[axis];
-        var values = [];
-        for (var k = 0; k <= segments; k++) {
-            values.push(-h + ((h - i) * k / segments));
-        }
-        for (var k = 0; k <= segments; k++) {
-            var value = i + ((h - i) * k / segments);
-            if (value > values[values.length - 1] + 1e-6) {
-                values.push(value);
-            }
-        }
-        return values;
-    });
-    var positions = [];
-    var normals = [];
-    var indices = [];
-    var point = [0, 0, 0];
-    var _loop_2 = function (axis) {
-        var _loop_3 = function (sign) {
-            var uAxis = (axis + 1) % 3;
-            var vAxis = (axis + 2) % 3;
-            var uValues = samples[uAxis];
-            var vValues = samples[vAxis];
-            var start = positions.length / 3;
-            for (var _b = 0, uValues_1 = uValues; _b < uValues_1.length; _b++) {
-                var u = uValues_1[_b];
-                var _loop_4 = function (v) {
-                    point[axis] = sign * half[axis];
-                    point[uAxis] = u;
-                    point[vAxis] = v;
-                    var nearest = point.map(function (value, i) { return clamp(value, -inner[i], inner[i]); });
-                    var offset = point.map(function (value, i) { return value - nearest[i]; });
-                    var length_2 = Math.hypot(offset[0], offset[1], offset[2]);
-                    var normal = length_2 > 1e-9 ? offset.map(function (value) { return value / length_2; }) : [0, 0, 0].map(function (_, i) { return (i === axis ? sign : 0); });
-                    var x = nearest[0] + (normal[0] * r);
-                    var y = nearest[1] + (normal[1] * r);
-                    var z = nearest[2] + (normal[2] * r);
-                    // Taper: scale x and z linearly with height, from 1 at the bottom to `taper` at
-                    // the top. Normals follow the inverse transpose of that deformation.
-                    var scale = 1 - ((1 - taper) * ((y + half[1]) / (2 * half[1])));
-                    var scaleSlope = -(1 - taper) / (2 * half[1]);
-                    var nx = normal[0] / scale;
-                    var ny = normal[1] - ((x * scaleSlope * normal[0]) / scale) - ((z * scaleSlope * normal[2]) / scale);
-                    var nz = normal[2] / scale;
-                    var normalLength = Math.hypot(nx, ny, nz);
-                    positions.push(x * scale, y, z * scale);
-                    normals.push(nx / normalLength, ny / normalLength, nz / normalLength);
-                };
-                for (var _c = 0, vValues_1 = vValues; _c < vValues_1.length; _c++) {
-                    var v = vValues_1[_c];
-                    _loop_4(v);
-                }
-            }
-            var columns = vValues.length;
-            for (var ui = 0; ui < uValues.length - 1; ui++) {
-                for (var vi = 0; vi < columns - 1; vi++) {
-                    var a = start + (ui * columns) + vi;
-                    var b = start + ((ui + 1) * columns) + vi;
-                    var c = start + ((ui + 1) * columns) + vi + 1;
-                    var d = start + (ui * columns) + vi + 1;
-                    pushOrientedTriangle(indices, positions, normals, a, b, c);
-                    pushOrientedTriangle(indices, positions, normals, a, c, d);
-                }
-            }
-        };
-        for (var _i = 0, _a = [-1, 1]; _i < _a.length; _i++) {
-            var sign = _a[_i];
-            _loop_3(sign);
-        }
-    };
-    for (var axis = 0; axis < 3; axis++) {
-        _loop_2(axis);
-    }
-    return buildMesh(name, positions, normals, indices, scene);
-}
-/**
- * Adds a triangle wound the way Babylon expects for a front face whose outward normal is the
- * vertex normal (Babylon's front faces have (b - a) x (c - a) pointing away from the normal).
- */
-function pushOrientedTriangle(indices, positions, normals, a, b, c) {
-    var ax = positions[a * 3], ay = positions[(a * 3) + 1], az = positions[(a * 3) + 2];
-    var e1x = positions[b * 3] - ax, e1y = positions[(b * 3) + 1] - ay, e1z = positions[(b * 3) + 2] - az;
-    var e2x = positions[c * 3] - ax, e2y = positions[(c * 3) + 1] - ay, e2z = positions[(c * 3) + 2] - az;
-    var cx = (e1y * e2z) - (e1z * e2y);
-    var cy = (e1z * e2x) - (e1x * e2z);
-    var cz = (e1x * e2y) - (e1y * e2x);
-    var nx = normals[a * 3] + normals[b * 3] + normals[c * 3];
-    var ny = normals[(a * 3) + 1] + normals[(b * 3) + 1] + normals[(c * 3) + 1];
-    var nz = normals[(a * 3) + 2] + normals[(b * 3) + 2] + normals[(c * 3) + 2];
-    if ((cx * nx) + (cy * ny) + (cz * nz) > 0) {
-        indices.push(a, c, b);
-    }
-    else {
-        indices.push(a, b, c);
-    }
-}
-function buildMesh(name, positions, normals, indices, scene) {
-    var mesh = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Mesh(name, scene);
-    var vertexData = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.VertexData();
-    vertexData.positions = positions;
-    vertexData.normals = normals;
-    vertexData.indices = indices;
-    vertexData.applyToMesh(mesh);
-    return mesh;
-}
-/** Cream roundel with a gold star, drawn once into a small texture. */
+/** Sand roundel with a sakura-pink star, drawn once into a small texture. */
 function createStarDecalMaterial(scene) {
     var size = 256;
     var texture = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.DynamicTexture("toy-star-decal-texture", { width: size, height: size }, scene, true);
@@ -2945,7 +3008,7 @@ function createStarDecalMaterial(scene) {
     context.beginPath();
     context.arc(center, center, size * 0.47, 0, Math.PI * 2);
     context.fill();
-    context.fillStyle = PALETTE.gold;
+    context.fillStyle = PALETTE.accent;
     context.strokeStyle = PALETTE.bodyDark;
     context.lineWidth = size * 0.03;
     context.lineJoin = "round";
@@ -2986,9 +3049,6 @@ function getYaw(mesh) {
 function wrapAngle(angle) {
     return Math.atan2(Math.sin(angle), Math.cos(angle));
 }
-function clamp(value, min, max) {
-    return Math.max(min, Math.min(max, value));
-}
 
 
 /***/ },
@@ -3004,16 +3064,37 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   instantiateTrees: () => (/* binding */ instantiateTrees)
 /* harmony export */ });
 /* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core */ "./node_modules/@babylonjs/core/index.js");
-// treeGenerator.ts
+/* harmony import */ var _toyStyle__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./toyStyle */ "./src/scenes/toyStyle.ts");
+var __assign = (undefined && undefined.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
 
+
+var TRUNK_HEIGHT = 15;
+var TRUNK_BOTTOM_DIAMETER = 5;
+var TRUNK_TOP_DIAMETER = 3;
+/** Height of the canopy's sway pivot (top of the trunk), relative to the tree's origin. */
+var CANOPY_PIVOT_Y = 6;
+var GROUND_Y = -0.5;
+// Natural sakura tones: pale blush blossoms rather than candy pink, on dark bark.
+var PALETTE = {
+    bark: "#5E4436",
+    barkDark: "#47332A",
+    puffs: ["#F3C6D1", "#E9AFBF", "#F8DCE3"],
+    blossom: "#FFF7F8",
+    petal: "#F6CFD9",
+};
 function instantiateTrees(_this) {
-    var trunkMaterial = _this.scene.getMaterialByName("default material");
-    var leafMaterial = _this.scene.getMaterialByName("Feuille.002");
-    if (!trunkMaterial || !leafMaterial) {
-        console.warn("Tree materials are missing from the scene.");
-        return;
-    }
-    // Define the coordinates where the trees will be placed
+    var scene = _this.scene;
+    // Trunk centers; the trunk is centered vertically on these points.
     var treeCoordinates = [
         new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(78.3985, 5.1848, -11.2018),
         new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(47.5043, 5.1848, -36.9549),
@@ -3021,97 +3102,224 @@ function instantiateTrees(_this) {
         new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(-54.0394, 5.1848, -22.0382),
         new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(57.1332, 5.1848, 77.0256),
     ];
-    var treeTemplates = createTreeTemplates(20, 15, 5, trunkMaterial, leafMaterial, _this.scene);
-    if (!treeTemplates) {
-        return;
-    }
+    var templates = createTreeTemplates(scene);
+    var petalTexture = createPetalTexture(scene);
+    var swayingCanopies = [];
     treeCoordinates.forEach(function (position, index) {
-        instantiateTree(treeTemplates, position, index, _this.scene);
+        var canopy = instantiateTree(templates, position, index, scene);
+        swayingCanopies.push({ node: canopy, phase: index * 1.7 });
+        createFallingPetals(scene, petalTexture, position, index);
+    });
+    // A slow breeze. The canopies pivot at the top of the trunk.
+    var time = 0;
+    scene.onBeforeRenderObservable.add(function () {
+        time += scene.getEngine().getDeltaTime() / 1000;
+        for (var _i = 0, swayingCanopies_1 = swayingCanopies; _i < swayingCanopies_1.length; _i++) {
+            var _a = swayingCanopies_1[_i], node = _a.node, phase = _a.phase;
+            node.rotation.z = Math.sin((time * 0.7) + phase) * 0.018;
+            node.rotation.x = Math.sin((time * 0.53) + (phase * 1.3)) * 0.012;
+        }
     });
 }
-function createTreeTemplates(sizeBranch, sizeTrunk, radius, trunkMaterial, leafMaterial, scene) {
-    var leaves = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateSphere("tree-leaves", { segments: 2, diameter: sizeBranch }, scene);
-    var positions = leaves.getVerticesData(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.VertexBuffer.PositionKind);
-    var indices = leaves.getIndices();
-    if (!positions || !indices) {
-        console.error("Failed to retrieve vertices data or indices.");
-        return null;
-    }
-    var numberOfPoints = positions.length / 3;
-    var pointMap = [];
-    for (var i = 0; i < numberOfPoints; i++) {
-        var p = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2]);
-        var found = false;
-        for (var index = 0; index < pointMap.length && !found; index++) {
-            var current = pointMap[index];
-            if (current.point.equals(p) || current.point.subtract(p).lengthSquared() < 0.01) {
-                current.indices.push(i * 3);
-                found = true;
-            }
-        }
-        if (!found) {
-            pointMap.push({ point: p, indices: [i * 3] });
-        }
-    }
-    var randomNumber = function (min, max) {
-        if (min === max)
-            return min;
-        var random = Math.random();
-        return (random * (max - min)) + min;
-    };
-    pointMap.forEach(function (_a) {
-        var indicesArray = _a.indices;
-        var min = -sizeBranch / 10;
-        var max = sizeBranch / 10;
-        var rx = randomNumber(min, max);
-        var ry = randomNumber(min, max);
-        var rz = randomNumber(min, max);
-        indicesArray.forEach(function (i) {
-            if (i + 2 < positions.length) {
-                positions[i] += rx;
-                positions[i + 1] += ry;
-                positions[i + 2] += rz;
-            }
-        });
+function createTreeTemplates(scene) {
+    var bark = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-tree-bark", PALETTE.bark, { roughness: 0.75, clearCoat: 0.1 });
+    var barkDark = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-tree-bark-dark", PALETTE.barkDark, { roughness: 0.8, clearCoat: 0.1 });
+    var blossom = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-tree-blossom", PALETTE.blossom, { roughness: 0.45, clearCoat: 0.4 });
+    var trunk = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder("tree-trunk", {
+        height: TRUNK_HEIGHT,
+        diameterTop: TRUNK_TOP_DIAMETER,
+        diameterBottom: TRUNK_BOTTOM_DIAMETER,
+        tessellation: 24,
+    }, scene);
+    trunk.material = bark;
+    trunk.isPickable = false;
+    // The first tree uses this mesh directly; the others are clones (each needs its own physics body).
+    var rootFlare = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createTemplate)(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder("tree-root-flare", {
+        height: 2.6,
+        diameterTop: TRUNK_BOTTOM_DIAMETER - 0.3,
+        diameterBottom: TRUNK_BOTTOM_DIAMETER + 2.6,
+        tessellation: 24,
+    }, scene), barkDark);
+    var branchMesh = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder("tree-branch", {
+        height: 7.5,
+        diameterTop: 0.9,
+        diameterBottom: 1.6,
+        tessellation: 12,
+    }, scene);
+    // Put the branch's base at its origin so it can be rotated around where it leaves the trunk.
+    branchMesh.bakeTransformIntoVertices(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Matrix.Translation(0, 3.75, 0));
+    var branch = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createTemplate)(branchMesh, bark);
+    var random = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRandom)(7);
+    var puffs = PALETTE.puffs.map(function (hex, i) {
+        var material = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-tree-puff-".concat(i), hex, { roughness: 0.65, clearCoat: 0.15 });
+        return (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createTemplate)(createPuffMesh("tree-puff-".concat(i), scene, random), material);
     });
-    leaves.setVerticesData(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.VertexBuffer.PositionKind, positions);
+    var blossomMesh = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateSphere("tree-blossom", { diameter: 1, segments: 6 }, scene);
+    var blossomTemplate = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createTemplate)(blossomMesh, blossom);
+    return { trunk: trunk, rootFlare: rootFlare, branch: branch, puffs: puffs, blossom: blossomTemplate };
+}
+/**
+ * A soft, slightly lumpy ball: an icosphere pushed in and out by a smooth pattern, with smooth
+ * normals so it reads as a rounded toy shape rather than a faceted rock.
+ */
+function createPuffMesh(name, scene, random) {
+    var puff = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateIcoSphere(name, { radius: 1, subdivisions: 3 }, scene);
+    var positions = puff.getVerticesData(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.VertexBuffer.PositionKind);
+    var indices = puff.getIndices();
+    if (!positions || !indices) {
+        return puff;
+    }
+    var a = random() * 10;
+    var b = random() * 10;
+    var c = random() * 10;
+    for (var i = 0; i < positions.length; i += 3) {
+        var x = positions[i];
+        var y = positions[i + 1];
+        var z = positions[i + 2];
+        var bump = 1
+            + (0.08 * Math.sin((x * 3.1) + a) * Math.sin((y * 2.7) + b))
+            + (0.06 * Math.sin((z * 3.7) + c) * Math.cos((x * 2.3) + b));
+        positions[i] = x * bump;
+        positions[i + 1] = y * bump;
+        positions[i + 2] = z * bump;
+    }
     var normals = [];
     _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.VertexData.ComputeNormals(positions, indices, normals);
-    leaves.setVerticesData(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.VertexBuffer.NormalKind, normals);
-    leaves.convertToFlatShadedMesh();
-    leaves.material = leafMaterial;
-    leaves.isPickable = false;
-    var trunk = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder("tree-trunk", {
-        height: sizeTrunk,
-        diameterTop: Math.max(radius - 2, 1),
-        diameterBottom: radius,
-        tessellation: 10,
-        subdivisions: 2
-    }, scene);
-    trunk.material = trunkMaterial;
-    trunk.convertToFlatShadedMesh();
-    trunk.isPickable = false;
-    leaves.position.y = (sizeTrunk + sizeBranch) / 2 - 2;
-    return { leaves: leaves, trunk: trunk };
+    puff.setVerticesData(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.VertexBuffer.PositionKind, positions);
+    puff.setVerticesData(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.VertexBuffer.NormalKind, normals);
+    return puff;
 }
+/**
+ * Builds one tree and returns its canopy node (for the sway animation).
+ */
 function instantiateTree(templates, position, index, scene) {
+    var random = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRandom)(1000 + index * 97);
     var tree = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.TransformNode("tree-".concat(index), scene);
     tree.position.copyFrom(position);
-    var leaves = index === 0 ? templates.leaves : templates.leaves.createInstance("tree-leaves-".concat(index));
-    var trunk = index === 0 ? templates.trunk : templates.trunk.clone("tree-trunk-".concat(index));
-    if (!trunk) {
-        console.error("Failed to create trunk mesh for tree ".concat(index));
-        return;
-    }
-    leaves.parent = tree;
+    tree.rotation.y = random() * Math.PI * 2;
+    // Don't clone the first trunk's physics body along with the mesh: the copy would stay behind
+    // as an invisible obstacle. Each trunk gets its own body at the end of this function.
+    var trunk = index === 0 ? templates.trunk : templates.trunk.clone("tree-trunk-".concat(index), null, true, false);
     trunk.parent = tree;
-    leaves.computeWorldMatrix(true);
-    trunk.computeWorldMatrix(true);
+    var rootFlare = templates.rootFlare.createInstance("tree-root-flare-".concat(index));
+    rootFlare.parent = tree;
+    // Sit the flare on the ground (y = -0.5), just sinking into it.
+    rootFlare.position.y = (GROUND_Y - 0.1) - position.y + 1.3;
+    // Everything above the trunk sways together around the top of the trunk.
+    var canopy = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.TransformNode("tree-canopy-".concat(index), scene);
+    canopy.parent = tree;
+    canopy.position.y = CANOPY_PIVOT_Y;
+    var branchAngles = [-0.55, 0.6];
+    branchAngles.forEach(function (angle, i) {
+        var branch = templates.branch.createInstance("tree-branch-".concat(index, "-").concat(i));
+        branch.parent = canopy;
+        branch.position.y = -1.5 - i;
+        branch.rotation.z = angle;
+        branch.rotation.y = (i * 1.9) + (random() * 0.6);
+    });
+    // Canopy: one big central puff, a ring of medium ones and a couple on top.
+    var canopyCenterY = 8.6;
+    var puffLayout = [{ x: 0, y: canopyCenterY, z: 0, r: 8.2 }];
+    var ringCount = 5;
+    for (var i = 0; i < ringCount; i++) {
+        var angle = ((i / ringCount) * Math.PI * 2) + (random() * 0.5);
+        var distance = 6.2 + (random() * 1.4);
+        puffLayout.push({
+            x: Math.cos(angle) * distance,
+            y: canopyCenterY - 1.8 + (random() * 2.6),
+            z: Math.sin(angle) * distance,
+            r: 4.8 + (random() * 1.6),
+        });
+    }
+    for (var i = 0; i < 2; i++) {
+        var angle = random() * Math.PI * 2;
+        puffLayout.push({
+            x: Math.cos(angle) * 2.5,
+            y: canopyCenterY + 4.6 + (random() * 0.8),
+            z: Math.sin(angle) * 2.5,
+            r: 4.4 + (random() * 1.0),
+        });
+    }
+    puffLayout.forEach(function (layout, i) {
+        var template = templates.puffs[Math.floor(random() * templates.puffs.length)];
+        var puff = template.createInstance("tree-leaves-".concat(index, "-").concat(i));
+        puff.parent = canopy;
+        puff.position.set(layout.x, layout.y, layout.z);
+        puff.scaling.set(layout.r, layout.r * 0.86, layout.r);
+        puff.rotation.y = random() * Math.PI * 2;
+    });
+    // Little blossoms sitting on the outside of the canopy.
+    var blossomCount = 26;
+    for (var i = 0; i < blossomCount; i++) {
+        var layout = puffLayout[Math.floor(random() * puffLayout.length)];
+        var theta = random() * Math.PI * 2;
+        var upness = (random() * 1.3) - 0.3;
+        var horizontal = Math.sqrt(Math.max(0, 1 - (upness * upness)));
+        var direction = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(Math.cos(theta) * horizontal, upness, Math.sin(theta) * horizontal).normalize();
+        var blossom = templates.blossom.createInstance("tree-blossom-".concat(index, "-").concat(i));
+        blossom.parent = canopy;
+        blossom.position.set(layout.x + (direction.x * layout.r * 0.98), layout.y + (direction.y * layout.r * 0.86 * 0.98), layout.z + (direction.z * layout.r * 0.98));
+        blossom.scaling.setAll(0.9 + (random() * 0.7));
+    }
+    tree.getChildMeshes().forEach(function (mesh) {
+        var _a;
+        mesh.isPickable = false;
+        // The canopy moves, so the scene optimizer must not freeze these meshes.
+        mesh.metadata = __assign(__assign({}, ((_a = mesh.metadata) !== null && _a !== void 0 ? _a : {})), { keepUnfrozen: true });
+        mesh.computeWorldMatrix(true);
+    });
     trunk.physicsImpostor = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.PhysicsImpostor(trunk, _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.PhysicsImpostor.BoxImpostor, { mass: 0, restitution: 0 }, scene);
+    return canopy;
+}
+/**
+ * A few petals drifting down from each canopy.
+ */
+function createFallingPetals(scene, texture, treePosition, index) {
+    var petals = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.ParticleSystem("tree-petals-".concat(index), 40, scene);
+    petals.particleTexture = texture;
+    petals.emitter = treePosition.add(new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, CANOPY_PIVOT_Y + 8, 0));
+    petals.minEmitBox = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(-8, -3, -8);
+    petals.maxEmitBox = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(8, 1, 8);
+    var petal = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.FromHexString(PALETTE.petal);
+    petals.color1 = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color4(petal.r, petal.g, petal.b, 1);
+    petals.color2 = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color4(1, 0.93, 0.96, 1);
+    petals.colorDead = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color4(petal.r, petal.g, petal.b, 0);
+    petals.minSize = 0.7;
+    petals.maxSize = 1.2;
+    petals.minLifeTime = 5;
+    petals.maxLifeTime = 7;
+    petals.emitRate = 3;
+    petals.gravity = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, -1.1, 0);
+    petals.direction1 = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(-1, -0.6, -1);
+    petals.direction2 = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(1, -0.2, 1);
+    petals.minEmitPower = 0.5;
+    petals.maxEmitPower = 1.5;
+    petals.minAngularSpeed = -1.5;
+    petals.maxAngularSpeed = 1.5;
+    petals.minInitialRotation = 0;
+    petals.maxInitialRotation = Math.PI * 2;
+    petals.blendMode = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.ParticleSystem.BLENDMODE_STANDARD;
+    petals.preWarmCycles = 120;
+    petals.preWarmStepOffset = 5;
+    petals.start();
+}
+/** Soft petal shape drawn once into a small texture. */
+function createPetalTexture(scene) {
+    var size = 64;
+    var texture = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.DynamicTexture("tree-petal-texture", { width: size, height: size }, scene, true);
+    texture.hasAlpha = true;
+    var context = texture.getContext();
+    context.clearRect(0, 0, size, size);
+    context.fillStyle = "#FFFFFF";
+    context.beginPath();
+    context.ellipse(size / 2, size / 2, size * 0.42, size * 0.24, Math.PI / 5, 0, Math.PI * 2);
+    context.fill();
+    texture.update();
+    return texture;
 }
 
 
 /***/ }
 
 }]);
-//# sourceMappingURL=src_scenes_tools_ts.866e8ea66415e3d06cba.js.map
+//# sourceMappingURL=src_scenes_tools_ts.ef5ccc08b74120695654.js.map

@@ -1,10 +1,15 @@
 import * as BABYLON from "@babylonjs/core";
 
+import { createRoundedBox, createTemplate, createToyMaterial } from "./toyStyle";
+
 type BrickContext = {
     scene: BABYLON.Scene;
     tank: BABYLON.AbstractMesh;
     brickSound: BABYLON.Sound;
 };
+
+/** Earthy toy-block colours (brick red, mustard, teal, slate blue, sand); neighbours differ. */
+const BRICK_COLORS = ["#B9553F", "#D9A13B", "#3F8C84", "#456F99", "#DCC9A8"];
 
 /** Shared by every wall, since they all play the same sound. */
 const brickSoundCooldownMs = 150;
@@ -38,10 +43,9 @@ export function instantiateBricks(
         return;
     }
 
-    // Create the initial brick
-    const brick = createBrick(_this, brickLength, brickHeight, brickDepth);
-    brick.isVisible = false;
-    brick.isPickable = false;
+    // One hidden template per colour; the visible bricks are instances of these.
+    const brickTemplates = createBrickTemplates(_this, brickLength, brickHeight, brickDepth);
+    const colorOffset = Math.abs(Math.round(x + z)) % BRICK_COLORS.length;
     
     // Define a small buffer to prevent collision
     const buffer = 0; // Adjust this value as needed
@@ -52,7 +56,6 @@ export function instantiateBricks(
     wallParent.position.set(x, 0, z);
     wallParent.rotation.y = rotationY;
     wallParent.computeWorldMatrix(true);
-    brick.parent = wallParent;
 
     // Create the wall of bricks
     for (let j = 0; j < numRows; j++) {
@@ -67,7 +70,9 @@ export function instantiateBricks(
         const localY = initialY + j * (brickHeight + buffer);
 
         for (let i = 0; i < numBricksInRow; i++) {
-            const brickInstance = brick.createInstance(`brick${j}-${i}`);
+            // Stepping by 2 per brick and 3 per row keeps side-by-side and stacked bricks different.
+            const template = brickTemplates[(colorOffset + (i * 2) + (j * 3)) % brickTemplates.length];
+            const brickInstance = template.createInstance(`brick${j}-${i}`);
             positionBrick(_this, brickInstance, localX, localY, 0, brickMass);
             // Parent only after the impostor exists: Babylon skips creating the physics
             // body for meshes that already have a parent.
@@ -77,21 +82,18 @@ export function instantiateBricks(
     }
 
     /**
-     * Create a brick mesh.
+     * Create the hidden, rounded toy-block templates (one per colour).
      */
-    function createBrick(
+    function createBrickTemplates(
         _this: BrickContext,
         length: number,
         height: number,
         depth: number
-    ): BABYLON.Mesh {
-        const brick = BABYLON.MeshBuilder.CreateBox(
-            "brick",
-            { width: length, height: height, depth: depth },
-            _this.scene
-        );
-        brick.material = new BABYLON.StandardMaterial("brickMaterial", _this.scene);
-        return brick;
+    ): BABYLON.Mesh[] {
+        return BRICK_COLORS.map((hex, i) => {
+            const material = createToyMaterial(_this.scene, `toy-brick-${i}`, hex, { roughness: 0.5, clearCoat: 0.4 });
+            return createTemplate(createRoundedBox(`brick-template-${i}`, length, height, depth, 0.38, _this.scene, 3), material);
+        });
     }
 
     /**

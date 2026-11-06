@@ -175,7 +175,7 @@ export default class Play extends Node {
         ]);
 
         const shadowCasterKeywords = [
-            "tank", "brick", "tree-trunk", "tree-leaves", "text", "arrow", "project", "target",
+            "tank", "brick", "tree-", "text", "arrow", "project", "target",
             "podium", "practice", "github", "linkedin", "twitter", "amongus", "statue", "berserk",
             "guts", "monument", "table", "desk", "chair",
         ];
@@ -341,7 +341,7 @@ export default class Play extends Node {
 
         const movableMeshes = new Set(["tank", "tank_holder", "amongus", "splatter1", "splatter2", "splatter3"]);
         this.scene.meshes
-            .filter((mesh) => !mesh.physicsImpostor && !movableMeshes.has(mesh.name) && !mesh.isDescendantOf(this.tank))
+            .filter((mesh) => !mesh.physicsImpostor && !movableMeshes.has(mesh.name) && !mesh.isDescendantOf(this.tank) && !mesh.metadata?.keepUnfrozen)
             .forEach((mesh) => {
                 mesh.isPickable = false;
                 mesh.doNotSyncBoundingInfo = true;
