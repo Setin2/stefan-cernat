@@ -6,6 +6,13 @@ type TankContext = {
     divFps: HTMLElement | null;
     tankSound: BABYLON.Sound;
     bullet: BABYLON.Sound;
+    /** Called every time the tank fires (used by the toy tank model for recoil). */
+    onShoot?: () => void;
+    /** Where shots spawn, relative to the tank holder: distance forward and height. */
+    shotOrigin?: {
+        forward: number;
+        height: number;
+    };
 };
 /**
  * Initialize the movement of the player tank.

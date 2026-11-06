@@ -126,6 +126,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _trees__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./trees */ "./src/scenes/trees.ts");
 /* harmony import */ var _bricks__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./bricks */ "./src/scenes/bricks.ts");
 /* harmony import */ var _tank__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./tank */ "./src/scenes/tank.ts");
+/* harmony import */ var _toyTank__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./toyTank */ "./src/scenes/toyTank.ts");
 var __extends = (undefined && undefined.__extends) || (function () {
     var extendStatics = function (d, b) {
         extendStatics = Object.setPrototypeOf ||
@@ -183,11 +184,13 @@ var __generator = (undefined && undefined.__generator) || function (thisArg, bod
 
 
 
+
 var Play = /** @class */ (function (_super) {
     __extends(Play, _super);
     // @ts-ignore Babylon attaches script classes without calling Node's public constructor shape.
     function Play() {
         var _this = this;
+        _this.toyTank = null;
         _this.divFps = null;
         _this.controlOverlayTexture = null;
         _this.controlOverlayPanel = null;
@@ -245,8 +248,11 @@ var Play = /** @class */ (function (_super) {
      * Initialize constant variables and functionalities of the game
      */
     Play.prototype.play = function () {
+        var _this = this;
+        var _a;
         var rotationSpeed = 0.07;
         var forward = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, 0, 1);
+        this.initializeTankModel();
         (0,_trees__WEBPACK_IMPORTED_MODULE_3__.instantiateTrees)({ scene: this.scene });
         (0,_bricks__WEBPACK_IMPORTED_MODULE_4__.instantiateBricks)({ scene: this.scene, tank: this.tank, brickSound: this.brickSound }, -5, 8, -30, 3, [6, 6, 4, 2], 0);
         // Center and angle match where this wall has always been placed (it was previously
@@ -259,8 +265,37 @@ var Play = /** @class */ (function (_super) {
             console.error("Shadow initialization failed", error);
         }
         (0,_tank__WEBPACK_IMPORTED_MODULE_5__.initializeTankMovement)({ scene: this.scene, tank: this.tank, camera: this.camera, divFps: this.divFps, tankSound: this.tankSound, bullet: this.bullet }, rotationSpeed);
-        void (0,_tank__WEBPACK_IMPORTED_MODULE_5__.initializeShooting)({ scene: this.scene, tank: this.tank, camera: this.camera, divFps: this.divFps, tankSound: this.tankSound, bullet: this.bullet }, forward);
+        void (0,_tank__WEBPACK_IMPORTED_MODULE_5__.initializeShooting)({
+            scene: this.scene,
+            tank: this.tank,
+            camera: this.camera,
+            divFps: this.divFps,
+            tankSound: this.tankSound,
+            bullet: this.bullet,
+            onShoot: this.toyTank ? function () { var _a; return (_a = _this.toyTank) === null || _a === void 0 ? void 0 : _a.fire(); } : undefined,
+            shotOrigin: (_a = this.toyTank) === null || _a === void 0 ? void 0 : _a.muzzle,
+        }, forward);
         void this.showControl();
+    };
+    /**
+     * Swaps the imported tank model for the toy tank built in code. Add `?tank=classic` to the URL
+     * to get the original model back for comparison.
+     */
+    Play.prototype.initializeTankModel = function () {
+        var _a, _b;
+        var useClassicTank = new URLSearchParams(window.location.search).get("tank") === "classic";
+        if (useClassicTank) {
+            return;
+        }
+        try {
+            this.toyTank = (0,_toyTank__WEBPACK_IMPORTED_MODULE_6__.createToyTank)(this.scene, this.tank);
+            (_a = this.scene.getMeshByName("tank")) === null || _a === void 0 ? void 0 : _a.setEnabled(false);
+        }
+        catch (error) {
+            console.error("Toy tank creation failed, keeping the original model", error);
+            (_b = this.toyTank) === null || _b === void 0 ? void 0 : _b.root.dispose();
+            this.toyTank = null;
+        }
     };
     /**
      * Creates a dedicated shadow-casting light and applies shadows to visible scene meshes.
@@ -437,6 +472,7 @@ var Play = /** @class */ (function (_super) {
         }
     };
     Play.prototype.optimizeScene = function () {
+        var _this = this;
         this.scene.skipPointerMovePicking = true;
         this.scene.skipPointerDownPicking = true;
         this.scene.skipPointerUpPicking = true;
@@ -450,7 +486,7 @@ var Play = /** @class */ (function (_super) {
         this.scene.pointerUpPredicate = function () { return false; };
         var movableMeshes = new Set(["tank", "tank_holder", "amongus", "splatter1", "splatter2", "splatter3"]);
         this.scene.meshes
-            .filter(function (mesh) { return !mesh.physicsImpostor && !movableMeshes.has(mesh.name); })
+            .filter(function (mesh) { return !mesh.physicsImpostor && !movableMeshes.has(mesh.name) && !mesh.isDescendantOf(_this.tank); })
             .forEach(function (mesh) {
             mesh.isPickable = false;
             mesh.doNotSyncBoundingInfo = true;
@@ -903,12 +939,13 @@ function createSplatterObjects(_this) {
 function initializeShooting(_this, forward) {
     return __awaiter(this, void 0, void 0, function () {
         var activeShots, shotOffset, shotHeightOffset, shotRadius, shotLifetimeMs, shotCooldownMs, targetHintRangeSquared, targetAimRangeSquared, aimLockThreshold, recoilRecoverSpeed, shotDirection, shotSpawnPosition, targetPosition, tankForward, toTarget, recoilOffset, recoilStep, targetConfigs, github, githubMaterial, gui, highlightLayer, targetUi, objectiveHint, reticle, hitFeedback, impactBurst, getHitRadiusSquared, targetLabels, targets, applyVelocity, ball, canShoot, shotCooldownUntil, hitFeedbackUntil, impactBurstUntil, currentStatusUntil, currentObjectiveText, hitTarget, impactTarget, discoveredTargets, totalTargetCount, recoilRestoreObserver, shotObserver, handleShoot;
-        return __generator(this, function (_a) {
-            switch (_a.label) {
+        var _a, _b, _c, _d;
+        return __generator(this, function (_e) {
+            switch (_e.label) {
                 case 0:
                     activeShots = [];
-                    shotOffset = 5;
-                    shotHeightOffset = 3;
+                    shotOffset = (_b = (_a = _this.shotOrigin) === null || _a === void 0 ? void 0 : _a.forward) !== null && _b !== void 0 ? _b : 5;
+                    shotHeightOffset = (_d = (_c = _this.shotOrigin) === null || _c === void 0 ? void 0 : _c.height) !== null && _d !== void 0 ? _d : 3;
                     shotRadius = 0.75;
                     shotLifetimeMs = 2000;
                     shotCooldownMs = 400;
@@ -950,7 +987,7 @@ function initializeShooting(_this, forward) {
                     }
                     return [4 /*yield*/, __webpack_require__.e(/*! import() */ "vendors-node_modules_babylonjs_gui_index_js").then(__webpack_require__.bind(__webpack_require__, /*! @babylonjs/gui */ "./node_modules/@babylonjs/gui/index.js"))];
                 case 1:
-                    gui = _a.sent();
+                    gui = _e.sent();
                     if (_this.scene.isDisposed) {
                         return [2 /*return*/];
                     }
@@ -1127,13 +1164,14 @@ function initializeShooting(_this, forward) {
                         }
                     });
                     handleShoot = function () {
-                        var _a;
+                        var _a, _b;
                         if (!canShoot) {
                             return;
                         }
                         canShoot = false;
                         shotCooldownUntil = performance.now() + shotCooldownMs;
                         _this.bullet.play();
+                        (_a = _this.onShoot) === null || _a === void 0 ? void 0 : _a.call(_this);
                         _this.tank.getDirectionToRef(forward, shotDirection);
                         shotDirection.normalize();
                         recoilOffset.addInPlaceFromFloats(-shotDirection.x * 0.22, 0.18, -shotDirection.z * 0.22);
@@ -1145,7 +1183,7 @@ function initializeShooting(_this, forward) {
                         shotBall.position.copyFrom(shotSpawnPosition);
                         shotBall.physicsImpostor = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.PhysicsImpostor(shotBall, _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.PhysicsImpostor.SphereImpostor, { mass: 0.5, restitution: 0 }, _this.scene);
                         // Shots inherit the tank's motion, so firing while driving still goes where you aim.
-                        var tankVelocity = (_a = _this.tank.physicsImpostor) === null || _a === void 0 ? void 0 : _a.getLinearVelocity();
+                        var tankVelocity = (_b = _this.tank.physicsImpostor) === null || _b === void 0 ? void 0 : _b.getLinearVelocity();
                         if (tankVelocity) {
                             shotBall.physicsImpostor.setLinearVelocity(tankVelocity);
                         }
@@ -2161,6 +2199,800 @@ function configurePostProcesses(scene_3) {
 
 /***/ },
 
+/***/ "./src/scenes/toyTank.ts"
+/*!*******************************!*\
+  !*** ./src/scenes/toyTank.ts ***!
+  \*******************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   createToyTank: () => (/* binding */ createToyTank)
+/* harmony export */ });
+/* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core */ "./node_modules/@babylonjs/core/index.js");
+var __spreadArray = (undefined && undefined.__spreadArray) || function (to, from, pack) {
+    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
+        if (ar || !(i in from)) {
+            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
+            ar[i] = from[i];
+        }
+    }
+    return to.concat(ar || Array.prototype.slice.call(from));
+};
+
+var HOLDER_SIZE = 12;
+// Track layout
+var TRACK_X = 4.6; // distance from the center line to the middle of each track
+var TRACK_WIDTH = 2.6;
+var TRACK_END_Z = 5; // z of the front/rear wheel centers
+var TRACK_CENTER_Y = 1.8; // height of the front/rear wheel centers
+var TRACK_RADIUS = 1.8; // outer radius of the belt around the end wheels
+var TRACK_THICKNESS = 0.35;
+var CLEAT_COUNT = 30;
+var ROAD_WHEEL_RADIUS = 1.15;
+var ROAD_WHEEL_Z = [-3.6, -1.8, 0, 1.8, 3.6];
+var END_WHEEL_RADIUS = 1.3;
+var RETURN_ROLLER_RADIUS = 0.42;
+var RETURN_ROLLER_Z = [-2.6, 2.6];
+// The turret narrows towards the top (top is this fraction of the base width/depth).
+var TURRET_TAPER = 0.85;
+// Gun layout
+var BARREL_Y = 6.9;
+var BARREL_START_Z = 3.6;
+var BARREL_LENGTH = 7.5;
+var PALETTE = {
+    body: "#F67FAA",
+    bodyDark: "#D9568A",
+    cream: "#FFF4E2",
+    gold: "#F7B955",
+    rubber: "#2E2B33",
+    cleat: "#4A4652",
+    lens: "#FFE7A8",
+};
+function createToyTank(scene, holder) {
+    var materials = createMaterials(scene);
+    var meshes = [];
+    var track = function (mesh) {
+        meshes.push(mesh);
+        return mesh;
+    };
+    var root = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.TransformNode("toy-tank-root", scene);
+    root.parent = holder;
+    root.position.set(0, -0.5, 0);
+    root.scaling.setAll(1 / HOLDER_SIZE);
+    // Everything above the tracks sits on this node so it can sway on its "suspension".
+    var body = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.TransformNode("toy-tank-body", scene);
+    body.parent = root;
+    var bodyPivotY = 3.6;
+    body.position.y = bodyPivotY;
+    var bodyContent = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.TransformNode("toy-tank-body-content", scene);
+    bodyContent.parent = body;
+    bodyContent.position.y = -bodyPivotY;
+    // ---------------------------------------------------------------- Hull
+    var lowerHull = track(createRoundedBox("toy-tank-lower-hull", 6.6, 2.4, 12.4, 0.55, scene, 4, 1.06));
+    lowerHull.material = materials.bodyDark;
+    lowerHull.parent = bodyContent;
+    lowerHull.position.set(0, 2.5, 0);
+    var deck = track(createRoundedBox("toy-tank-deck", 12.4, 1.2, 12.8, 0.5, scene, 4, 0.95));
+    deck.material = materials.body;
+    deck.parent = bodyContent;
+    deck.position.set(0, 4.55, 0);
+    var glacis = track(createRoundedBox("toy-tank-glacis", 6.4, 0.9, 3.0, 0.4, scene));
+    glacis.material = materials.body;
+    glacis.parent = bodyContent;
+    glacis.position.set(0, 3.25, 6.0);
+    glacis.rotation.x = 0.55;
+    // Rivets along the fenders for that snap-together toy look.
+    var rivetTemplate = createTemplate(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateSphere("toy-tank-rivet", { diameter: 0.38, segments: 8 }, scene), materials.cream);
+    [-1, 1].forEach(function (side) {
+        for (var i = 0; i < 6; i++) {
+            var rivet = track(rivetTemplate.createInstance("toy-tank-rivet-".concat(side, "-").concat(i)));
+            rivet.parent = bodyContent;
+            rivet.position.set(side * 6.2, 4.55, -5 + i * 2);
+        }
+    });
+    // Headlights
+    [-1, 1].forEach(function (side) {
+        var housing = track(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder("toy-tank-headlight-".concat(side), { diameter: 1.1, height: 0.7, tessellation: 20 }, scene));
+        housing.material = materials.cream;
+        housing.parent = bodyContent;
+        housing.rotation.x = Math.PI / 2;
+        housing.position.set(side * 4.3, 5.55, 5.7);
+        var lens = track(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder("toy-tank-headlight-lens-".concat(side), { diameter: 0.8, height: 0.12, tessellation: 20 }, scene));
+        lens.material = materials.lens;
+        lens.parent = bodyContent;
+        lens.rotation.x = Math.PI / 2;
+        lens.position.set(side * 4.3, 5.55, 6.07);
+    });
+    // Exhaust pipes
+    [-1, 1].forEach(function (side) {
+        var pipe = track(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder("toy-tank-exhaust-".concat(side), { diameter: 0.7, height: 1.6, tessellation: 16 }, scene));
+        pipe.material = materials.gold;
+        pipe.parent = bodyContent;
+        pipe.rotation.x = Math.PI / 2;
+        pipe.position.set(side * 3.2, 5.35, -6.3);
+    });
+    // Wind-up key on the back: the signature toy detail. It turns as the tank drives.
+    var windUpKey = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.TransformNode("toy-tank-key", scene);
+    windUpKey.parent = bodyContent;
+    windUpKey.position.set(0, 3.0, -6.2);
+    var keyShaft = track(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder("toy-tank-key-shaft", { diameter: 0.45, height: 1.6, tessellation: 12 }, scene));
+    keyShaft.material = materials.gold;
+    keyShaft.parent = windUpKey;
+    keyShaft.rotation.x = Math.PI / 2;
+    keyShaft.position.z = -0.6;
+    [-1, 1].forEach(function (side) {
+        var wing = track(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder("toy-tank-key-wing-".concat(side), { diameter: 1.7, height: 0.32, tessellation: 24 }, scene));
+        // Flat discs lying in the plane of the shaft, like the bow of a real wind-up key.
+        wing.material = materials.gold;
+        wing.parent = windUpKey;
+        wing.position.set(side * 0.95, 0, -1.45);
+    });
+    // ---------------------------------------------------------------- Turret
+    var turret = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.TransformNode("toy-tank-turret", scene);
+    turret.parent = bodyContent;
+    turret.position.set(0, 5.15, -0.6);
+    var turretRing = track(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder("toy-tank-turret-ring", { diameter: 6.4, height: 0.5, tessellation: 40 }, scene));
+    turretRing.material = materials.cream;
+    turretRing.parent = turret;
+    turretRing.position.y = 0.25;
+    var turretShell = track(createRoundedBox("toy-tank-turret-shell", 6.8, 2.6, 7.2, 0.75, scene, 5, TURRET_TAPER));
+    turretShell.material = materials.body;
+    turretShell.parent = turret;
+    turretShell.position.y = 1.8;
+    var cupola = track(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder("toy-tank-cupola", { diameter: 2.4, height: 0.6, tessellation: 32 }, scene));
+    cupola.material = materials.bodyDark;
+    cupola.parent = turret;
+    cupola.position.set(-1.4, 3.35, -1.4);
+    var hatch = track(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateSphere("toy-tank-hatch", { diameter: 2.1, segments: 20, slice: 0.5 }, scene));
+    hatch.material = materials.cream;
+    hatch.parent = turret;
+    hatch.scaling.y = 0.55;
+    hatch.position.set(-1.4, 3.6, -1.4);
+    var periscope = track(createRoundedBox("toy-tank-periscope", 1.2, 0.7, 0.9, 0.2, scene));
+    periscope.material = materials.cream;
+    periscope.parent = turret;
+    periscope.position.set(1.6, 3.3, 1.2);
+    // Star decals on both turret sides
+    var decalMaterial = createStarDecalMaterial(scene);
+    [-1, 1].forEach(function (side) {
+        var decal = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreatePlane("toy-star-decal-".concat(side), { size: 1.7 }, scene);
+        decal.material = decalMaterial;
+        decal.parent = turret;
+        // Sit on the sloped turret side: at mid-height the side is at 3.4 * (1 + TURRET_TAPER) / 2.
+        var sideSlope = Math.atan((3.4 * (1 - TURRET_TAPER)) / 2.6);
+        decal.position.set(side * ((3.4 * (1 + TURRET_TAPER) / 2) + 0.03), 1.8, -0.4);
+        decal.rotation.y = -side * Math.PI / 2;
+        decal.rotation.x = sideSlope;
+        decal.isPickable = false;
+    });
+    // Antenna (wobbles on a spring)
+    var antenna = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.TransformNode("toy-tank-antenna", scene);
+    antenna.parent = turret;
+    antenna.position.set(1.9, 3.05, -2.2);
+    var antennaBase = track(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder("toy-tank-antenna-base", { diameter: 0.6, height: 0.4, tessellation: 12 }, scene));
+    antennaBase.material = materials.bodyDark;
+    antennaBase.parent = antenna;
+    var antennaRod = track(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder("toy-tank-antenna-rod", { diameterTop: 0.1, diameterBottom: 0.18, height: 4.2, tessellation: 8 }, scene));
+    antennaRod.material = materials.rubber;
+    antennaRod.parent = antenna;
+    antennaRod.position.y = 2.1;
+    var antennaTip = track(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateSphere("toy-tank-antenna-tip", { diameter: 0.55, segments: 12 }, scene));
+    antennaTip.material = materials.gold;
+    antennaTip.parent = antenna;
+    antennaTip.position.y = 4.25;
+    // ---------------------------------------------------------------- Gun
+    var mantlet = track(createRoundedBox("toy-tank-mantlet", 3.4, 2.0, 1.4, 0.55, scene, 4, 0.88));
+    mantlet.material = materials.bodyDark;
+    mantlet.parent = turret;
+    mantlet.position.set(0, BARREL_Y - turret.position.y, BARREL_START_Z - turret.position.z - 0.3);
+    // The barrel slides back on this node when firing.
+    var barrel = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.TransformNode("toy-tank-barrel", scene);
+    barrel.parent = turret;
+    barrel.position.set(0, BARREL_Y - turret.position.y, BARREL_START_Z - turret.position.z);
+    var barrelTube = track(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder("toy-tank-barrel-tube", { diameter: 0.9, height: BARREL_LENGTH, tessellation: 24 }, scene));
+    barrelTube.material = materials.body;
+    barrelTube.parent = barrel;
+    barrelTube.rotation.x = Math.PI / 2;
+    barrelTube.position.z = BARREL_LENGTH / 2;
+    var barrelCollar = track(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder("toy-tank-barrel-collar", { diameter: 1.2, height: 0.6, tessellation: 24 }, scene));
+    barrelCollar.material = materials.cream;
+    barrelCollar.parent = barrel;
+    barrelCollar.rotation.x = Math.PI / 2;
+    barrelCollar.position.z = 1.2;
+    var muzzleBrake = track(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder("toy-tank-muzzle", { diameter: 1.35, height: 1.2, tessellation: 24 }, scene));
+    muzzleBrake.material = materials.gold;
+    muzzleBrake.parent = barrel;
+    muzzleBrake.rotation.x = Math.PI / 2;
+    muzzleBrake.position.z = BARREL_LENGTH - 0.5;
+    var muzzleFlash = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateSphere("toy-tank-muzzle-flash", { diameter: 1.6, segments: 12 }, scene);
+    muzzleFlash.material = materials.flash;
+    muzzleFlash.parent = barrel;
+    muzzleFlash.position.z = BARREL_LENGTH + 0.5;
+    muzzleFlash.isVisible = false;
+    muzzleFlash.isPickable = false;
+    // ---------------------------------------------------------------- Tracks and wheels
+    var wheelSpinners = [];
+    var cleatSides = [];
+    var roadWheel = createWheelTemplates(scene, "road", ROAD_WHEEL_RADIUS, 2.0, materials);
+    var endWheel = createWheelTemplates(scene, "end", END_WHEEL_RADIUS, 2.2, materials);
+    var roller = createWheelTemplates(scene, "roller", RETURN_ROLLER_RADIUS, 1.6, materials);
+    var cleatTemplate = createTemplate(createRoundedBox("toy-tank-cleat", TRACK_WIDTH + 0.2, 0.26, 0.5, 0.1, scene, 2), materials.cleat);
+    [-1, 1].forEach(function (side) {
+        var trackGroup = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.TransformNode("toy-tank-track-".concat(side), scene);
+        trackGroup.parent = root;
+        trackGroup.position.x = side * TRACK_X;
+        var belt = track(createTrackBelt("toy-tank-belt-".concat(side), scene));
+        belt.material = materials.rubber;
+        belt.parent = trackGroup;
+        var addWheel = function (templates, radius, y, z, index) {
+            var spinner = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.TransformNode("toy-tank-wheel-".concat(side, "-").concat(index), scene);
+            spinner.parent = trackGroup;
+            spinner.position.set(0, y, z);
+            var wheelBody = track(templates.body.createInstance("toy-tank-wheel-body-".concat(side, "-").concat(index)));
+            wheelBody.parent = spinner;
+            var hub = track(templates.hub.createInstance("toy-tank-wheel-hub-".concat(side, "-").concat(index)));
+            hub.parent = spinner;
+            if (side < 0) {
+                hub.rotation.y = Math.PI;
+            }
+            wheelSpinners.push({ node: spinner, radius: radius, side: side });
+        };
+        var innerBottom = TRACK_CENTER_Y - TRACK_RADIUS + TRACK_THICKNESS;
+        ROAD_WHEEL_Z.forEach(function (z, i) { return addWheel(roadWheel, ROAD_WHEEL_RADIUS, innerBottom + ROAD_WHEEL_RADIUS, z, "road".concat(i)); });
+        addWheel(endWheel, END_WHEEL_RADIUS, TRACK_CENTER_Y, TRACK_END_Z, "front");
+        addWheel(endWheel, END_WHEEL_RADIUS, TRACK_CENTER_Y, -TRACK_END_Z, "rear");
+        var innerTop = TRACK_CENTER_Y + TRACK_RADIUS - TRACK_THICKNESS;
+        RETURN_ROLLER_Z.forEach(function (z, i) { return addWheel(roller, RETURN_ROLLER_RADIUS, innerTop - RETURN_ROLLER_RADIUS, z, "roller".concat(i)); });
+        var cleats = [];
+        for (var i = 0; i < CLEAT_COUNT; i++) {
+            var cleat = track(cleatTemplate.createInstance("toy-tank-cleat-".concat(side, "-").concat(i)));
+            cleat.parent = trackGroup;
+            cleats.push(cleat);
+        }
+        cleatSides.push({ side: side, cleats: cleats });
+    });
+    meshes.forEach(function (mesh) {
+        mesh.isPickable = false;
+    });
+    // ---------------------------------------------------------------- Animation
+    var cleatRadius = TRACK_RADIUS + 0.06;
+    var cleatPerimeter = (4 * TRACK_END_Z) + (2 * Math.PI * cleatRadius);
+    var cleatSpacing = cleatPerimeter / CLEAT_COUNT;
+    var trackOffsets = new Map([[-1, 0], [1, 0]]);
+    var wheelAngles = new Map();
+    var placeCleats = function () {
+        var _a;
+        var _loop_1 = function (side, cleats) {
+            var offset = (_a = trackOffsets.get(side)) !== null && _a !== void 0 ? _a : 0;
+            cleats.forEach(function (cleat, i) {
+                setCleatPose(cleat, (i * cleatSpacing) + offset, cleatRadius, cleatPerimeter);
+            });
+        };
+        for (var _i = 0, cleatSides_1 = cleatSides; _i < cleatSides_1.length; _i++) {
+            var _b = cleatSides_1[_i], side = _b.side, cleats = _b.cleats;
+            _loop_1(side, cleats);
+        }
+    };
+    placeCleats();
+    var previousPosition = holder.position.clone();
+    var previousYaw = getYaw(holder);
+    var previousSpeed = 0;
+    var travelled = 0;
+    var keyAngle = 0;
+    var sway = { pitch: 0, pitchVelocity: 0, roll: 0, rollVelocity: 0 };
+    var antennaSway = { x: 0, xVelocity: 0, z: 0, zVelocity: 0 };
+    var recoil = 0;
+    var flashTime = 0;
+    var forwardVector = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.Zero();
+    var movement = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.Zero();
+    scene.onBeforeRenderObservable.add(function () {
+        var _a, _b;
+        var deltaSeconds = Math.min(scene.getEngine().getDeltaTime() / 1000, 0.05);
+        if (deltaSeconds <= 0) {
+            return;
+        }
+        // How the holder actually moved this frame (after physics), so the wheels match reality,
+        // including when the tank is blocked or pushed.
+        var yaw = getYaw(holder);
+        forwardVector.set(Math.sin(yaw), 0, Math.cos(yaw));
+        holder.position.subtractToRef(previousPosition, movement);
+        movement.y = 0;
+        previousPosition.copyFrom(holder.position);
+        var speed = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.Dot(movement, forwardVector) / deltaSeconds;
+        var yawRate = wrapAngle(yaw - previousYaw) / deltaSeconds;
+        previousYaw = yaw;
+        var acceleration = (speed - previousSpeed) / deltaSeconds;
+        previousSpeed = speed;
+        // Turning right speeds up the left track and slows the right one.
+        for (var _i = 0, _c = [-1, 1]; _i < _c.length; _i++) {
+            var side = _c[_i];
+            var trackSpeed = speed - (side * yawRate * TRACK_X);
+            trackOffsets.set(side, ((_a = trackOffsets.get(side)) !== null && _a !== void 0 ? _a : 0) + (trackSpeed * deltaSeconds));
+        }
+        placeCleats();
+        for (var _d = 0, wheelSpinners_1 = wheelSpinners; _d < wheelSpinners_1.length; _d++) {
+            var wheel = wheelSpinners_1[_d];
+            var trackSpeed = speed - (wheel.side * yawRate * TRACK_X);
+            var angle = ((_b = wheelAngles.get(wheel.node)) !== null && _b !== void 0 ? _b : 0) + ((trackSpeed / wheel.radius) * deltaSeconds);
+            wheelAngles.set(wheel.node, angle);
+            wheel.node.rotation.x = angle;
+        }
+        // Suspension: the nose lifts when accelerating, dips when braking, and the body leans
+        // out of turns. Slightly under-damped so it settles with a little bounce.
+        var clampedAcceleration = clamp(acceleration, -80, 80);
+        var pitchTarget = clamp(-clampedAcceleration * 0.0011, -0.06, 0.06);
+        var rollTarget = clamp(speed * yawRate * 0.0022, -0.05, 0.05);
+        stepSpring(sway, "pitch", "pitchVelocity", pitchTarget, 140, 9, deltaSeconds);
+        stepSpring(sway, "roll", "rollVelocity", rollTarget, 140, 9, deltaSeconds);
+        body.rotation.x = sway.pitch;
+        body.rotation.z = sway.roll;
+        // A tiny rattle while driving, like a plastic toy on a hard floor.
+        travelled += Math.abs(speed) * deltaSeconds;
+        var rattle = Math.min(1, Math.abs(speed) / 10) * 0.06;
+        body.position.y = bodyPivotY + (Math.sin(travelled * 1.7) * rattle);
+        // Antenna whips back when accelerating and swings out in turns.
+        stepSpring(antennaSway, "x", "xVelocity", clamp(-clampedAcceleration * 0.004, -0.3, 0.3), 70, 2.2, deltaSeconds);
+        stepSpring(antennaSway, "z", "zVelocity", clamp(speed * yawRate * 0.01, -0.25, 0.25), 70, 2.2, deltaSeconds);
+        antenna.rotation.x = antennaSway.x;
+        antenna.rotation.z = antennaSway.z;
+        keyAngle += speed * 0.12 * deltaSeconds;
+        windUpKey.rotation.z = keyAngle;
+        recoil *= Math.exp(-9 * deltaSeconds);
+        barrel.position.z = BARREL_START_Z - turret.position.z - recoil;
+        if (flashTime > 0) {
+            flashTime -= deltaSeconds;
+            var progress = 1 - Math.max(0, flashTime) / 0.09;
+            muzzleFlash.isVisible = flashTime > 0;
+            muzzleFlash.scaling.setAll(0.6 + progress * 0.9);
+        }
+    });
+    var muzzleHeight = (root.position.y * HOLDER_SIZE) + BARREL_Y;
+    return {
+        root: root,
+        muzzle: { forward: BARREL_START_Z + BARREL_LENGTH + 0.4, height: muzzleHeight },
+        fire: function () {
+            recoil = 1.0;
+            flashTime = 0.09;
+            muzzleFlash.isVisible = true;
+            muzzleFlash.scaling.setAll(0.6);
+            sway.pitchVelocity -= 0.9;
+            antennaSway.xVelocity -= 2.5;
+        },
+    };
+}
+function createMaterials(scene) {
+    var environment = createToyEnvironment(scene);
+    var plastic = function (name, hex, roughness, metallic, clearCoat) {
+        if (metallic === void 0) { metallic = 0; }
+        if (clearCoat === void 0) { clearCoat = 0; }
+        var material = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.PBRMaterial("toy-tank-".concat(name), scene);
+        material.albedoColor = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.FromHexString(hex).toLinearSpace();
+        material.metallic = metallic;
+        material.roughness = roughness;
+        material.reflectionTexture = environment;
+        material.environmentIntensity = 0.6;
+        if (clearCoat > 0) {
+            // Glossy varnish layer: crisp highlights on top of the softer plastic underneath.
+            material.clearCoat.isEnabled = true;
+            material.clearCoat.intensity = clearCoat;
+            material.clearCoat.roughness = 0.12;
+        }
+        return material;
+    };
+    var lens = plastic("lens", PALETTE.lens, 0.2);
+    lens.emissiveColor = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.FromHexString(PALETTE.lens).toLinearSpace().scale(0.9);
+    var flash = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.StandardMaterial("toy-tank-flash", scene);
+    flash.disableLighting = true;
+    flash.emissiveColor = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.FromHexString("#FFD27A");
+    flash.alpha = 0.85;
+    return {
+        body: plastic("body", PALETTE.body, 0.45, 0, 0.8),
+        bodyDark: plastic("body-dark", PALETTE.bodyDark, 0.5, 0, 0.6),
+        cream: plastic("cream", PALETTE.cream, 0.45, 0, 0.7),
+        gold: plastic("gold", PALETTE.gold, 0.28, 0.55, 0.5),
+        rubber: plastic("rubber", PALETTE.rubber, 0.85),
+        cleat: plastic("cleat", PALETTE.cleat, 0.75),
+        lens: lens,
+        flash: flash,
+    };
+}
+/**
+ * The scene has no environment map, so PBR plastic would only be lit by the direct lights and
+ * look flat. This builds a tiny sky-to-ground gradient cube map just for the toy tank's materials:
+ * it gives the plastic soft sky-coloured fill from above, darker undersides, and reflections for
+ * the glossy highlights. It only depends on height, so face orientation doesn't matter.
+ */
+function createToyEnvironment(scene) {
+    var size = 32;
+    var zenith = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.FromHexString("#D6E4FF");
+    var sky = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.FromHexString("#F4F1FF");
+    var horizon = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.FromHexString("#FFE6D2");
+    var ground = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.FromHexString("#5E7552");
+    var color = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3();
+    var faceNames = ["right", "left", "up", "down", "front", "back"];
+    var faceAxes = {
+        right: [new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(1, 0, 0), new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, 0, -1), new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, -1, 0)],
+        left: [new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(-1, 0, 0), new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, 0, 1), new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, -1, 0)],
+        up: [new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, 1, 0), new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(1, 0, 0), new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, 0, 1)],
+        down: [new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, -1, 0), new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(1, 0, 0), new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, 0, -1)],
+        front: [new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, 0, 1), new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(1, 0, 0), new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, -1, 0)],
+        back: [new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, 0, -1), new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(-1, 0, 0), new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, -1, 0)],
+    };
+    var faces = faceNames.map(function (faceName) {
+        var _a = faceAxes[faceName], normal = _a[0], axisX = _a[1], axisY = _a[2];
+        var data = new Uint8Array(size * size * 4);
+        for (var py = 0; py < size; py++) {
+            for (var px = 0; px < size; px++) {
+                var u = (((px + 0.5) / size) * 2) - 1;
+                var v = (((py + 0.5) / size) * 2) - 1;
+                var dirY = (normal.y + (axisX.y * u) + (axisY.y * v)) / Math.hypot(normal.x + (axisX.x * u) + (axisY.x * v), normal.y + (axisX.y * u) + (axisY.y * v), normal.z + (axisX.z * u) + (axisY.z * v));
+                if (dirY >= 0) {
+                    _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.LerpToRef(horizon, sky, Math.min(1, dirY * 2.5), color);
+                    _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.LerpToRef(color, zenith, Math.max(0, (dirY - 0.4) / 0.6), color);
+                    if (dirY > 0.82) {
+                        // Bright "studio light" cap for crisp highlights on top surfaces.
+                        _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.LerpToRef(color, _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.White(), Math.min(1, (dirY - 0.82) / 0.08), color);
+                    }
+                }
+                else {
+                    _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.LerpToRef(horizon, ground, Math.min(1, -dirY * 4), color);
+                }
+                var offset = ((py * size) + px) * 4;
+                data[offset] = Math.round(color.r * 255);
+                data[offset + 1] = Math.round(color.g * 255);
+                data[offset + 2] = Math.round(color.b * 255);
+                data[offset + 3] = 255;
+            }
+        }
+        return data;
+    });
+    var texture = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.RawCubeTexture(scene, faces, size, _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Constants.TEXTUREFORMAT_RGBA, _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Constants.TEXTURETYPE_UNSIGNED_BYTE, true);
+    texture.gammaSpace = true;
+    texture.name = "toy-tank-environment";
+    // Diffuse image-based lighting needs spherical harmonics; compute them from the same data on
+    // the CPU instead of reading the texture back from the GPU.
+    texture.sphericalPolynomial = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.CubeMapToSphericalPolynomialTools.ConvertCubeMapToSphericalPolynomial({
+        size: size,
+        right: faces[0],
+        left: faces[1],
+        up: faces[2],
+        down: faces[3],
+        front: faces[4],
+        back: faces[5],
+        format: _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Constants.TEXTUREFORMAT_RGBA,
+        type: _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Constants.TEXTURETYPE_UNSIGNED_BYTE,
+        gammaSpace: true,
+    });
+    return texture;
+}
+/** Hidden source mesh for instances. */
+function createTemplate(mesh, material) {
+    mesh.material = material;
+    mesh.isVisible = false;
+    mesh.isPickable = false;
+    return mesh;
+}
+/**
+ * Wheel templates with their axle along X: a cream wheel body, and a gold hub cap with bolts on
+ * the +X face (left-side wheels turn the hub around so it faces outward).
+ */
+function createWheelTemplates(scene, name, radius, width, materials) {
+    var axleAlongX = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Matrix.RotationZ(Math.PI / 2);
+    var tire = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder("toy-tank-".concat(name, "-tire"), { diameter: radius * 2, height: width, tessellation: 28 }, scene);
+    var rim = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder("toy-tank-".concat(name, "-rim"), { diameter: radius * 1.35, height: width + 0.14, tessellation: 28 }, scene);
+    var body = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Mesh.MergeMeshes([tire, rim], true, true);
+    if (!body) {
+        throw new Error("Failed to build toy tank wheel");
+    }
+    body.bakeTransformIntoVertices(axleAlongX);
+    body.name = "toy-tank-".concat(name, "-wheel");
+    createTemplate(body, materials.cream);
+    var hubParts = [];
+    var cap = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder("toy-tank-".concat(name, "-cap"), { diameter: radius * 0.75, height: 0.2, tessellation: 20 }, scene);
+    cap.position.y = (width / 2) + 0.12;
+    hubParts.push(cap);
+    var boltCount = 5;
+    for (var i = 0; i < boltCount; i++) {
+        var angle = (i / boltCount) * Math.PI * 2;
+        var bolt = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateSphere("toy-tank-".concat(name, "-bolt-").concat(i), { diameter: radius * 0.18, segments: 6 }, scene);
+        bolt.position.set(Math.cos(angle) * radius * 0.5, (width / 2) + 0.1, Math.sin(angle) * radius * 0.5);
+        hubParts.push(bolt);
+    }
+    var hub = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Mesh.MergeMeshes(hubParts, true, true);
+    if (!hub) {
+        throw new Error("Failed to build toy tank wheel hub");
+    }
+    // Cylinder axis is Y; rotating -90° around Z points the +Y face toward +X.
+    hub.bakeTransformIntoVertices(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Matrix.RotationZ(-Math.PI / 2));
+    hub.name = "toy-tank-".concat(name, "-hub");
+    createTemplate(hub, materials.gold);
+    return { body: body, hub: hub };
+}
+/**
+ * Places one track cleat on the belt loop. Distance 0 is the front of the bottom run; distance
+ * grows backwards along the bottom, up the rear, forwards along the top and down the front, which
+ * is the direction the belt moves (relative to the tank) when driving forward.
+ */
+function setCleatPose(cleat, distance, radius, perimeter) {
+    var s = ((distance % perimeter) + perimeter) % perimeter;
+    var straight = 2 * TRACK_END_Z;
+    var arc = Math.PI * radius;
+    var y;
+    var z;
+    var normalY;
+    var normalZ;
+    if (s < straight) {
+        z = TRACK_END_Z - s;
+        y = TRACK_CENTER_Y - radius;
+        normalY = -1;
+        normalZ = 0;
+    }
+    else if ((s -= straight) < arc) {
+        var theta = s / radius;
+        normalY = -Math.cos(theta);
+        normalZ = -Math.sin(theta);
+        z = -TRACK_END_Z + (normalZ * radius);
+        y = TRACK_CENTER_Y + (normalY * radius);
+    }
+    else if ((s -= arc) < straight) {
+        z = -TRACK_END_Z + s;
+        y = TRACK_CENTER_Y + radius;
+        normalY = 1;
+        normalZ = 0;
+    }
+    else {
+        s -= straight;
+        var theta = s / radius;
+        normalY = Math.cos(theta);
+        normalZ = Math.sin(theta);
+        z = TRACK_END_Z + (normalZ * radius);
+        y = TRACK_CENTER_Y + (normalY * radius);
+    }
+    cleat.position.set(0, y, z);
+    // Rotating around X by `a` turns the cleat's local up (0, 1, 0) into (0, cos a, sin a).
+    cleat.rotation.x = Math.atan2(normalZ, normalY);
+}
+/**
+ * Closed rubber belt around the track loop: a slightly bevelled rectangular profile swept around
+ * a stadium shape (two straight runs joined by half circles).
+ */
+function createTrackBelt(name, scene) {
+    var midRadius = TRACK_RADIUS - (TRACK_THICKNESS / 2);
+    var loop = [];
+    var straightSteps = 6;
+    var arcSteps = 20;
+    for (var i = 0; i < straightSteps; i++) {
+        var t_1 = i / straightSteps;
+        loop.push({ z: TRACK_END_Z - (2 * TRACK_END_Z * t_1), y: TRACK_CENTER_Y - midRadius, ny: -1, nz: 0 });
+    }
+    for (var i = 0; i < arcSteps; i++) {
+        var theta = (i / arcSteps) * Math.PI;
+        var ny = -Math.cos(theta);
+        var nz = -Math.sin(theta);
+        loop.push({ z: -TRACK_END_Z + (nz * midRadius), y: TRACK_CENTER_Y + (ny * midRadius), ny: ny, nz: nz });
+    }
+    for (var i = 0; i < straightSteps; i++) {
+        var t_2 = i / straightSteps;
+        loop.push({ z: -TRACK_END_Z + (2 * TRACK_END_Z * t_2), y: TRACK_CENTER_Y + midRadius, ny: 1, nz: 0 });
+    }
+    for (var i = 0; i < arcSteps; i++) {
+        var theta = (i / arcSteps) * Math.PI;
+        var ny = Math.cos(theta);
+        var nz = Math.sin(theta);
+        loop.push({ z: TRACK_END_Z + (nz * midRadius), y: TRACK_CENTER_Y + (ny * midRadius), ny: ny, nz: nz });
+    }
+    var w = TRACK_WIDTH / 2;
+    var t = TRACK_THICKNESS / 2;
+    var b = 0.08;
+    // Profile points: x offset, radial offset (outward), and the normal in (x, radial).
+    var profile = [
+        [-w + b, t, -0.3, 1], [w - b, t, 0.3, 1], [w, t - b, 1, 0.3], [w, -t + b, 1, -0.3],
+        [w - b, -t, 0.3, -1], [-w + b, -t, -0.3, -1], [-w, -t + b, -1, -0.3], [-w, t - b, -1, 0.3],
+    ];
+    var positions = [];
+    var normals = [];
+    for (var _i = 0, loop_1 = loop; _i < loop_1.length; _i++) {
+        var point = loop_1[_i];
+        for (var _a = 0, profile_1 = profile; _a < profile_1.length; _a++) {
+            var _b = profile_1[_a], px = _b[0], pr = _b[1], nx = _b[2], nr = _b[3];
+            positions.push(px, point.y + (point.ny * pr), point.z + (point.nz * pr));
+            var length_1 = Math.hypot(nx, nr);
+            normals.push(nx / length_1, (point.ny * nr) / length_1, (point.nz * nr) / length_1);
+        }
+    }
+    var indices = [];
+    var profileCount = profile.length;
+    for (var i = 0; i < loop.length; i++) {
+        var nextI = (i + 1) % loop.length;
+        for (var j = 0; j < profileCount; j++) {
+            var nextJ = (j + 1) % profileCount;
+            var a = (i * profileCount) + j;
+            var bIndex = (nextI * profileCount) + j;
+            var c = (nextI * profileCount) + nextJ;
+            var d = (i * profileCount) + nextJ;
+            pushOrientedTriangle(indices, positions, normals, a, bIndex, c);
+            pushOrientedTriangle(indices, positions, normals, a, c, d);
+        }
+    }
+    return buildMesh(name, positions, normals, indices, scene);
+}
+/**
+ * Box with all edges and corners rounded by `radius`: each face is a grid that is extra dense
+ * near the edges, and every vertex is pushed onto the rounded surface. `taper` below 1 makes the
+ * top narrower than the bottom (above 1, wider).
+ */
+function createRoundedBox(name, width, height, depth, radius, scene, segments, taper) {
+    if (segments === void 0) { segments = 4; }
+    if (taper === void 0) { taper = 1; }
+    var half = [width / 2, height / 2, depth / 2];
+    var r = Math.min.apply(Math, __spreadArray([radius], half, false));
+    var inner = half.map(function (h) { return h - r; });
+    var samples = half.map(function (h, axis) {
+        var i = inner[axis];
+        var values = [];
+        for (var k = 0; k <= segments; k++) {
+            values.push(-h + ((h - i) * k / segments));
+        }
+        for (var k = 0; k <= segments; k++) {
+            var value = i + ((h - i) * k / segments);
+            if (value > values[values.length - 1] + 1e-6) {
+                values.push(value);
+            }
+        }
+        return values;
+    });
+    var positions = [];
+    var normals = [];
+    var indices = [];
+    var point = [0, 0, 0];
+    var _loop_2 = function (axis) {
+        var _loop_3 = function (sign) {
+            var uAxis = (axis + 1) % 3;
+            var vAxis = (axis + 2) % 3;
+            var uValues = samples[uAxis];
+            var vValues = samples[vAxis];
+            var start = positions.length / 3;
+            for (var _b = 0, uValues_1 = uValues; _b < uValues_1.length; _b++) {
+                var u = uValues_1[_b];
+                var _loop_4 = function (v) {
+                    point[axis] = sign * half[axis];
+                    point[uAxis] = u;
+                    point[vAxis] = v;
+                    var nearest = point.map(function (value, i) { return clamp(value, -inner[i], inner[i]); });
+                    var offset = point.map(function (value, i) { return value - nearest[i]; });
+                    var length_2 = Math.hypot(offset[0], offset[1], offset[2]);
+                    var normal = length_2 > 1e-9 ? offset.map(function (value) { return value / length_2; }) : [0, 0, 0].map(function (_, i) { return (i === axis ? sign : 0); });
+                    var x = nearest[0] + (normal[0] * r);
+                    var y = nearest[1] + (normal[1] * r);
+                    var z = nearest[2] + (normal[2] * r);
+                    // Taper: scale x and z linearly with height, from 1 at the bottom to `taper` at
+                    // the top. Normals follow the inverse transpose of that deformation.
+                    var scale = 1 - ((1 - taper) * ((y + half[1]) / (2 * half[1])));
+                    var scaleSlope = -(1 - taper) / (2 * half[1]);
+                    var nx = normal[0] / scale;
+                    var ny = normal[1] - ((x * scaleSlope * normal[0]) / scale) - ((z * scaleSlope * normal[2]) / scale);
+                    var nz = normal[2] / scale;
+                    var normalLength = Math.hypot(nx, ny, nz);
+                    positions.push(x * scale, y, z * scale);
+                    normals.push(nx / normalLength, ny / normalLength, nz / normalLength);
+                };
+                for (var _c = 0, vValues_1 = vValues; _c < vValues_1.length; _c++) {
+                    var v = vValues_1[_c];
+                    _loop_4(v);
+                }
+            }
+            var columns = vValues.length;
+            for (var ui = 0; ui < uValues.length - 1; ui++) {
+                for (var vi = 0; vi < columns - 1; vi++) {
+                    var a = start + (ui * columns) + vi;
+                    var b = start + ((ui + 1) * columns) + vi;
+                    var c = start + ((ui + 1) * columns) + vi + 1;
+                    var d = start + (ui * columns) + vi + 1;
+                    pushOrientedTriangle(indices, positions, normals, a, b, c);
+                    pushOrientedTriangle(indices, positions, normals, a, c, d);
+                }
+            }
+        };
+        for (var _i = 0, _a = [-1, 1]; _i < _a.length; _i++) {
+            var sign = _a[_i];
+            _loop_3(sign);
+        }
+    };
+    for (var axis = 0; axis < 3; axis++) {
+        _loop_2(axis);
+    }
+    return buildMesh(name, positions, normals, indices, scene);
+}
+/**
+ * Adds a triangle wound the way Babylon expects for a front face whose outward normal is the
+ * vertex normal (Babylon's front faces have (b - a) x (c - a) pointing away from the normal).
+ */
+function pushOrientedTriangle(indices, positions, normals, a, b, c) {
+    var ax = positions[a * 3], ay = positions[(a * 3) + 1], az = positions[(a * 3) + 2];
+    var e1x = positions[b * 3] - ax, e1y = positions[(b * 3) + 1] - ay, e1z = positions[(b * 3) + 2] - az;
+    var e2x = positions[c * 3] - ax, e2y = positions[(c * 3) + 1] - ay, e2z = positions[(c * 3) + 2] - az;
+    var cx = (e1y * e2z) - (e1z * e2y);
+    var cy = (e1z * e2x) - (e1x * e2z);
+    var cz = (e1x * e2y) - (e1y * e2x);
+    var nx = normals[a * 3] + normals[b * 3] + normals[c * 3];
+    var ny = normals[(a * 3) + 1] + normals[(b * 3) + 1] + normals[(c * 3) + 1];
+    var nz = normals[(a * 3) + 2] + normals[(b * 3) + 2] + normals[(c * 3) + 2];
+    if ((cx * nx) + (cy * ny) + (cz * nz) > 0) {
+        indices.push(a, c, b);
+    }
+    else {
+        indices.push(a, b, c);
+    }
+}
+function buildMesh(name, positions, normals, indices, scene) {
+    var mesh = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Mesh(name, scene);
+    var vertexData = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.VertexData();
+    vertexData.positions = positions;
+    vertexData.normals = normals;
+    vertexData.indices = indices;
+    vertexData.applyToMesh(mesh);
+    return mesh;
+}
+/** Cream roundel with a gold star, drawn once into a small texture. */
+function createStarDecalMaterial(scene) {
+    var size = 256;
+    var texture = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.DynamicTexture("toy-star-decal-texture", { width: size, height: size }, scene, true);
+    texture.hasAlpha = true;
+    var context = texture.getContext();
+    var center = size / 2;
+    context.clearRect(0, 0, size, size);
+    context.fillStyle = PALETTE.cream;
+    context.beginPath();
+    context.arc(center, center, size * 0.47, 0, Math.PI * 2);
+    context.fill();
+    context.fillStyle = PALETTE.gold;
+    context.strokeStyle = PALETTE.bodyDark;
+    context.lineWidth = size * 0.03;
+    context.lineJoin = "round";
+    context.beginPath();
+    for (var i = 0; i < 10; i++) {
+        var angle = (-Math.PI / 2) + (i * Math.PI / 5);
+        var pointRadius = i % 2 === 0 ? size * 0.38 : size * 0.16;
+        var x = center + (Math.cos(angle) * pointRadius);
+        var y = center + (Math.sin(angle) * pointRadius);
+        if (i === 0) {
+            context.moveTo(x, y);
+        }
+        else {
+            context.lineTo(x, y);
+        }
+    }
+    context.closePath();
+    context.fill();
+    context.stroke();
+    texture.update();
+    var material = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.StandardMaterial("toy-star-decal", scene);
+    material.diffuseTexture = texture;
+    material.useAlphaFromDiffuseTexture = true;
+    material.emissiveColor = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3(0.25, 0.22, 0.2);
+    material.specularColor = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3(0.15, 0.15, 0.15);
+    material.zOffset = -2;
+    return material;
+}
+function stepSpring(state, valueKey, velocityKey, target, stiffness, damping, deltaSeconds) {
+    var value = state[valueKey];
+    var velocity = state[velocityKey] + (((stiffness * (target - value)) - (damping * state[velocityKey])) * deltaSeconds);
+    state[velocityKey] = velocity;
+    state[valueKey] = (value + (velocity * deltaSeconds));
+}
+function getYaw(mesh) {
+    return mesh.rotationQuaternion ? mesh.rotationQuaternion.toEulerAngles().y : mesh.rotation.y;
+}
+function wrapAngle(angle) {
+    return Math.atan2(Math.sin(angle), Math.cos(angle));
+}
+function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+}
+
+
+/***/ },
+
 /***/ "./src/scenes/trees.ts"
 /*!*****************************!*\
   !*** ./src/scenes/trees.ts ***!
@@ -2282,4 +3114,4 @@ function instantiateTree(templates, position, index, scene) {
 /***/ }
 
 }]);
-//# sourceMappingURL=src_scenes_tools_ts.b45ebbb27e21842f73f1.js.map
+//# sourceMappingURL=src_scenes_tools_ts.866e8ea66415e3d06cba.js.map

@@ -10,6 +10,10 @@ type TankContext = {
     divFps: HTMLElement | null;
     tankSound: BABYLON.Sound;
     bullet: BABYLON.Sound;
+    /** Called every time the tank fires (used by the toy tank model for recoil). */
+    onShoot?: () => void;
+    /** Where shots spawn, relative to the tank holder: distance forward and height. */
+    shotOrigin?: { forward: number; height: number };
 };
 
 type TargetLink = {
@@ -262,8 +266,8 @@ function createSplatterObjects(_this: TankContext): BABYLON.AbstractMesh[] {
  */
 export async function initializeShooting(_this: TankContext, forward: BABYLON.Vector3): Promise<void> {
     const activeShots: ActiveShot[] = [];
-    const shotOffset = 5;
-    const shotHeightOffset = 3;
+    const shotOffset = _this.shotOrigin?.forward ?? 5;
+    const shotHeightOffset = _this.shotOrigin?.height ?? 3;
     const shotRadius = 0.75;
     const shotLifetimeMs = 2000;
     const shotCooldownMs = 400;
@@ -516,6 +520,7 @@ export async function initializeShooting(_this: TankContext, forward: BABYLON.Ve
         canShoot = false;
         shotCooldownUntil = performance.now() + shotCooldownMs;
         _this.bullet.play();
+        _this.onShoot?.();
 
         _this.tank.getDirectionToRef(forward, shotDirection);
         shotDirection.normalize();

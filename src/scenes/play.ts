@@ -6,6 +6,7 @@ import type { AdvancedDynamicTexture, Rectangle, TextBlock } from "@babylonjs/gu
 import { instantiateTrees } from "./trees";
 import { instantiateBricks } from "./bricks";
 import { initializeTankMovement, initializeShooting } from "./tank";
+import { createToyTank, type ToyTank } from "./toyTank";
 
 export default class Play extends Node {
     private scene!: BABYLON.Scene;
@@ -14,6 +15,7 @@ export default class Play extends Node {
     private tankSound!: BABYLON.Sound;
     private brickSound!: BABYLON.Sound;
     private tank!: BABYLON.AbstractMesh;
+    private toyTank: ToyTank | null = null;
     private divFps: HTMLElement | null = null;
     private controlOverlayTexture: AdvancedDynamicTexture | null = null;
     private controlOverlayPanel: Rectangle | null = null;
@@ -82,6 +84,7 @@ export default class Play extends Node {
         const rotationSpeed = 0.07;
         const forward = new BABYLON.Vector3(0, 0, 1);
 
+        this.initializeTankModel();
         instantiateTrees({ scene: this.scene });
         instantiateBricks({ scene: this.scene, tank: this.tank, brickSound: this.brickSound }, -5, 8, -30, 3, [6, 6, 4, 2], 0);
         // Center and angle match where this wall has always been placed (it was previously
@@ -93,8 +96,37 @@ export default class Play extends Node {
             console.error("Shadow initialization failed", error);
         }
         initializeTankMovement({ scene: this.scene, tank: this.tank, camera: this.camera, divFps: this.divFps, tankSound: this.tankSound, bullet: this.bullet }, rotationSpeed);
-        void initializeShooting({ scene: this.scene, tank: this.tank, camera: this.camera, divFps: this.divFps, tankSound: this.tankSound, bullet: this.bullet }, forward);
+        void initializeShooting({
+            scene: this.scene,
+            tank: this.tank,
+            camera: this.camera,
+            divFps: this.divFps,
+            tankSound: this.tankSound,
+            bullet: this.bullet,
+            onShoot: this.toyTank ? () => this.toyTank?.fire() : undefined,
+            shotOrigin: this.toyTank?.muzzle,
+        }, forward);
         void this.showControl();
+    }
+
+    /**
+     * Swaps the imported tank model for the toy tank built in code. Add `?tank=classic` to the URL
+     * to get the original model back for comparison.
+     */
+    private initializeTankModel(): void {
+        const useClassicTank = new URLSearchParams(window.location.search).get("tank") === "classic";
+        if (useClassicTank) {
+            return;
+        }
+
+        try {
+            this.toyTank = createToyTank(this.scene, this.tank);
+            this.scene.getMeshByName("tank")?.setEnabled(false);
+        } catch (error) {
+            console.error("Toy tank creation failed, keeping the original model", error);
+            this.toyTank?.root.dispose();
+            this.toyTank = null;
+        }
     }
 
     /**
@@ -309,7 +341,7 @@ export default class Play extends Node {
 
         const movableMeshes = new Set(["tank", "tank_holder", "amongus", "splatter1", "splatter2", "splatter3"]);
         this.scene.meshes
-            .filter((mesh) => !mesh.physicsImpostor && !movableMeshes.has(mesh.name))
+            .filter((mesh) => !mesh.physicsImpostor && !movableMeshes.has(mesh.name) && !mesh.isDescendantOf(this.tank))
             .forEach((mesh) => {
                 mesh.isPickable = false;
                 mesh.doNotSyncBoundingInfo = true;

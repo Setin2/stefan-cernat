@@ -6,6 +6,7 @@ export default class Play extends Node {
     private tankSound;
     private brickSound;
     private tank;
+    private toyTank;
     private divFps;
     private controlOverlayTexture;
     private controlOverlayPanel;
@@ -27,6 +28,11 @@ export default class Play extends Node {
      * Initialize constant variables and functionalities of the game
      */
     play(): void;
+    /**
+     * Swaps the imported tank model for the toy tank built in code. Add `?tank=classic` to the URL
+     * to get the original model back for comparison.
+     */
+    private initializeTankModel;
     /**
      * Creates a dedicated shadow-casting light and applies shadows to visible scene meshes.
      */
