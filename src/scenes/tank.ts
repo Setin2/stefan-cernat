@@ -347,7 +347,11 @@ export async function initializeShooting(_this: TankContext, forward: BABYLON.Ve
     let impactTarget: BABYLON.Mesh | null = null;
     const discoveredTargets = new Set<string>();
     const totalTargetCount = targets.length;
-    const baseCameraPosition = _this.camera.position.clone();
+    // Recoil is applied as a temporary offset only for the rendered frame, so it never
+    // fights with the camera follow logic in initializeTankMovement.
+    const recoilRestoreObserver = _this.scene.onAfterRenderObservable.add(() => {
+        _this.camera.position.subtractInPlace(recoilOffset);
+    });
 
     const shotObserver = _this.scene.onBeforeRenderObservable.add(() => {
         const now = performance.now();
@@ -360,7 +364,7 @@ export async function initializeShooting(_this: TankContext, forward: BABYLON.Ve
 
         recoilStep.copyFrom(recoilOffset).scaleInPlace(Math.min(1, recoilRecoverSpeed * deltaSeconds));
         recoilOffset.subtractInPlace(recoilStep);
-        _this.camera.position.copyFrom(baseCameraPosition).addInPlace(recoilOffset);
+        _this.camera.position.addInPlace(recoilOffset);
 
         _this.tank.getDirectionToRef(forward, tankForward);
         tankForward.normalize();
@@ -523,6 +527,7 @@ export async function initializeShooting(_this: TankContext, forward: BABYLON.Ve
 
     _this.scene.onDisposeObservable.addOnce(() => {
         _this.scene.onBeforeRenderObservable.remove(shotObserver);
+        _this.scene.onAfterRenderObservable.remove(recoilRestoreObserver);
         activeShots.forEach((activeShot) => {
             clearTimeout(activeShot.disposeTimeout);
             activeShot.dispose();
