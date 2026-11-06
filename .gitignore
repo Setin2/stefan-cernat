@@ -51,10 +51,3 @@ coverage/
 
 # Cypress
 cypress/
-
-#Terraform
-terraform/.terraform/*
-terraform/.terraform.lock.hcl
-*.tfvars
-*.terraform*
-*.tfstate*
