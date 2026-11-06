@@ -173,27 +173,28 @@ function buildDesk(scene: BABYLON.Scene, frame: DeskFrame, box: FrameBox, materi
 
     const underTop = topY - 0.35 - edgeThickness;
 
-    // Left legs and a rail between them.
+    // Legs on the right (the robot sits at the right-hand side of the desk) and a rail between them.
+    const legX = box.maxX - 1.4;
     const legSize = 1.6;
     const legHeight = underTop - floorY + 0.2;
     for (const side of [-1, 1]) {
         const leg = createRoundedBox(`ff-desk-leg-${side}`, legSize, legHeight, legSize, 0.5, scene);
         leg.material = materials.deskFrame;
-        place(leg, frame, box.minX + 1.4, floorY + (legHeight / 2), centerZ + (side * ((depth / 2) - 1.4)));
+        place(leg, frame, legX, floorY + (legHeight / 2), centerZ + (side * ((depth / 2) - 1.4)));
 
         // Little round feet
         const foot = BABYLON.MeshBuilder.CreateCylinder(`ff-desk-foot-${side}`, { diameter: 2.2, height: 0.5, tessellation: 20 }, scene);
         foot.material = materials.navy;
-        place(foot, frame, box.minX + 1.4, floorY + 0.25, centerZ + (side * ((depth / 2) - 1.4)));
+        place(foot, frame, legX, floorY + 0.25, centerZ + (side * ((depth / 2) - 1.4)));
     }
     const rail = createRoundedBox("ff-desk-rail", 0.9, 0.9, depth - 2.8, 0.3, scene);
     rail.material = materials.deskFrame;
-    place(rail, frame, box.minX + 1.4, floorY + 1.8, centerZ);
+    place(rail, frame, legX, floorY + 1.8, centerZ);
 
-    // Drawer unit on the right.
+    // Drawer unit on the left.
     const unitWidth = Math.min(8, width * 0.3);
     const unitHeight = underTop - floorY + 0.2;
-    const unitX = box.maxX - (unitWidth / 2) - 0.6;
+    const unitX = box.minX + (unitWidth / 2) + 0.6;
     const unitDepth = depth - 1.6;
     const unit = createRoundedBox("ff-desk-drawers", unitWidth, unitHeight, unitDepth, 0.55, scene);
     unit.material = materials.deskFrame;
@@ -215,8 +216,8 @@ function buildDesk(scene: BABYLON.Scene, frame: DeskFrame, box: FrameBox, materi
     }
 
     // Back panel between the legs and the drawers.
-    const panelLeft = box.minX + 1.4 + (legSize / 2);
-    const panelRight = unitX - (unitWidth / 2);
+    const panelLeft = unitX + (unitWidth / 2);
+    const panelRight = legX - (legSize / 2);
     const panelHeight = Math.min(5, underTop - floorY - 1);
     const panel = createRoundedBox("ff-desk-panel", panelRight - panelLeft + 0.4, panelHeight, 0.6, 0.25, scene, 3);
     panel.material = materials.deskFrame;

@@ -10,6 +10,7 @@ import { createToyTank, type ToyTank } from "./toyTank";
 import { restyleLandmarks } from "./landmarks";
 import { decorateGround } from "./ground";
 import { restyleFruitFactory } from "./fruitFactory";
+import { restyleMascots } from "./mascots";
 
 export default class Play extends Node {
     private scene!: BABYLON.Scene;
@@ -91,6 +92,7 @@ export default class Play extends Node {
         instantiateTrees({ scene: this.scene });
         restyleLandmarks(this.scene);
         restyleFruitFactory(this.scene);
+        restyleMascots(this.scene);
         instantiateBricks({ scene: this.scene, tank: this.tank, brickSound: this.brickSound }, -5, 8, -30, 3, [6, 6, 4, 2], 0);
         // Center and angle match where this wall has always been placed (it was previously
         // built at (130, -50) and then rotated 300 rad around the world origin).
@@ -182,7 +184,7 @@ export default class Play extends Node {
         ]);
 
         const shadowCasterKeywords = [
-            "tank", "brick", "tree-", "deco-", "ff-", "text", "arrow", "project", "target",
+            "tank", "brick", "tree-", "deco-", "ff-", "robot-", "text", "arrow", "project", "target",
             "podium", "practice", "github", "linkedin", "twitter", "amongus", "statue", "berserk",
             "guts", "monument", "table", "desk", "chair",
         ];

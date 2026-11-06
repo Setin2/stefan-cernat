@@ -284,26 +284,27 @@ function buildDesk(scene, frame, box, materials) {
     surface.material = materials.deskTop;
     place(surface, frame, centerX, topY - 0.25, centerZ);
     var underTop = topY - 0.35 - edgeThickness;
-    // Left legs and a rail between them.
+    // Legs on the right (the robot sits at the right-hand side of the desk) and a rail between them.
+    var legX = box.maxX - 1.4;
     var legSize = 1.6;
     var legHeight = underTop - floorY + 0.2;
     for (var _i = 0, _a = [-1, 1]; _i < _a.length; _i++) {
         var side = _a[_i];
         var leg = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRoundedBox)("ff-desk-leg-".concat(side), legSize, legHeight, legSize, 0.5, scene);
         leg.material = materials.deskFrame;
-        place(leg, frame, box.minX + 1.4, floorY + (legHeight / 2), centerZ + (side * ((depth / 2) - 1.4)));
+        place(leg, frame, legX, floorY + (legHeight / 2), centerZ + (side * ((depth / 2) - 1.4)));
         // Little round feet
         var foot = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder("ff-desk-foot-".concat(side), { diameter: 2.2, height: 0.5, tessellation: 20 }, scene);
         foot.material = materials.navy;
-        place(foot, frame, box.minX + 1.4, floorY + 0.25, centerZ + (side * ((depth / 2) - 1.4)));
+        place(foot, frame, legX, floorY + 0.25, centerZ + (side * ((depth / 2) - 1.4)));
     }
     var rail = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRoundedBox)("ff-desk-rail", 0.9, 0.9, depth - 2.8, 0.3, scene);
     rail.material = materials.deskFrame;
-    place(rail, frame, box.minX + 1.4, floorY + 1.8, centerZ);
-    // Drawer unit on the right.
+    place(rail, frame, legX, floorY + 1.8, centerZ);
+    // Drawer unit on the left.
     var unitWidth = Math.min(8, width * 0.3);
     var unitHeight = underTop - floorY + 0.2;
-    var unitX = box.maxX - (unitWidth / 2) - 0.6;
+    var unitX = box.minX + (unitWidth / 2) + 0.6;
     var unitDepth = depth - 1.6;
     var unit = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRoundedBox)("ff-desk-drawers", unitWidth, unitHeight, unitDepth, 0.55, scene);
     unit.material = materials.deskFrame;
@@ -322,8 +323,8 @@ function buildDesk(scene, frame, box, materials) {
         place(handle, frame, unitX, y + (drawerHeight * 0.15), frontZ + 0.55);
     }
     // Back panel between the legs and the drawers.
-    var panelLeft = box.minX + 1.4 + (legSize / 2);
-    var panelRight = unitX - (unitWidth / 2);
+    var panelLeft = unitX + (unitWidth / 2);
+    var panelRight = legX - (legSize / 2);
     var panelHeight = Math.min(5, underTop - floorY - 1);
     var panel = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRoundedBox)("ff-desk-panel", panelRight - panelLeft + 0.4, panelHeight, 0.6, 0.25, scene, 3);
     panel.material = materials.deskFrame;
@@ -1504,6 +1505,140 @@ function createSignPlate(scene, name, x, z, yaw, width, depth, plate, rim) {
 
 /***/ },
 
+/***/ "./src/scenes/mascots.ts"
+/*!*******************************!*\
+  !*** ./src/scenes/mascots.ts ***!
+  \*******************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   restyleMascots: () => (/* binding */ restyleMascots)
+/* harmony export */ });
+/* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core */ "./node_modules/@babylonjs/core/index.js");
+/* harmony import */ var _toyStyle__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./toyStyle */ "./src/scenes/toyStyle.ts");
+
+
+/**
+ * Gives the imported character models (the three small figures, the big sword and the big
+ * symbol) the same toy finish as the rest of the world: glossy plastic materials in the site's
+ * palette, plus a few small set pieces around them. Their geometry, positions and physics are
+ * unchanged.
+ */
+var GROUND_Y = -0.5;
+var PALETTE = {
+    figureBodies: ["#4F6F8F", "#E8869F", "#D9A13B"],
+    visor: "#A9D8EA",
+    outline: "#22313F",
+    steel: "#C9D2DA",
+    symbolInside: "#E8869F",
+    symbolOutside: "#344B63",
+    sand: "#E8DCC6",
+    stone: "#CFC1A8",
+};
+function restyleMascots(scene) {
+    try {
+        restyleFigures(scene);
+    }
+    catch (error) {
+        console.error("Figure restyle failed, keeping the originals", error);
+    }
+    try {
+        restyleSword(scene);
+    }
+    catch (error) {
+        console.error("Sword restyle failed, keeping the original", error);
+    }
+    try {
+        restyleSymbol(scene);
+    }
+    catch (error) {
+        console.error("Symbol restyle failed, keeping the original", error);
+    }
+}
+/**
+ * Each figure is a hidden collider with three visible children: an outline shell (drawn with
+ * flipped faces to give the cartoon outline), the body, and the visor (the smallest part).
+ */
+function restyleFigures(scene) {
+    var figures = scene.meshes.filter(function (mesh) { return mesh.name === "amongus" && !mesh.parent; });
+    var visor = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-figure-visor", PALETTE.visor, { roughness: 0.12, clearCoat: 1 });
+    visor.emissiveColor = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.FromHexString(PALETTE.visor).toLinearSpace().scale(0.12);
+    var outline = null;
+    figures.forEach(function (figure, index) {
+        var _a;
+        var parts = figure.getChildMeshes();
+        if (!parts.length) {
+            return;
+        }
+        var body = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-figure-body-".concat(index), PALETTE.figureBodies[index % PALETTE.figureBodies.length], { roughness: 0.42, clearCoat: 0.6 });
+        var smallest = parts.reduce(function (a, b) { return (a.getTotalVertices() < b.getTotalVertices() ? a : b); });
+        for (var _i = 0, parts_1 = parts; _i < parts_1.length; _i++) {
+            var part = parts_1[_i];
+            if (((_a = part.material) === null || _a === void 0 ? void 0 : _a.name) === "Outline.002") {
+                // Keep the outline's flipped-face setup, just tint it navy instead of black.
+                if (!outline && part.material instanceof _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.PBRMaterial) {
+                    var clone = part.material.clone("toy-figure-outline");
+                    clone.albedoColor = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.FromHexString(PALETTE.outline).toLinearSpace();
+                    outline = clone;
+                }
+                if (outline) {
+                    part.material = outline;
+                }
+            }
+            else if (part === smallest) {
+                part.material = visor;
+            }
+            else {
+                part.material = body;
+            }
+        }
+    });
+}
+/** The sword in toy steel, with a ring of stones where it's stuck in the ground. */
+function restyleSword(scene) {
+    var sword = scene.getMeshByName("berserk_sword");
+    if (!sword) {
+        return;
+    }
+    sword.material = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-sword-steel", PALETTE.steel, { roughness: 0.25, metallic: 0.55, clearCoat: 0.6 });
+    sword.computeWorldMatrix(true);
+    var center = sword.getBoundingInfo().boundingBox.centerWorld;
+    var stone = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-sword-stone", PALETTE.stone, { roughness: 0.65, clearCoat: 0.15 });
+    for (var i = 0; i < 7; i++) {
+        var angle = ((i / 7) * Math.PI * 2) + 0.3;
+        var rock = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateSphere("monument-sword-stone-".concat(i), { diameter: 1, segments: 8 }, scene);
+        rock.material = stone;
+        var size = 1.2 + ((i % 3) * 0.45);
+        rock.scaling.set(size, size * 0.5, size * 0.9);
+        rock.position.set(center.x + (Math.cos(angle) * 3.6), GROUND_Y + 0.15, center.z + (Math.sin(angle) * 3.6));
+        rock.isPickable = false;
+    }
+}
+/** The symbol in glossy pink on navy, standing on a low sand plinth. */
+function restyleSymbol(scene) {
+    var inside = scene.getMeshByName("berserk_symbol_inside");
+    var outside = scene.getMeshByName("berserk_symbol_outside");
+    if (inside) {
+        inside.material = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-symbol-inside", PALETTE.symbolInside, { roughness: 0.4, clearCoat: 0.6 });
+    }
+    if (!outside) {
+        return;
+    }
+    outside.material = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-symbol-outside", PALETTE.symbolOutside, { roughness: 0.45, clearCoat: 0.5 });
+    // Low plinth under the symbol's footprint.
+    outside.computeWorldMatrix(true);
+    var box = outside.getBoundingInfo().boundingBox;
+    var width = box.maximumWorld.x - box.minimumWorld.x;
+    var depth = box.maximumWorld.z - box.minimumWorld.z;
+    var plinth = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRoundedBox)("monument-symbol-plinth", Math.min(width, 10) + 1, 1.2, Math.min(depth, 10) + 1, 0.5, scene);
+    plinth.material = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-symbol-plinth", PALETTE.sand, { roughness: 0.5, clearCoat: 0.35 });
+    plinth.position.set(box.centerWorld.x, GROUND_Y + 0.5, box.centerWorld.z);
+    plinth.isPickable = false;
+}
+
+
+/***/ },
+
 /***/ "./src/scenes/play.ts"
 /*!****************************!*\
   !*** ./src/scenes/play.ts ***!
@@ -1524,6 +1659,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _landmarks__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./landmarks */ "./src/scenes/landmarks.ts");
 /* harmony import */ var _ground__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./ground */ "./src/scenes/ground.ts");
 /* harmony import */ var _fruitFactory__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./fruitFactory */ "./src/scenes/fruitFactory.ts");
+/* harmony import */ var _mascots__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./mascots */ "./src/scenes/mascots.ts");
 var __extends = (undefined && undefined.__extends) || (function () {
     var extendStatics = function (d, b) {
         extendStatics = Object.setPrototypeOf ||
@@ -1575,6 +1711,7 @@ var __generator = (undefined && undefined.__generator) || function (thisArg, bod
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+
 
 
 
@@ -1656,6 +1793,7 @@ var Play = /** @class */ (function (_super) {
         (0,_trees__WEBPACK_IMPORTED_MODULE_3__.instantiateTrees)({ scene: this.scene });
         (0,_landmarks__WEBPACK_IMPORTED_MODULE_7__.restyleLandmarks)(this.scene);
         (0,_fruitFactory__WEBPACK_IMPORTED_MODULE_9__.restyleFruitFactory)(this.scene);
+        (0,_mascots__WEBPACK_IMPORTED_MODULE_10__.restyleMascots)(this.scene);
         (0,_bricks__WEBPACK_IMPORTED_MODULE_4__.instantiateBricks)({ scene: this.scene, tank: this.tank, brickSound: this.brickSound }, -5, 8, -30, 3, [6, 6, 4, 2], 0);
         // Center and angle match where this wall has always been placed (it was previously
         // built at (130, -50) and then rotated 300 rad around the world origin).
@@ -1738,7 +1876,7 @@ var Play = /** @class */ (function (_super) {
             "monitor",
         ]);
         var shadowCasterKeywords = [
-            "tank", "brick", "tree-", "deco-", "ff-", "text", "arrow", "project", "target",
+            "tank", "brick", "tree-", "deco-", "ff-", "robot-", "text", "arrow", "project", "target",
             "podium", "practice", "github", "linkedin", "twitter", "amongus", "statue", "berserk",
             "guts", "monument", "table", "desk", "chair",
         ];
@@ -4921,4 +5059,4 @@ function createPetalTexture(scene) {
 /***/ }
 
 }]);
-//# sourceMappingURL=src_scenes_tools_ts.ce1568273124e6185104.js.map
+//# sourceMappingURL=src_scenes_tools_ts.6cc9a8a7de6943fd54fc.js.map
