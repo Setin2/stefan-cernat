@@ -1,4 +1,4 @@
-/*! babylonjs-editor-generated-template 4.1.0 Fri Nov 06 2026 15:54:09 GMT+0100 (Central European Standard Time) */
+/*! babylonjs-editor-generated-template 4.1.0 Fri Nov 06 2026 16:57:14 GMT+0100 (Central European Standard Time) */
 "use strict";
 (self["webpackChunkgame"] = self["webpackChunkgame"] || []).push([["src_scenes_tools_ts"],{
 
@@ -115,6 +115,1395 @@ function instantiateBricks(_this, x, y, z, numRows, numColumnsPerRow, rotationY)
 
 /***/ },
 
+/***/ "./src/scenes/fruitFactory.ts"
+/*!************************************!*\
+  !*** ./src/scenes/fruitFactory.ts ***!
+  \************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   restyleFruitFactory: () => (/* binding */ restyleFruitFactory)
+/* harmony export */ });
+/* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core */ "./node_modules/@babylonjs/core/index.js");
+/* harmony import */ var _toyStyle__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./toyStyle */ "./src/scenes/toyStyle.ts");
+var __assign = (undefined && undefined.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
+
+
+/**
+ * Rebuilds the Fruit Factory corner (the desk with the PC, and the C# trophy) as a toy desk setup.
+ *
+ * Every piece of the original desk model is replaced by a toy version built in code at the same
+ * place and size: desk, monitor (reusing the Fruit Factory screenshot), PC tower, keyboard, mouse
+ * and speakers, plus a few props. The originals are hidden; the invisible "fruit factory" box keeps
+ * doing the physics.
+ */
+var GROUND_Y = -0.5;
+var PALETTE = {
+    deskTop: "#E2B57E",
+    deskEdge: "#B9834F",
+    deskFrame: "#4F6F8F",
+    drawer: "#E8DCC6",
+    accent: "#E8869F",
+    navy: "#344B63",
+    slate: "#4F6F8F",
+    sand: "#E8DCC6",
+    cream: "#F4EBDD",
+    coneDark: "#2A2C30",
+    powerLight: "#7CF0B0",
+    coffee: "#6B4430",
+    pot: "#C9734F",
+    soil: "#5E4436",
+    leaves: ["#6E9F7E", "#5B8C70", "#82B08F"],
+    title: "#F4EBDD",
+    trophy: "#C9A35B",
+};
+function restyleFruitFactory(scene) {
+    try {
+        restyleDesk(scene);
+    }
+    catch (error) {
+        console.error("Fruit Factory desk restyle failed", error);
+    }
+    try {
+        restyleTrophy(scene);
+    }
+    catch (error) {
+        console.error("C# trophy restyle failed, keeping the original", error);
+    }
+}
+function createMaterials(scene) {
+    var toy = function (name, hex, roughness, clearCoat, metallic) {
+        if (roughness === void 0) { roughness = 0.45; }
+        if (clearCoat === void 0) { clearCoat = 0.4; }
+        if (metallic === void 0) { metallic = 0; }
+        return (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-ff-".concat(name), hex, { roughness: roughness, clearCoat: clearCoat, metallic: metallic });
+    };
+    var glow = function (name, hex) {
+        var material = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.StandardMaterial("toy-ff-".concat(name), scene);
+        material.disableLighting = true;
+        material.emissiveColor = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.FromHexString(hex);
+        return material;
+    };
+    return {
+        deskTop: toy("desk-top", PALETTE.deskTop, 0.5, 0.5),
+        deskEdge: toy("desk-edge", PALETTE.deskEdge, 0.5, 0.4),
+        deskFrame: toy("desk-frame", PALETTE.deskFrame),
+        drawer: toy("drawer", PALETTE.drawer, 0.5, 0.35),
+        accent: toy("accent", PALETTE.accent, 0.4, 0.5),
+        navy: toy("navy", PALETTE.navy, 0.45, 0.4),
+        slate: toy("slate", PALETTE.slate, 0.45, 0.45),
+        sand: toy("sand", PALETTE.sand, 0.45, 0.4),
+        cream: toy("cream", PALETTE.cream, 0.4, 0.5),
+        coneDark: toy("cone", PALETTE.coneDark, 0.7, 0.1),
+        coffee: toy("coffee", PALETTE.coffee, 0.2, 0.6),
+        pot: toy("pot", PALETTE.pot, 0.55, 0.3),
+        soil: toy("soil", PALETTE.soil, 0.9, 0),
+        leaves: PALETTE.leaves.map(function (hex, i) { return toy("leaves-".concat(i), hex, 0.6, 0.15); }),
+        powerLight: glow("power-light", PALETTE.powerLight),
+    };
+}
+function restyleDesk(scene) {
+    var factory = scene.getMeshByName("fruit factory");
+    if (!factory) {
+        return;
+    }
+    factory.computeWorldMatrix(true);
+    var yaw = factory.rotationQuaternion ? factory.rotationQuaternion.toEulerAngles().y : factory.rotation.y;
+    var right = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
+    var forward = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(Math.sin(yaw), 0, Math.cos(yaw));
+    var frame = {
+        yaw: yaw,
+        right: right,
+        forward: forward,
+        toWorld: function (x, y, z) { return right.scale(x).addInPlace(forward.scale(z)).addInPlaceFromFloats(0, y, 0); },
+    };
+    // The desk parts are not children of the "fruit factory" physics box (they hang under a
+    // separate node with the same name), so look them up by their own, unique names.
+    var find = function (name) { return scene.getMeshByName(name); };
+    var table = find("Cube.001_table_0");
+    if (!table) {
+        console.warn("Fruit Factory desk not found, keeping the original");
+        return;
+    }
+    var materials = createMaterials(scene);
+    var deskBox = getFrameBox(table, frame);
+    var deskTopY = deskBox.maxY;
+    buildDesk(scene, frame, deskBox, materials);
+    table.isVisible = false;
+    // Each part is rebuilt independently; if one fails the original stays visible.
+    var replace = function (name, build) {
+        var mesh = find(name);
+        if (!mesh) {
+            return;
+        }
+        try {
+            if (build(mesh)) {
+                mesh.isVisible = false;
+            }
+        }
+        catch (error) {
+            console.error("Failed to rebuild ".concat(name), error);
+        }
+    };
+    replace("monitor", function (mesh) { return buildMonitor(scene, frame, mesh, deskTopY, materials); });
+    replace("Cube.005_cpu_0", function (mesh) { return buildPcTower(scene, frame, getFrameBox(mesh, frame), deskTopY, materials); });
+    replace("Cube.004_keyboard_0", function (mesh) { return buildKeyboard(scene, frame, getFrameBox(mesh, frame), deskTopY, materials); });
+    replace("Cube.008_mouse_0", function (mesh) { return buildMouse(scene, frame, getFrameBox(mesh, frame), deskTopY, materials); });
+    replace("Cube.012_speakers_0", function (mesh) { return buildSpeakers(scene, frame, mesh, deskTopY, materials); });
+    buildProps(scene, frame, deskBox, materials);
+    // The 3D "Fruit Factory" title.
+    var title = scene.getTransformNodeByName("Text");
+    title === null || title === void 0 ? void 0 : title.getChildMeshes().forEach(function (mesh) {
+        mesh.material = materials.cream;
+    });
+}
+// ==================================================================== Desk
+function buildDesk(scene, frame, box, materials) {
+    var width = box.maxX - box.minX;
+    var depth = box.maxZ - box.minZ;
+    var centerX = (box.minX + box.maxX) / 2;
+    var centerZ = (box.minZ + box.maxZ) / 2;
+    var topY = box.maxY;
+    var floorY = GROUND_Y - 0.1;
+    // Two-tone top: a darker edge band with a lighter, slightly inset surface on it.
+    var edgeThickness = 1.1;
+    var edge = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRoundedBox)("ff-desk-edge", width, edgeThickness, depth, 0.5, scene);
+    edge.material = materials.deskEdge;
+    place(edge, frame, centerX, topY - 0.35 - (edgeThickness / 2), centerZ);
+    var surface = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRoundedBox)("ff-desk-surface", width - 0.5, 0.5, depth - 0.5, 0.22, scene, 3);
+    surface.material = materials.deskTop;
+    place(surface, frame, centerX, topY - 0.25, centerZ);
+    var underTop = topY - 0.35 - edgeThickness;
+    // Left legs and a rail between them.
+    var legSize = 1.6;
+    var legHeight = underTop - floorY + 0.2;
+    for (var _i = 0, _a = [-1, 1]; _i < _a.length; _i++) {
+        var side = _a[_i];
+        var leg = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRoundedBox)("ff-desk-leg-".concat(side), legSize, legHeight, legSize, 0.5, scene);
+        leg.material = materials.deskFrame;
+        place(leg, frame, box.minX + 1.4, floorY + (legHeight / 2), centerZ + (side * ((depth / 2) - 1.4)));
+        // Little round feet
+        var foot = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder("ff-desk-foot-".concat(side), { diameter: 2.2, height: 0.5, tessellation: 20 }, scene);
+        foot.material = materials.navy;
+        place(foot, frame, box.minX + 1.4, floorY + 0.25, centerZ + (side * ((depth / 2) - 1.4)));
+    }
+    var rail = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRoundedBox)("ff-desk-rail", 0.9, 0.9, depth - 2.8, 0.3, scene);
+    rail.material = materials.deskFrame;
+    place(rail, frame, box.minX + 1.4, floorY + 1.8, centerZ);
+    // Drawer unit on the right.
+    var unitWidth = Math.min(8, width * 0.3);
+    var unitHeight = underTop - floorY + 0.2;
+    var unitX = box.maxX - (unitWidth / 2) - 0.6;
+    var unitDepth = depth - 1.6;
+    var unit = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRoundedBox)("ff-desk-drawers", unitWidth, unitHeight, unitDepth, 0.55, scene);
+    unit.material = materials.deskFrame;
+    place(unit, frame, unitX, floorY + (unitHeight / 2), centerZ);
+    var drawerCount = 3;
+    var drawerGap = 0.45;
+    var drawerHeight = (unitHeight - 1.2 - (drawerGap * (drawerCount - 1))) / drawerCount;
+    var frontZ = centerZ + (unitDepth / 2);
+    for (var i = 0; i < drawerCount; i++) {
+        var y = floorY + 0.7 + (drawerHeight / 2) + (i * (drawerHeight + drawerGap));
+        var drawer = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRoundedBox)("ff-desk-drawer-".concat(i), unitWidth - 1.2, drawerHeight, 0.6, 0.22, scene, 3);
+        drawer.material = materials.drawer;
+        place(drawer, frame, unitX, y, frontZ + 0.1);
+        var handle = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRoundedBox)("ff-desk-handle-".concat(i), unitWidth * 0.35, 0.45, 0.5, 0.2, scene, 2);
+        handle.material = materials.accent;
+        place(handle, frame, unitX, y + (drawerHeight * 0.15), frontZ + 0.55);
+    }
+    // Back panel between the legs and the drawers.
+    var panelLeft = box.minX + 1.4 + (legSize / 2);
+    var panelRight = unitX - (unitWidth / 2);
+    var panelHeight = Math.min(5, underTop - floorY - 1);
+    var panel = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRoundedBox)("ff-desk-panel", panelRight - panelLeft + 0.4, panelHeight, 0.6, 0.25, scene, 3);
+    panel.material = materials.deskFrame;
+    place(panel, frame, (panelLeft + panelRight) / 2, underTop - (panelHeight / 2) + 0.1, box.minZ + 1.2);
+}
+// ==================================================================== Monitor
+/**
+ * New monitor with a rounded bezel, stand and a glowing screen. The screen reuses the original
+ * monitor's texture: the corners of the original screen face are found in its mesh together with
+ * their texture coordinates, so the screenshot appears exactly as it did before.
+ */
+function buildMonitor(scene, frame, monitor, deskTopY, materials) {
+    var _a, _b;
+    var texture = (_b = (_a = monitor.material) === null || _a === void 0 ? void 0 : _a.albedoTexture) !== null && _b !== void 0 ? _b : null;
+    var screen = findScreenCorners(monitor, frame);
+    if (!texture || !screen) {
+        // Keep the original, just make the screen glow.
+        var material = monitor.material;
+        if (material instanceof _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.PBRMaterial && material.albedoTexture) {
+            material.emissiveTexture = material.albedoTexture;
+            material.emissiveColor = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3(0.45, 0.45, 0.45);
+        }
+        return false;
+    }
+    var corners = screen.corners, minX = screen.minX, maxX = screen.maxX, minY = screen.minY, maxY = screen.maxY, frontZ = screen.frontZ;
+    var width = maxX - minX;
+    var height = maxY - minY;
+    var centerX = (minX + maxX) / 2;
+    var centerY = (minY + maxY) / 2;
+    var bezel = 0.9;
+    var bezelDepth = 1.1;
+    // Screen: a quad over the original screen with the original texture coordinates.
+    var screenZ = frontZ + 0.12;
+    var positions = [];
+    var normals = [];
+    var uvs = [];
+    corners.forEach(function (corner) {
+        var world = frame.toWorld(corner.x, corner.y, screenZ);
+        positions.push(world.x, world.y, world.z);
+        normals.push(frame.forward.x, 0, frame.forward.z);
+        uvs.push(corner.u, corner.v);
+    });
+    var indices = [];
+    (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.pushOrientedTriangle)(indices, positions, normals, 0, 1, 2);
+    (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.pushOrientedTriangle)(indices, positions, normals, 0, 2, 3);
+    var screenMesh = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.buildMesh)("ff-monitor-screen", positions, normals, indices, scene, uvs);
+    var screenMaterial = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.StandardMaterial("toy-ff-screen", scene);
+    screenMaterial.disableLighting = true;
+    screenMaterial.emissiveTexture = texture;
+    screenMesh.material = screenMaterial;
+    screenMesh.isPickable = false;
+    // Bezel, with a rounded back like a chunky toy monitor.
+    var frameBox = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRoundedBox)("ff-monitor-bezel", width + (bezel * 2), height + (bezel * 2), bezelDepth, 0.55, scene);
+    frameBox.material = materials.navy;
+    place(frameBox, frame, centerX, centerY, frontZ + 0.05 - (bezelDepth / 2));
+    var back = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRoundedBox)("ff-monitor-back", width * 0.6, height * 0.6, 1.6, 0.6, scene, 4, 0.85);
+    back.material = materials.slate;
+    place(back, frame, centerX, centerY, frontZ - bezelDepth - 0.6);
+    // Power light on the bezel
+    var led = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateSphere("ff-monitor-led", { diameter: 0.35, segments: 8 }, scene);
+    led.material = materials.powerLight;
+    place(led, frame, maxX + (bezel * 0.5), minY - (bezel * 0.5), frontZ + 0.1);
+    // Stand: neck and base on the desk.
+    var bottomY = minY - bezel;
+    var neckHeight = Math.max(0.5, bottomY - deskTopY + 0.3);
+    var neck = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRoundedBox)("ff-monitor-neck", 1.6, neckHeight, 1.0, 0.4, scene, 3);
+    neck.material = materials.slate;
+    place(neck, frame, centerX, deskTopY + (neckHeight / 2), frontZ - bezelDepth - 0.3);
+    var base = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRoundedBox)("ff-monitor-base", 6, 0.55, 3.4, 0.27, scene, 3);
+    base.material = materials.navy;
+    place(base, frame, centerX, deskTopY + 0.27, frontZ - bezelDepth - 0.3);
+    return true;
+}
+/**
+ * Finds the original screen: the front-most vertices of the monitor whose texture coordinates are
+ * in the screenshot part of the texture. Returns the four corners (in the desk frame) ordered
+ * around the quad, each with its texture coordinate.
+ */
+function findScreenCorners(monitor, frame) {
+    var positions = monitor.getVerticesData(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.VertexBuffer.PositionKind);
+    var uvData = monitor.getVerticesData(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.VertexBuffer.UVKind);
+    if (!positions || !uvData) {
+        return null;
+    }
+    monitor.computeWorldMatrix(true);
+    var world = monitor.getWorldMatrix();
+    var point = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3();
+    var vertices = [];
+    for (var i = 0; i < positions.length / 3; i++) {
+        _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.TransformCoordinatesFromFloatsToRef(positions[i * 3], positions[(i * 3) + 1], positions[(i * 3) + 2], world, point);
+        vertices.push({
+            x: _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.Dot(point, frame.right),
+            y: point.y,
+            z: _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.Dot(point, frame.forward),
+            u: uvData[i * 2],
+            v: uvData[(i * 2) + 1],
+        });
+    }
+    // The screenshot lives in the lower-left part of the texture.
+    var inScreenshot = vertices.filter(function (vertex) { return vertex.u <= 0.3 && vertex.v <= 0.52; });
+    if (inScreenshot.length < 4) {
+        return null;
+    }
+    var frontZ = Math.max.apply(Math, inScreenshot.map(function (vertex) { return vertex.z; }));
+    var front = inScreenshot.filter(function (vertex) { return vertex.z >= frontZ - 0.3; });
+    if (front.length < 4) {
+        return null;
+    }
+    var minX = Math.min.apply(Math, front.map(function (vertex) { return vertex.x; }));
+    var maxX = Math.max.apply(Math, front.map(function (vertex) { return vertex.x; }));
+    var minY = Math.min.apply(Math, front.map(function (vertex) { return vertex.y; }));
+    var maxY = Math.max.apply(Math, front.map(function (vertex) { return vertex.y; }));
+    if (maxX - minX < 2 || maxY - minY < 2) {
+        return null;
+    }
+    var nearest = function (x, y) {
+        var best = front[0];
+        var bestDistance = Infinity;
+        for (var _i = 0, front_1 = front; _i < front_1.length; _i++) {
+            var vertex = front_1[_i];
+            var distance = Math.hypot(vertex.x - x, vertex.y - y);
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                best = vertex;
+            }
+        }
+        return { x: x, y: y, u: best.u, v: best.v };
+    };
+    return {
+        corners: [nearest(minX, maxY), nearest(maxX, maxY), nearest(maxX, minY), nearest(minX, minY)],
+        minX: minX,
+        maxX: maxX,
+        minY: minY,
+        maxY: maxY,
+        frontZ: frontZ,
+    };
+}
+// ==================================================================== Peripherals
+function buildPcTower(scene, frame, box, deskTopY, materials) {
+    // The original case is slightly tilted, so its measured box is a bit too big; shrink it so the
+    // new case doesn't clip the speaker next to it.
+    var width = box.maxX - box.minX - 1.6;
+    var depth = box.maxZ - box.minZ - 0.8;
+    var height = box.maxY - deskTopY;
+    if (width < 1 || height < 1 || depth < 1) {
+        return false;
+    }
+    var centerX = (box.minX + box.maxX) / 2;
+    var centerZ = (box.minZ + box.maxZ) / 2;
+    var frontZ = centerZ + (depth / 2);
+    var body = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRoundedBox)("ff-pc-body", width, height, depth, 0.6, scene);
+    body.material = materials.slate;
+    place(body, frame, centerX, deskTopY + (height / 2), centerZ);
+    // Front panel with grille bars, a power button and a light.
+    var panel = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRoundedBox)("ff-pc-front", width - 0.6, height - 0.6, 0.4, 0.3, scene, 3);
+    panel.material = materials.sand;
+    place(panel, frame, centerX, deskTopY + (height / 2), frontZ - 0.05);
+    var barCount = 4;
+    for (var i = 0; i < barCount; i++) {
+        var bar = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRoundedBox)("ff-pc-grille-".concat(i), width - 1.6, 0.35, 0.3, 0.15, scene, 2);
+        bar.material = materials.navy;
+        place(bar, frame, centerX, deskTopY + 0.9 + (i * 0.7), frontZ + 0.2);
+    }
+    var button = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder("ff-pc-button", { diameter: 1.0, height: 0.3, tessellation: 20 }, scene);
+    button.material = materials.accent;
+    button.rotation.x = Math.PI / 2;
+    button.position.copyFrom(frame.toWorld(centerX, deskTopY + height - 1.2, frontZ + 0.2));
+    button.rotation.y = frame.yaw;
+    button.isPickable = false;
+    var light = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateSphere("ff-pc-light", { diameter: 0.32, segments: 8 }, scene);
+    light.material = materials.powerLight;
+    place(light, frame, centerX + (width * 0.28), deskTopY + height - 1.2, frontZ + 0.2);
+    return true;
+}
+function buildKeyboard(scene, frame, box, deskTopY, materials) {
+    var width = box.maxX - box.minX;
+    var depth = box.maxZ - box.minZ;
+    if (width < 1 || depth < 1) {
+        return false;
+    }
+    var baseHeight = 0.55;
+    var base = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRoundedBox)("ff-keyboard-base", width, baseHeight, depth, 0.25, scene, 3);
+    base.material = materials.navy;
+    place(base, frame, (box.minX + box.maxX) / 2, deskTopY + (baseHeight / 2), (box.minZ + box.maxZ) / 2);
+    addKeycaps(scene, frame, __assign(__assign({}, box), { maxY: deskTopY + baseHeight }), materials);
+    return true;
+}
+/**
+ * Rows of rounded keycaps, with W, A, S and D picked out in sakura pink (the tank's controls).
+ */
+function addKeycaps(scene, frame, box, materials) {
+    var cap = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRoundedBox)("ff-keycap", 1, 1, 1, 0.24, scene, 2);
+    cap.material = materials.cream;
+    var accentCap = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRoundedBox)("ff-keycap-accent", 1, 1, 1, 0.24, scene, 2);
+    accentCap.material = materials.accent;
+    var columns = 14;
+    var rows = 5;
+    var margin = 0.4;
+    var pitchX = ((box.maxX - box.minX) - (margin * 2)) / columns;
+    var pitchZ = ((box.maxZ - box.minZ) - (margin * 2)) / rows;
+    var capHeight = 0.4;
+    var y = box.maxY + (capHeight / 2) - 0.08;
+    var rotation = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Quaternion.RotationYawPitchRoll(frame.yaw, 0, 0);
+    // Rows go from the back of the keyboard (numbers) to the front (space bar).
+    var accentKeys = new Set(["1,2", "2,1", "2,2", "2,3"]);
+    var normal = [];
+    var accent = [];
+    for (var row = 0; row < rows; row++) {
+        var z = box.minZ + margin + ((row + 0.5) * pitchZ);
+        if (row === rows - 1) {
+            normal.push(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Matrix.Compose(new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(pitchX * 5.8, capHeight, pitchZ * 0.75), rotation, frame.toWorld((box.minX + box.maxX) / 2, y, z)));
+            continue;
+        }
+        for (var column = 0; column < columns; column++) {
+            var x = box.minX + margin + ((column + 0.5) * pitchX);
+            var matrix = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Matrix.Compose(new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(pitchX * 0.78, capHeight, pitchZ * 0.75), rotation, frame.toWorld(x, y, z));
+            (accentKeys.has("".concat(row, ",").concat(column)) ? accent : normal).push(matrix);
+        }
+    }
+    (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.addThinInstances)(cap, normal);
+    (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.addThinInstances)(accentCap, accent);
+}
+function buildMouse(scene, frame, box, deskTopY, materials) {
+    var centerX = (box.minX + box.maxX) / 2;
+    var centerZ = (box.minZ + box.maxZ) / 2;
+    var width = Math.max(1.1, box.maxX - box.minX);
+    var depth = Math.max(1.6, box.maxZ - box.minZ);
+    var pad = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRoundedBox)("ff-mouse-pad", width + 3.2, 0.2, depth + 2.4, 0.1, scene, 2);
+    pad.material = materials.accent;
+    place(pad, frame, centerX, deskTopY + 0.1, centerZ);
+    var body = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateSphere("ff-mouse", { diameter: 1, segments: 16 }, scene);
+    body.material = materials.sand;
+    body.scaling.set(width, 0.75, depth);
+    place(body, frame, centerX, deskTopY + 0.2, centerZ);
+    var wheel = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder("ff-mouse-wheel", { diameter: 0.4, height: 0.16, tessellation: 12 }, scene);
+    wheel.material = materials.navy;
+    wheel.rotation.z = Math.PI / 2;
+    wheel.position.copyFrom(frame.toWorld(centerX, deskTopY + 0.58, centerZ - (depth * 0.22)));
+    wheel.rotation.y = frame.yaw;
+    wheel.isPickable = false;
+    return true;
+}
+/** The original speakers are one mesh with a speaker on each side of the monitor. */
+function buildSpeakers(scene, frame, mesh, deskTopY, materials) {
+    var positions = mesh.getVerticesData(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.VertexBuffer.PositionKind);
+    if (!positions) {
+        return false;
+    }
+    mesh.computeWorldMatrix(true);
+    var world = mesh.getWorldMatrix();
+    var point = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3();
+    var points = [];
+    for (var i = 0; i < positions.length; i += 3) {
+        _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.TransformCoordinatesFromFloatsToRef(positions[i], positions[i + 1], positions[i + 2], world, point);
+        points.push({ x: _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.Dot(point, frame.right), y: point.y, z: _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.Dot(point, frame.forward) });
+    }
+    var middle = (Math.min.apply(Math, points.map(function (p) { return p.x; })) + Math.max.apply(Math, points.map(function (p) { return p.x; }))) / 2;
+    var groups = [points.filter(function (p) { return p.x < middle; }), points.filter(function (p) { return p.x >= middle; })];
+    groups.forEach(function (group, index) {
+        if (!group.length) {
+            return;
+        }
+        var minX = Math.min.apply(Math, group.map(function (p) { return p.x; }));
+        var maxX = Math.max.apply(Math, group.map(function (p) { return p.x; }));
+        var minZ = Math.min.apply(Math, group.map(function (p) { return p.z; }));
+        var maxZ = Math.max.apply(Math, group.map(function (p) { return p.z; }));
+        var maxY = Math.max.apply(Math, group.map(function (p) { return p.y; }));
+        var width = Math.max(1.5, maxX - minX);
+        var depth = Math.max(1.5, maxZ - minZ);
+        var height = Math.max(2, maxY - deskTopY);
+        var centerX = (minX + maxX) / 2;
+        var centerZ = (minZ + maxZ) / 2;
+        var body = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRoundedBox)("ff-speaker-".concat(index), width, height, depth, 0.45, scene, 3);
+        body.material = materials.navy;
+        place(body, frame, centerX, deskTopY + (height / 2), centerZ);
+        // Woofer (big) and tweeter (small) on the front.
+        var cones = [
+            { diameter: Math.min(width, height) * 0.62, y: deskTopY + (height * 0.36) },
+            { diameter: Math.min(width, height) * 0.3, y: deskTopY + (height * 0.78) },
+        ];
+        cones.forEach(function (cone, coneIndex) {
+            if (cone.diameter < 0.3) {
+                return;
+            }
+            var ring = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder("ff-speaker-ring-".concat(index, "-").concat(coneIndex), { diameter: cone.diameter, height: 0.2, tessellation: 24 }, scene);
+            ring.material = materials.cream;
+            ring.rotation.x = Math.PI / 2;
+            ring.position.copyFrom(frame.toWorld(centerX, cone.y, maxZ + 0.05));
+            ring.rotation.y = frame.yaw;
+            ring.isPickable = false;
+            var inner = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder("ff-speaker-cone-".concat(index, "-").concat(coneIndex), { diameter: cone.diameter * 0.62, height: 0.24, tessellation: 24 }, scene);
+            inner.material = materials.coneDark;
+            inner.rotation.x = Math.PI / 2;
+            inner.position.copyFrom(frame.toWorld(centerX, cone.y, maxZ + 0.08));
+            inner.rotation.y = frame.yaw;
+            inner.isPickable = false;
+        });
+    });
+    return true;
+}
+// ==================================================================== Props
+function buildProps(scene, frame, deskBox, materials) {
+    var deskTopY = deskBox.maxY;
+    // Coffee mug on the front-left corner of the desk.
+    var mugX = deskBox.minX + 2.4;
+    var mugZ = deskBox.maxZ - 2.2;
+    var mug = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder("ff-mug", { diameter: 1.9, height: 2.1, tessellation: 24 }, scene);
+    mug.material = materials.cream;
+    place(mug, frame, mugX, deskTopY + 1.05, mugZ);
+    var coffee = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder("ff-mug-coffee", { diameter: 1.6, height: 0.1, tessellation: 24 }, scene);
+    coffee.material = materials.coffee;
+    place(coffee, frame, mugX, deskTopY + 1.95, mugZ);
+    var handle = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateTorus("ff-mug-handle", { diameter: 1.1, thickness: 0.28, tessellation: 20 }, scene);
+    handle.material = materials.accent;
+    handle.rotation.x = Math.PI / 2;
+    handle.position.copyFrom(frame.toWorld(mugX - 1.05, deskTopY + 1.05, mugZ));
+    // Ring standing upright beside the mug, facing the front of the desk.
+    handle.rotation.y = frame.yaw;
+    handle.isPickable = false;
+    // Potted plant on the floor beside the desk.
+    var plantX = deskBox.minX - 3.6;
+    // Slightly towards the front, clear of the C# trophy behind it.
+    var plantZ = ((deskBox.minZ + deskBox.maxZ) / 2) + 3.5;
+    var pot = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder("ff-plant-pot", { diameterTop: 3.8, diameterBottom: 2.8, height: 3.4, tessellation: 28 }, scene);
+    pot.material = materials.pot;
+    place(pot, frame, plantX, GROUND_Y + 1.7, plantZ);
+    var rim = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateTorus("ff-plant-rim", { diameter: 3.7, thickness: 0.45, tessellation: 28 }, scene);
+    rim.material = materials.pot;
+    place(rim, frame, plantX, GROUND_Y + 3.4, plantZ);
+    var soil = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder("ff-plant-soil", { diameter: 3.4, height: 0.2, tessellation: 24 }, scene);
+    soil.material = materials.soil;
+    place(soil, frame, plantX, GROUND_Y + 3.25, plantZ);
+    var random = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRandom)(55);
+    var leafTemplates = materials.leaves.map(function (material, i) {
+        var leaf = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createLumpyBall)("ff-plant-leaf-".concat(i), scene, random, 1.2, 2);
+        leaf.material = material;
+        leaf.isVisible = false;
+        return leaf;
+    });
+    var leafLayout = [
+        { x: 0, y: 5.6, z: 0, r: 1.9 },
+        { x: 1.2, y: 4.6, z: 0.4, r: 1.5 },
+        { x: -1.1, y: 4.8, z: -0.3, r: 1.5 },
+        { x: 0.2, y: 4.5, z: -1.2, r: 1.4 },
+        { x: -0.3, y: 4.4, z: 1.2, r: 1.3 },
+        { x: 0.4, y: 6.9, z: 0.2, r: 1.2 },
+    ];
+    leafLayout.forEach(function (layout, i) {
+        var leaf = leafTemplates[i % leafTemplates.length].createInstance("ff-plant-leaves-".concat(i));
+        leaf.position.copyFrom(frame.toWorld(plantX + layout.x, GROUND_Y + layout.y, plantZ + layout.z));
+        leaf.scaling.set(layout.r, layout.r * 0.9, layout.r);
+        leaf.rotation.y = random() * Math.PI * 2;
+        leaf.isPickable = false;
+    });
+}
+// ==================================================================== Helpers
+/** Bounding box of a mesh's vertices, measured in the desk's frame. */
+function getFrameBox(mesh, frame) {
+    var _a;
+    mesh.computeWorldMatrix(true);
+    var positions = (_a = mesh.getVerticesData(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.VertexBuffer.PositionKind)) !== null && _a !== void 0 ? _a : [];
+    var world = mesh.getWorldMatrix();
+    var point = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3();
+    var box = { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity, minZ: Infinity, maxZ: -Infinity };
+    for (var i = 0; i < positions.length; i += 3) {
+        _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.TransformCoordinatesFromFloatsToRef(positions[i], positions[i + 1], positions[i + 2], world, point);
+        var x = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.Dot(point, frame.right);
+        var z = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.Dot(point, frame.forward);
+        box.minX = Math.min(box.minX, x);
+        box.maxX = Math.max(box.maxX, x);
+        box.minY = Math.min(box.minY, point.y);
+        box.maxY = Math.max(box.maxY, point.y);
+        box.minZ = Math.min(box.minZ, z);
+        box.maxZ = Math.max(box.maxZ, z);
+    }
+    return box;
+}
+/** Positions a mesh in the desk frame and turns it with the desk. */
+function place(mesh, frame, x, y, z) {
+    mesh.position.copyFrom(frame.toWorld(x, y, z));
+    mesh.rotation.y = frame.yaw;
+    mesh.isPickable = false;
+}
+/** The C# logo becomes a shiny gold trophy. */
+function restyleTrophy(scene) {
+    var trophy = scene.getMeshByName("c#");
+    if (!trophy) {
+        return;
+    }
+    var gold = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-trophy-gold", PALETTE.trophy, { roughness: 0.25, metallic: 0.75, clearCoat: 0.6 });
+    trophy.getChildMeshes().forEach(function (mesh) {
+        mesh.material = gold;
+    });
+}
+
+
+/***/ },
+
+/***/ "./src/scenes/ground.ts"
+/*!******************************!*\
+  !*** ./src/scenes/ground.ts ***!
+  \******************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   decorateGround: () => (/* binding */ decorateGround)
+/* harmony export */ });
+/* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core */ "./node_modules/@babylonjs/core/index.js");
+/* harmony import */ var _toyStyle__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./toyStyle */ "./src/scenes/toyStyle.ts");
+
+
+/**
+ * Gives the flat ground some character without changing its shape: a soft play-mat texture, and
+ * small decorations scattered around (pebbles, fallen petals under the trees, toy flowers and a few
+ * rounded bushes).
+ *
+ * Everything is placed from a fixed seed, so the layout is the same on every visit, and kept clear
+ * of gameplay objects (anything with a physics body, the roads, signs and the spawn area). Only the
+ * bushes are solid.
+ */
+var GROUND_Y = -0.5;
+/** Decorations are scattered within this distance of the world origin. */
+var SCATTER_RADIUS = 175;
+/** Keep the area around the tank's spawn point clear. */
+var SPAWN_CLEAR_RADIUS = 28;
+var PALETTE = {
+    mat: "#337CA0",
+    matAlt: "#3884A8",
+    matSeam: "#2B6D8E",
+    matSeamLight: "#4A93B6",
+    pebbles: ["#C9BFAE", "#A99F8F", "#DDD3C2"],
+    petals: ["#F3C6D1", "#F8DCE3"],
+    stem: "#5E8F6D",
+    flowerCenter: "#D9A13B",
+    flowers: ["#F3C6D1", "#F4EBDD", "#E9AFBF"],
+    bushes: ["#6E9F7E", "#5B8C70", "#82B08F"],
+};
+function decorateGround(scene, treePositions) {
+    try {
+        restyleGroundMaterial(scene);
+    }
+    catch (error) {
+        console.error("Ground restyle failed, keeping the original", error);
+    }
+    try {
+        scatterDecorations(scene, treePositions);
+    }
+    catch (error) {
+        console.error("Ground decorations failed", error);
+    }
+}
+// ==================================================================== Play-mat ground
+function restyleGroundMaterial(scene) {
+    var ground = scene.getMeshByName("ground");
+    if (!ground) {
+        return;
+    }
+    var size = 512;
+    var tilesPerTexture = 2;
+    var tileWorldSize = 30;
+    var texture = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.DynamicTexture("toy-ground-mat", { width: size, height: size }, scene, true);
+    var context = texture.getContext();
+    var tile = size / tilesPerTexture;
+    // Checker of two close blues, like interlocking foam play-mat tiles.
+    for (var ty = 0; ty < tilesPerTexture; ty++) {
+        for (var tx = 0; tx < tilesPerTexture; tx++) {
+            context.fillStyle = (tx + ty) % 2 === 0 ? PALETTE.mat : PALETTE.matAlt;
+            context.fillRect(tx * tile, ty * tile, tile, tile);
+        }
+    }
+    // Foam speckle.
+    var random = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRandom)(3);
+    for (var i = 0; i < 2600; i++) {
+        var light = random() > 0.5;
+        context.fillStyle = light ? "rgba(255,255,255,0.06)" : "rgba(0,30,60,0.07)";
+        var radius = 0.6 + (random() * 1.6);
+        context.beginPath();
+        context.arc(random() * size, random() * size, radius, 0, Math.PI * 2);
+        context.fill();
+    }
+    // Embossed seams between tiles: a dark groove with a light edge next to it. Drawn on the
+    // texture's edges as well so neighbouring repeats line up.
+    for (var i = 0; i <= tilesPerTexture; i++) {
+        var position = i * tile;
+        context.fillStyle = PALETTE.matSeam;
+        context.fillRect(position - 2, 0, 4, size);
+        context.fillRect(0, position - 2, size, 4);
+        context.fillStyle = PALETTE.matSeamLight;
+        context.fillRect(position + 2, 0, 2, size);
+        context.fillRect(0, position + 2, size, 2);
+    }
+    texture.update();
+    texture.wrapU = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Texture.WRAP_ADDRESSMODE;
+    texture.wrapV = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Texture.WRAP_ADDRESSMODE;
+    texture.anisotropicFilteringLevel = 8;
+    ground.computeWorldMatrix(true);
+    var extent = ground.getBoundingInfo().boundingBox.extendSizeWorld;
+    texture.uScale = (extent.x * 2) / (tileWorldSize * tilesPerTexture);
+    texture.vScale = (extent.z * 2) / (tileWorldSize * tilesPerTexture);
+    // Plain (non-PBR) material like the original, so the ground keeps the same brightness.
+    var material = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.StandardMaterial("toy-ground", scene);
+    material.diffuseTexture = texture;
+    material.specularColor = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3(0.06, 0.06, 0.06);
+    ground.material = material;
+}
+// ==================================================================== Decorations
+function scatterDecorations(scene, treePositions) {
+    var random = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRandom)(2024);
+    var blocked = collectBlockedAreas(scene);
+    var isFree = function (x, z, margin) {
+        if (Math.hypot(x, z) < SPAWN_CLEAR_RADIUS + margin) {
+            return false;
+        }
+        return !blocked.some(function (area) { return x > area.minX - margin && x < area.maxX + margin && z > area.minZ - margin && z < area.maxZ + margin; });
+    };
+    var randomSpot = function (margin, minDistance) {
+        if (minDistance === void 0) { minDistance = SPAWN_CLEAR_RADIUS; }
+        for (var attempt = 0; attempt < 40; attempt++) {
+            var angle = random() * Math.PI * 2;
+            var distance = minDistance + (Math.sqrt(random()) * (SCATTER_RADIUS - minDistance));
+            var x = Math.cos(angle) * distance;
+            var z = Math.sin(angle) * distance;
+            if (isFree(x, z, margin)) {
+                return new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector2(x, z);
+            }
+        }
+        return null;
+    };
+    // ---- Bushes first (they are solid, so later decorations avoid them).
+    var bushTemplates = PALETTE.bushes.map(function (hex, i) { return (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createTemplate)((0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createLumpyBall)("deco-bush-puff-".concat(i), scene, random), (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-bush-".concat(i), hex, { roughness: 0.6, clearCoat: 0.15 })); });
+    for (var i = 0; i < 12; i++) {
+        var spot = randomSpot(9, 45);
+        if (!spot) {
+            continue;
+        }
+        var bush = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.TransformNode("deco-bush-".concat(i), scene);
+        bush.position.set(spot.x, GROUND_Y, spot.y);
+        bush.rotation.y = random() * Math.PI * 2;
+        var puffCount = 3 + Math.floor(random() * 3);
+        for (var p = 0; p < puffCount; p++) {
+            var angle = (p / puffCount) * Math.PI * 2;
+            var radius = 2.2 + (random() * 1.3);
+            var offset = p === 0 ? 0 : 1.8 + (random() * 0.8);
+            var puff = bushTemplates[Math.floor(random() * bushTemplates.length)].createInstance("deco-bush-".concat(i, "-").concat(p));
+            puff.parent = bush;
+            puff.position.set(Math.cos(angle) * offset, radius * 0.75, Math.sin(angle) * offset);
+            puff.scaling.set(radius, radius * 0.85, radius);
+            puff.rotation.y = random() * Math.PI * 2;
+            puff.isPickable = false;
+        }
+        // A simple solid sphere so the tank bumps into the bush instead of driving through it.
+        var collider = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateSphere("deco-bush-collider-".concat(i), { diameter: 7, segments: 4 }, scene);
+        collider.position.set(spot.x, GROUND_Y + 2, spot.y);
+        collider.isVisible = false;
+        collider.isPickable = false;
+        collider.physicsImpostor = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.PhysicsImpostor(collider, _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.PhysicsImpostor.SphereImpostor, { mass: 0, restitution: 0 }, scene);
+        blocked.push({ minX: spot.x - 4, maxX: spot.x + 4, minZ: spot.y - 4, maxZ: spot.y + 4 });
+    }
+    // ---- Pebbles, alone and in small groups.
+    var pebbleMeshes = PALETTE.pebbles.map(function (hex, i) {
+        var pebble = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createLumpyBall)("deco-pebble-".concat(i), scene, random, 1.8, 2);
+        pebble.material = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-pebble-".concat(i), hex, { roughness: 0.65, clearCoat: 0.2 });
+        return pebble;
+    });
+    var pebbleMatrices = pebbleMeshes.map(function () { return []; });
+    for (var group = 0; group < 70; group++) {
+        var spot = randomSpot(2);
+        if (!spot) {
+            continue;
+        }
+        var count = 1 + Math.floor(random() * 4);
+        for (var i = 0; i < count; i++) {
+            var x = spot.x + ((random() - 0.5) * 4);
+            var z = spot.y + ((random() - 0.5) * 4);
+            if (!isFree(x, z, 1)) {
+                continue;
+            }
+            var size = 0.5 + (random() * 0.9);
+            pebbleMatrices[Math.floor(random() * pebbleMeshes.length)].push(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Matrix.Compose(new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(size, size * 0.6, size * (0.8 + (random() * 0.4))), _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Quaternion.RotationYawPitchRoll(random() * Math.PI * 2, 0, 0), new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(x, GROUND_Y + (size * 0.15), z)));
+        }
+    }
+    pebbleMeshes.forEach(function (mesh, i) { return (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.addThinInstances)(mesh, pebbleMatrices[i]); });
+    // ---- Fallen petals around each tree.
+    var petalMeshes = PALETTE.petals.map(function (hex, i) {
+        var petal = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder("ground-petal-".concat(i), { diameter: 1, height: 0.06, tessellation: 10 }, scene);
+        petal.material = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-ground-petal-".concat(i), hex, { roughness: 0.6 });
+        return petal;
+    });
+    var petalMatrices = petalMeshes.map(function () { return []; });
+    for (var _i = 0, treePositions_1 = treePositions; _i < treePositions_1.length; _i++) {
+        var tree = treePositions_1[_i];
+        for (var i = 0; i < 70; i++) {
+            var angle = random() * Math.PI * 2;
+            // More petals near the trunk, thinning out towards the canopy's edge.
+            var distance = 3.5 + (Math.pow(random(), 0.7) * 13);
+            var x = tree.x + (Math.cos(angle) * distance);
+            var z = tree.z + (Math.sin(angle) * distance);
+            var size = 0.6 + (random() * 0.5);
+            petalMatrices[Math.floor(random() * petalMeshes.length)].push(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Matrix.Compose(new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(size * 1.6, 1, size), _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Quaternion.RotationYawPitchRoll(random() * Math.PI * 2, (random() - 0.5) * 0.2, (random() - 0.5) * 0.2), new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(x, GROUND_Y + 0.03 + (random() * 0.02), z)));
+        }
+    }
+    petalMeshes.forEach(function (mesh, i) { return (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.addThinInstances)(mesh, petalMatrices[i]); });
+    // ---- Toy flowers in little clusters.
+    var flowerMeshes = PALETTE.flowers.map(function (hex, i) { return createFlowerMesh(scene, "deco-flower-".concat(i), hex); });
+    var flowerMatrices = flowerMeshes.map(function () { return []; });
+    for (var cluster = 0; cluster < 18; cluster++) {
+        var spot = randomSpot(4);
+        if (!spot) {
+            continue;
+        }
+        var colorIndex = Math.floor(random() * flowerMeshes.length);
+        var count = 4 + Math.floor(random() * 5);
+        for (var i = 0; i < count; i++) {
+            var x = spot.x + ((random() - 0.5) * 6);
+            var z = spot.y + ((random() - 0.5) * 6);
+            if (!isFree(x, z, 1)) {
+                continue;
+            }
+            var size = 1.3 + (random() * 0.6);
+            flowerMatrices[random() < 0.75 ? colorIndex : Math.floor(random() * flowerMeshes.length)].push(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Matrix.Compose(new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(size, size * (0.8 + (random() * 0.5)), size), _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Quaternion.RotationYawPitchRoll(random() * Math.PI * 2, (random() - 0.5) * 0.25, (random() - 0.5) * 0.25), new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(x, GROUND_Y, z)));
+        }
+    }
+    flowerMeshes.forEach(function (mesh, i) { return (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.addThinInstances)(mesh, flowerMatrices[i]); });
+}
+/**
+ * Areas to keep clear: every visible object standing on the ground (buildings, props, trees,
+ * podium, signs, roads, targets, bricks...) plus invisible ones that have a physics body. The ground
+ * itself and the tank are ignored.
+ */
+function collectBlockedAreas(scene) {
+    var tank = scene.getMeshByName("tank_holder");
+    var ignored = /^(ground|tank_holder|splatter\d*|ball|deco-|ground-petal)/;
+    var areas = [];
+    for (var _i = 0, _a = scene.meshes; _i < _a.length; _i++) {
+        var mesh = _a[_i];
+        if (!mesh.isEnabled() || ignored.test(mesh.name) || (tank && mesh.isDescendantOf(tank))) {
+            continue;
+        }
+        if (!mesh.isVisible && !mesh.physicsImpostor) {
+            continue;
+        }
+        mesh.computeWorldMatrix(true);
+        var box = mesh.getBoundingInfo().boundingBox;
+        var width = box.maximumWorld.x - box.minimumWorld.x;
+        var depth = box.maximumWorld.z - box.minimumWorld.z;
+        if (width > 1000 || depth > 1000) {
+            continue;
+        }
+        areas.push({ minX: box.minimumWorld.x, maxX: box.maximumWorld.x, minZ: box.minimumWorld.z, maxZ: box.maximumWorld.z });
+    }
+    return areas;
+}
+/** A small toy flower: stem, five rounded petals and a centre, merged into one mesh. */
+function createFlowerMesh(scene, name, petalHex) {
+    var stemMaterial = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "".concat(name, "-stem"), PALETTE.stem, { roughness: 0.6 });
+    var petalMaterial = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "".concat(name, "-petals"), petalHex, { roughness: 0.5, clearCoat: 0.3 });
+    var centerMaterial = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "".concat(name, "-center"), PALETTE.flowerCenter, { roughness: 0.45, clearCoat: 0.3 });
+    var stem = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder("".concat(name, "-stem"), { diameter: 0.16, height: 1.4, tessellation: 6 }, scene);
+    stem.position.y = 0.7;
+    stem.material = stemMaterial;
+    var parts = [stem];
+    for (var i = 0; i < 5; i++) {
+        var angle = (i / 5) * Math.PI * 2;
+        var petal = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateSphere("".concat(name, "-petal-").concat(i), { diameter: 0.5, segments: 6 }, scene);
+        petal.scaling.set(1, 0.4, 1);
+        petal.position.set(Math.cos(angle) * 0.3, 1.45, Math.sin(angle) * 0.3);
+        petal.material = petalMaterial;
+        parts.push(petal);
+    }
+    var center = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateSphere("".concat(name, "-center"), { diameter: 0.34, segments: 6 }, scene);
+    center.position.y = 1.5;
+    center.material = centerMaterial;
+    parts.push(center);
+    var flower = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Mesh.MergeMeshes(parts, true, true, undefined, false, true);
+    if (!flower) {
+        throw new Error("Failed to build flower mesh");
+    }
+    flower.name = name;
+    return flower;
+}
+
+
+/***/ },
+
+/***/ "./src/scenes/landmarks.ts"
+/*!*********************************!*\
+  !*** ./src/scenes/landmarks.ts ***!
+  \*********************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   restyleLandmarks: () => (/* binding */ restyleLandmarks)
+/* harmony export */ });
+/* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core */ "./node_modules/@babylonjs/core/index.js");
+/* harmony import */ var _toyStyle__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./toyStyle */ "./src/scenes/toyStyle.ts");
+var __spreadArray = (undefined && undefined.__spreadArray) || function (to, from, pack) {
+    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
+        if (ar || !(i in from)) {
+            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
+            ar[i] = from[i];
+        }
+    }
+    return to.concat(ar || Array.prototype.slice.call(from));
+};
+
+
+/**
+ * Restyles static landmarks from the editor scene to match the toy look: the social-media podium,
+ * the flat road slabs and the signs lying on the ground. The original meshes keep their role (the podium keeps its physics body
+ * and the logos parented to it), they are only hidden and replaced by toy-style geometry with the
+ * same footprint and heights.
+ */
+var GROUND_Y = -0.5;
+var PALETTE = {
+    podiumBody: "#E8DCC6",
+    first: "#C9A35B",
+    second: "#AEB8C2",
+    third: "#B07A52",
+    numbers: "#344B63",
+    logoBlue: "#456F99",
+    logoSakura: "#E8869F",
+    slabs: ["#D8CBB4", "#CFC1A8", "#E0D4BF", "#C9B79C"],
+    mortar: "#8F8372",
+    edgePebbles: ["#9C9282", "#B3A893"],
+    signPlate: "#344B63",
+    signRim: "#E8DCC6",
+    signLetters: "#F4EBDD",
+};
+function restyleLandmarks(scene) {
+    try {
+        restylePodium(scene);
+    }
+    catch (error) {
+        console.error("Podium restyle failed, keeping the original", error);
+    }
+    try {
+        restyleRoads(scene);
+    }
+    catch (error) {
+        console.error("Road restyle failed, keeping the original", error);
+    }
+    try {
+        restyleSigns(scene);
+    }
+    catch (error) {
+        console.error("Sign restyle failed, keeping the originals", error);
+    }
+}
+// ==================================================================== Podium
+/**
+ * The podium mesh is three boxes side by side (2nd, 1st, 3rd place). These are their extents in
+ * the podium's local space, taken from its geometry; local +Z is up and local +Y is the front.
+ */
+var PODIUM_STEPS = [
+    { place: 2, minX: -2.7, maxX: -1, topZ: 0.3 },
+    { place: 1, minX: -1, maxX: 1, topZ: 1 },
+    { place: 3, minX: 1, maxX: 2.64, topZ: -0.25 },
+];
+function restylePodium(scene) {
+    var podium = scene.getMeshByName("podium");
+    if (!podium) {
+        return;
+    }
+    podium.computeWorldMatrix(true);
+    var world = podium.getWorldMatrix();
+    var front = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.TransformNormal(new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, 1, 0), world).normalize();
+    var bodyMaterial = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-podium-body", PALETTE.podiumBody, { roughness: 0.5, clearCoat: 0.35 });
+    var capMaterials = {
+        1: (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-podium-first", PALETTE.first, { roughness: 0.3, metallic: 0.6, clearCoat: 0.4 }),
+        2: (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-podium-second", PALETTE.second, { roughness: 0.3, metallic: 0.6, clearCoat: 0.4 }),
+        3: (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-podium-third", PALETTE.third, { roughness: 0.35, metallic: 0.5, clearCoat: 0.4 }),
+    };
+    var capThickness = 1.4;
+    var capOverhang = 0.3;
+    for (var _i = 0, PODIUM_STEPS_1 = PODIUM_STEPS; _i < PODIUM_STEPS_1.length; _i++) {
+        var step = PODIUM_STEPS_1[_i];
+        // World-space box of this step (the podium is only rotated by multiples of 90°).
+        var corners = [
+            new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(step.minX, -1, -1),
+            new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(step.maxX, 1, step.topZ),
+        ].map(function (corner) { return _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.TransformCoordinates(corner, world); });
+        var min = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.Minimize(corners[0], corners[1]);
+        var max = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.Maximize(corners[0], corners[1]);
+        var size = max.subtract(min);
+        var center = min.add(max).scaleInPlace(0.5);
+        // Body, slightly inset so neighbouring steps read as separate blocks.
+        var bodyHeight = size.y - capThickness + 0.2;
+        var body = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRoundedBox)("podium-step-".concat(step.place), size.x - 0.3, bodyHeight, size.z - 0.3, 0.9, scene);
+        body.material = bodyMaterial;
+        body.position.set(center.x, min.y + (bodyHeight / 2), center.z);
+        // Medal-coloured cap; its top is exactly the old step top, where the logos stand.
+        var cap = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRoundedBox)("podium-cap-".concat(step.place), size.x + (capOverhang * 2) - 0.3, capThickness, size.z + (capOverhang * 2) - 0.3, 0.5, scene);
+        cap.material = capMaterials[step.place];
+        cap.position.set(center.x, max.y - (capThickness / 2), center.z);
+        // Place number on the front face.
+        var numberSize = Math.min(size.x, size.z, bodyHeight) * 0.55;
+        var number = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreatePlane("toy-place-number-".concat(step.place), { size: numberSize }, scene);
+        number.material = createNumberMaterial(scene, step.place);
+        var frontOffset = (Math.abs(front.x) * size.x / 2) + (Math.abs(front.z) * size.z / 2) - 0.1;
+        number.position.set(center.x + (front.x * frontOffset), min.y + (bodyHeight * 0.5), center.z + (front.z * frontOffset));
+        // A plane faces -Z; turn it to face the podium's front.
+        number.rotation.y = Math.atan2(-front.x, -front.z);
+        [body, cap, number].forEach(function (mesh) {
+            mesh.isPickable = false;
+        });
+    }
+    // Hide the old blocks but keep the physics body and the logos parented to it.
+    podium.isVisible = false;
+    for (var _a = 0, _b = podium.getChildMeshes(); _a < _b.length; _a++) {
+        var child = _b[_a];
+        var name_1 = child.name.toLowerCase();
+        if (name_1.includes("linkedin") || name_1.includes("twitter")) {
+            child.material = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-logo-".concat(name_1), PALETTE.logoBlue, { roughness: 0.4, clearCoat: 0.6 });
+        }
+        else if (name_1.includes("stlmesh")) {
+            child.material = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-logo-sakura", PALETTE.logoSakura, { roughness: 0.45, clearCoat: 0.5 });
+        }
+    }
+}
+function createNumberMaterial(scene, place) {
+    var size = 256;
+    var texture = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.DynamicTexture("toy-podium-number-".concat(place, "-texture"), { width: size, height: size }, scene, true);
+    texture.hasAlpha = true;
+    var context = texture.getContext();
+    context.clearRect(0, 0, size, size);
+    context.fillStyle = PALETTE.numbers;
+    context.font = "900 ".concat(size * 0.8, "px \"Arial Rounded MT Bold\", \"Nunito\", \"Trebuchet MS\", Arial, sans-serif");
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.fillText(String(place), size / 2, size * 0.54);
+    texture.update();
+    var material = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.StandardMaterial("toy-podium-number-".concat(place), scene);
+    material.diffuseTexture = texture;
+    material.useAlphaFromDiffuseTexture = true;
+    material.specularColor = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3(0.1, 0.1, 0.1);
+    material.emissiveColor = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3(0.15, 0.15, 0.18);
+    material.zOffset = -2;
+    return material;
+}
+// ==================================================================== Roads
+/**
+ * Each road mesh is a few flat, irregular slabs. Every slab's outline is read back from the mesh
+ * (in world space) and rebuilt as a raised paving slab with bevelled edges.
+ */
+function restyleRoads(scene) {
+    var roads = scene.meshes.filter(function (mesh) { return /^road\d*$/i.test(mesh.name); });
+    if (!roads.length) {
+        return;
+    }
+    var random = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRandom)(42);
+    var cobbles = createCobbleMaterial(scene);
+    var edgeMeshes = PALETTE.edgePebbles.map(function (hex, i) {
+        var pebble = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createLumpyBall)("road-edge-pebble-".concat(i), scene, random, 1.6, 2);
+        pebble.material = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-road-edge-".concat(i), hex, { roughness: 0.7, clearCoat: 0.15 });
+        return pebble;
+    });
+    var edgeMatrices = edgeMeshes.map(function () { return []; });
+    roads.forEach(function (road, roadIndex) {
+        var outlines = getSlabOutlines(road);
+        if (!outlines.length) {
+            return;
+        }
+        outlines.forEach(function (outline, slabIndex) {
+            // Only slightly raised: the tank drives over these without physics, so a tall slab
+            // would swallow its tracks.
+            var slab = createSlabMesh("road-slab-".concat(roadIndex, "-").concat(slabIndex), outline, GROUND_Y - 0.2, GROUND_Y + 0.15, 0.12, scene);
+            slab.material = cobbles;
+            slab.isPickable = false;
+            // A border of small pebbles around each slab.
+            var center = outline.reduce(function (sum, p) { return sum.addInPlace(p); }, new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector2(0, 0)).scaleInPlace(1 / outline.length);
+            for (var i = 0; i < outline.length; i++) {
+                var start = outline[i];
+                var end = outline[(i + 1) % outline.length];
+                var edgeLength = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector2.Distance(start, end);
+                var steps = Math.max(1, Math.round(edgeLength / 1.25));
+                for (var k = 0; k < steps; k++) {
+                    var point = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector2.Lerp(start, end, (k + 0.5) / steps);
+                    var outward = point.subtract(center).normalize();
+                    var size = 0.45 + (random() * 0.35);
+                    var matrix = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Matrix.Compose(new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(size, size * 0.55, size), _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Quaternion.RotationYawPitchRoll(random() * Math.PI * 2, 0, 0), new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(point.x + (outward.x * 0.45), GROUND_Y + 0.05, point.y + (outward.y * 0.45)));
+                    edgeMatrices[Math.floor(random() * edgeMeshes.length)].push(matrix);
+                }
+            }
+        });
+        road.setEnabled(false);
+    });
+    edgeMeshes.forEach(function (mesh, i) { return (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.addThinInstances)(mesh, edgeMatrices[i]); });
+}
+/**
+ * Cobblestone texture generated on a canvas: a colour map with stones in a few tones and darker
+ * mortar, plus a matching normal map so the stones look raised with rounded edges.
+ */
+function createCobbleMaterial(scene) {
+    var size = 512;
+    var rows = 4;
+    var columns = 3;
+    var cellWidth = size / columns;
+    var cellHeight = size / rows;
+    var mortar = 7;
+    var cornerRadius = 22;
+    var bevel = 20;
+    var random = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRandom)(9);
+    var stoneColors = PALETTE.slabs.map(function (hex) { return _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.FromHexString(hex); });
+    var mortarColor = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.FromHexString(PALETTE.mortar);
+    var cellTone = [];
+    var cellShade = [];
+    for (var i = 0; i < rows * columns; i++) {
+        cellTone.push(Math.floor(random() * stoneColors.length));
+        cellShade.push(0.94 + (random() * 0.1));
+    }
+    var heights = new Float32Array(size * size);
+    var colorTexture = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.DynamicTexture("toy-cobble-color", { width: size, height: size }, scene, true);
+    var colorContext = colorTexture.getContext();
+    var colorImage = colorContext.createImageData(size, size);
+    for (var y = 0; y < size; y++) {
+        var row = Math.floor(y / cellHeight);
+        var shift = (row % 2) * (cellWidth / 2);
+        for (var x = 0; x < size; x++) {
+            var shiftedX = (x + shift) % size;
+            var column = Math.floor(shiftedX / cellWidth);
+            // Rounded-rectangle distance from the stone's edge (positive inside the stone).
+            var qx = (cellWidth / 2) - (mortar / 2) - Math.abs(shiftedX - ((column + 0.5) * cellWidth));
+            var qy = (cellHeight / 2) - (mortar / 2) - Math.abs(y - ((row + 0.5) * cellHeight));
+            var distance = Math.min(qx, qy);
+            if (qx < cornerRadius && qy < cornerRadius) {
+                distance = cornerRadius - Math.hypot(cornerRadius - qx, cornerRadius - qy);
+            }
+            var grain = (Math.sin(x * 0.9) * Math.sin(y * 1.3) * 0.5) + (random() - 0.5);
+            var height = distance <= 0 ? 0 : smoothStep(0, bevel, distance) + (grain * 0.015);
+            heights[(y * size) + x] = height;
+            var cell = (row * columns) + column;
+            var stone = stoneColors[cellTone[cell]];
+            var shade = distance <= 0 ? 1 : cellShade[cell] * (0.9 + (0.1 * smoothStep(0, bevel, distance))) + (grain * 0.02);
+            var base = distance <= 0 ? mortarColor : stone;
+            var offset = ((y * size) + x) * 4;
+            colorImage.data[offset] = clampByte(base.r * 255 * shade);
+            colorImage.data[offset + 1] = clampByte(base.g * 255 * shade);
+            colorImage.data[offset + 2] = clampByte(base.b * 255 * shade);
+            colorImage.data[offset + 3] = 255;
+        }
+    }
+    colorContext.putImageData(colorImage, 0, 0);
+    colorTexture.update();
+    var normalTexture = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.DynamicTexture("toy-cobble-normal", { width: size, height: size }, scene, true);
+    var normalContext = normalTexture.getContext();
+    var normalImage = normalContext.createImageData(size, size);
+    var strength = 6;
+    var heightAt = function (x, y) { return heights[(((y + size) % size) * size) + ((x + size) % size)]; };
+    for (var y = 0; y < size; y++) {
+        for (var x = 0; x < size; x++) {
+            var nx = (heightAt(x - 1, y) - heightAt(x + 1, y)) * strength;
+            var ny = (heightAt(x, y - 1) - heightAt(x, y + 1)) * strength;
+            var length_1 = Math.hypot(nx, ny, 1);
+            var offset = ((y * size) + x) * 4;
+            normalImage.data[offset] = clampByte(((nx / length_1) * 0.5 + 0.5) * 255);
+            normalImage.data[offset + 1] = clampByte(((ny / length_1) * 0.5 + 0.5) * 255);
+            normalImage.data[offset + 2] = clampByte(((1 / length_1) * 0.5 + 0.5) * 255);
+            normalImage.data[offset + 3] = 255;
+        }
+    }
+    normalContext.putImageData(normalImage, 0, 0);
+    normalTexture.update();
+    normalTexture.gammaSpace = false;
+    [colorTexture, normalTexture].forEach(function (texture) {
+        texture.wrapU = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Texture.WRAP_ADDRESSMODE;
+        texture.wrapV = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Texture.WRAP_ADDRESSMODE;
+        texture.anisotropicFilteringLevel = 8;
+    });
+    var material = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-road-cobbles", "#FFFFFF", { roughness: 0.72, clearCoat: 0.12 });
+    material.albedoTexture = colorTexture;
+    material.bumpTexture = normalTexture;
+    return material;
+}
+function smoothStep(edge0, edge1, value) {
+    var t = Math.max(0, Math.min(1, (value - edge0) / (edge1 - edge0)));
+    return t * t * (3 - (2 * t));
+}
+function clampByte(value) {
+    return Math.max(0, Math.min(255, Math.round(value)));
+}
+/**
+ * Splits a mesh into its connected pieces and returns each piece's outline on the ground (convex
+ * hull of its vertices in world X/Z).
+ */
+function getSlabOutlines(mesh) {
+    var positions = mesh.getVerticesData(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.VertexBuffer.PositionKind);
+    var indices = mesh.getIndices();
+    if (!positions || !indices) {
+        return [];
+    }
+    mesh.computeWorldMatrix(true);
+    var world = mesh.getWorldMatrix();
+    var vertexCount = positions.length / 3;
+    var worldPoints = [];
+    var point = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3();
+    for (var i = 0; i < vertexCount; i++) {
+        _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.TransformCoordinatesFromFloatsToRef(positions[i * 3], positions[(i * 3) + 1], positions[(i * 3) + 2], world, point);
+        worldPoints.push(new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector2(point.x, point.z));
+    }
+    // Union-find over triangles; vertices at the same spot (top/bottom, split normals) are joined too.
+    var parent = Array.from({ length: vertexCount }, function (_, i) { return i; });
+    var find = function (i) {
+        while (parent[i] !== i) {
+            parent[i] = parent[parent[i]];
+            i = parent[i];
+        }
+        return i;
+    };
+    var union = function (a, b) {
+        parent[find(a)] = find(b);
+    };
+    for (var t = 0; t < indices.length; t += 3) {
+        union(indices[t], indices[t + 1]);
+        union(indices[t + 1], indices[t + 2]);
+    }
+    var byPosition = new Map();
+    worldPoints.forEach(function (p, i) {
+        var key = "".concat(p.x.toFixed(2), ",").concat(p.y.toFixed(2));
+        var existing = byPosition.get(key);
+        if (existing === undefined) {
+            byPosition.set(key, i);
+        }
+        else {
+            union(i, existing);
+        }
+    });
+    var groups = new Map();
+    worldPoints.forEach(function (p, i) {
+        var _a;
+        var root = find(i);
+        var group = (_a = groups.get(root)) !== null && _a !== void 0 ? _a : [];
+        group.push(p);
+        groups.set(root, group);
+    });
+    return Array.from(groups.values())
+        .map(convexHull)
+        .filter(function (hull) { return hull.length >= 3; });
+}
+/** Andrew's monotone chain; returns the hull counter-clockwise in (x, z). */
+function convexHull(points) {
+    var sorted = __spreadArray([], points, true).sort(function (a, b) { return (a.x - b.x) || (a.y - b.y); });
+    var cross = function (o, a, b) { return ((a.x - o.x) * (b.y - o.y)) - ((a.y - o.y) * (b.x - o.x)); };
+    var lower = [];
+    for (var _i = 0, sorted_1 = sorted; _i < sorted_1.length; _i++) {
+        var p = sorted_1[_i];
+        while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 1e-6) {
+            lower.pop();
+        }
+        lower.push(p);
+    }
+    var upper = [];
+    for (var i = sorted.length - 1; i >= 0; i--) {
+        var p = sorted[i];
+        while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 1e-6) {
+            upper.pop();
+        }
+        upper.push(p);
+    }
+    upper.pop();
+    lower.pop();
+    return lower.concat(upper);
+}
+/**
+ * Extrudes a convex outline into a slab between `bottomY` and `topY`, with a bevel of size
+ * `bevel` around the top edge.
+ */
+function createSlabMesh(name, outline, bottomY, topY, bevel, scene) {
+    var center = outline.reduce(function (sum, p) { return sum.addInPlace(p); }, new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector2(0, 0)).scaleInPlace(1 / outline.length);
+    var inset = outline.map(function (p) {
+        var offset = p.subtract(center);
+        var length = offset.length();
+        return length > bevel ? center.add(offset.scale((length - bevel) / length)) : center.clone();
+    });
+    var outward = outline.map(function (p) {
+        var offset = p.subtract(center);
+        return offset.normalize();
+    });
+    var positions = [];
+    var normals = [];
+    var indices = [];
+    var uvs = [];
+    // Planar world-space UVs so the cobble pattern has the same scale on every slab.
+    var uvScale = 1 / 8;
+    var addVertex = function (x, y, z, nx, ny, nz) {
+        positions.push(x, y, z);
+        uvs.push(x * uvScale, z * uvScale);
+        var length = Math.hypot(nx, ny, nz);
+        normals.push(nx / length, ny / length, nz / length);
+        return (positions.length / 3) - 1;
+    };
+    // Top face (fan around the center).
+    var topCenter = addVertex(center.x, topY, center.y, 0, 1, 0);
+    var topRing = inset.map(function (p) { return addVertex(p.x, topY, p.y, 0, 1, 0); });
+    for (var i = 0; i < topRing.length; i++) {
+        (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.pushOrientedTriangle)(indices, positions, normals, topCenter, topRing[i], topRing[(i + 1) % topRing.length]);
+    }
+    // Bevel and side walls, with soft normals so the edge catches the light.
+    var shoulderY = topY - bevel;
+    var count = outline.length;
+    for (var i = 0; i < count; i++) {
+        var next = (i + 1) % count;
+        var bevelTopA = addVertex(inset[i].x, topY, inset[i].y, outward[i].x * 0.6, 1, outward[i].y * 0.6);
+        var bevelTopB = addVertex(inset[next].x, topY, inset[next].y, outward[next].x * 0.6, 1, outward[next].y * 0.6);
+        var shoulderA = addVertex(outline[i].x, shoulderY, outline[i].y, outward[i].x, 0.6, outward[i].y);
+        var shoulderB = addVertex(outline[next].x, shoulderY, outline[next].y, outward[next].x, 0.6, outward[next].y);
+        (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.pushOrientedTriangle)(indices, positions, normals, bevelTopA, shoulderA, shoulderB);
+        (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.pushOrientedTriangle)(indices, positions, normals, bevelTopA, shoulderB, bevelTopB);
+        var wallTopA = addVertex(outline[i].x, shoulderY, outline[i].y, outward[i].x, 0.15, outward[i].y);
+        var wallTopB = addVertex(outline[next].x, shoulderY, outline[next].y, outward[next].x, 0.15, outward[next].y);
+        var wallBottomA = addVertex(outline[i].x, bottomY, outline[i].y, outward[i].x, 0, outward[i].y);
+        var wallBottomB = addVertex(outline[next].x, bottomY, outline[next].y, outward[next].x, 0, outward[next].y);
+        (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.pushOrientedTriangle)(indices, positions, normals, wallTopA, wallBottomA, wallBottomB);
+        (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.pushOrientedTriangle)(indices, positions, normals, wallTopA, wallBottomB, wallTopB);
+    }
+    return (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.buildMesh)(name, positions, normals, indices, scene, uvs);
+}
+// ==================================================================== Signs
+/**
+ * Signs lying on the ground: extruded 3D text, and the Fruit Factory description (white text on a
+ * transparent image). Each gets a raised navy plate with a sand rim underneath, like a toy name
+ * plate, and the 3D letters get a glossy cream plastic finish.
+ */
+function restyleSigns(scene) {
+    var letters = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-sign-letters", PALETTE.signLetters, { roughness: 0.4, clearCoat: 0.6 });
+    var plate = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-sign-plate", PALETTE.signPlate, { roughness: 0.5, clearCoat: 0.35 });
+    var rim = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-sign-rim", PALETTE.signRim, { roughness: 0.5, clearCoat: 0.3 });
+    // 3D text: how far to lift the letters so they stand clear of the plate.
+    var textSigns = [
+        { name: "target_text", lift: 0.6 },
+        { name: "projects_sign", lift: 0 },
+    ];
+    for (var _i = 0, textSigns_1 = textSigns; _i < textSigns_1.length; _i++) {
+        var _a = textSigns_1[_i], name_2 = _a.name, lift = _a.lift;
+        var mesh = scene.getMeshByName(name_2);
+        if (!mesh) {
+            continue;
+        }
+        mesh.position.y += lift;
+        mesh.material = letters;
+        mesh.computeWorldMatrix(true);
+        var box = mesh.getBoundingInfo().boundingBox;
+        var scaling = mesh.scaling;
+        var width = (box.maximum.x - box.minimum.x) * Math.abs(scaling.x);
+        var depth = (box.maximum.z - box.minimum.z) * Math.abs(scaling.z);
+        var center = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.TransformCoordinates(box.center, mesh.getWorldMatrix());
+        var yaw = mesh.rotationQuaternion ? mesh.rotationQuaternion.toEulerAngles().y : mesh.rotation.y;
+        createSignPlate(scene, "sign-plate-".concat(name_2), center.x, center.z, yaw, width + 4, depth + 4, plate, rim);
+    }
+    // The description is a flat textured plane lying on the ground.
+    var description = scene.getMeshByName("ffdescription");
+    if (description) {
+        description.computeWorldMatrix(true);
+        var world = description.getWorldMatrix();
+        var axisX = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.TransformNormal(new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(1, 0, 0), world);
+        var axisY = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.TransformNormal(new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, 1, 0), world);
+        var center = description.getAbsolutePosition();
+        // Rotating a box by `yaw` turns its local X into (cos yaw, 0, -sin yaw).
+        var yaw = Math.atan2(-axisX.z, axisX.x);
+        createSignPlate(scene, "sign-plate-ffdescription", center.x, center.z, yaw, axisX.length() + 5, axisY.length() + 5, plate, rim);
+    }
+}
+function createSignPlate(scene, name, x, z, yaw, width, depth, plate, rim) {
+    var plateHeight = 0.5;
+    var plateTop = GROUND_Y + 0.24;
+    var top = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRoundedBox)(name, width, plateHeight, depth, 0.25, scene, 3);
+    top.material = plate;
+    top.position.set(x, plateTop - (plateHeight / 2), z);
+    top.rotation.y = yaw;
+    var border = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRoundedBox)("".concat(name, "-rim"), width + 1.6, plateHeight, depth + 1.6, 0.25, scene, 3);
+    border.material = rim;
+    border.position.set(x, plateTop - 0.08 - (plateHeight / 2), z);
+    border.rotation.y = yaw;
+    [top, border].forEach(function (mesh) {
+        mesh.isPickable = false;
+    });
+}
+
+
+/***/ },
+
 /***/ "./src/scenes/play.ts"
 /*!****************************!*\
   !*** ./src/scenes/play.ts ***!
@@ -132,6 +1521,9 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _bricks__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./bricks */ "./src/scenes/bricks.ts");
 /* harmony import */ var _tank__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./tank */ "./src/scenes/tank.ts");
 /* harmony import */ var _toyTank__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./toyTank */ "./src/scenes/toyTank.ts");
+/* harmony import */ var _landmarks__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./landmarks */ "./src/scenes/landmarks.ts");
+/* harmony import */ var _ground__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./ground */ "./src/scenes/ground.ts");
+/* harmony import */ var _fruitFactory__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./fruitFactory */ "./src/scenes/fruitFactory.ts");
 var __extends = (undefined && undefined.__extends) || (function () {
     var extendStatics = function (d, b) {
         extendStatics = Object.setPrototypeOf ||
@@ -183,6 +1575,9 @@ var __generator = (undefined && undefined.__generator) || function (thisArg, bod
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+
+
+
 
 
 
@@ -259,10 +1654,14 @@ var Play = /** @class */ (function (_super) {
         var forward = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, 0, 1);
         this.initializeTankModel();
         (0,_trees__WEBPACK_IMPORTED_MODULE_3__.instantiateTrees)({ scene: this.scene });
+        (0,_landmarks__WEBPACK_IMPORTED_MODULE_7__.restyleLandmarks)(this.scene);
+        (0,_fruitFactory__WEBPACK_IMPORTED_MODULE_9__.restyleFruitFactory)(this.scene);
         (0,_bricks__WEBPACK_IMPORTED_MODULE_4__.instantiateBricks)({ scene: this.scene, tank: this.tank, brickSound: this.brickSound }, -5, 8, -30, 3, [6, 6, 4, 2], 0);
         // Center and angle match where this wall has always been placed (it was previously
         // built at (130, -50) and then rotated 300 rad around the world origin).
         (0,_bricks__WEBPACK_IMPORTED_MODULE_4__.instantiateBricks)({ scene: this.scene, tank: this.tank, brickSound: this.brickSound }, 47.1152, 8, 131.0731, 4, [6, 6, 6, 4], 4.6903);
+        // After the bricks: walls measure the ground height with a ray, and decorations avoid them.
+        (0,_ground__WEBPACK_IMPORTED_MODULE_8__.decorateGround)(this.scene, _trees__WEBPACK_IMPORTED_MODULE_3__.TREE_POSITIONS);
         try {
             this.initializeShadows();
         }
@@ -339,7 +1738,7 @@ var Play = /** @class */ (function (_super) {
             "monitor",
         ]);
         var shadowCasterKeywords = [
-            "tank", "brick", "tree-", "text", "arrow", "project", "target",
+            "tank", "brick", "tree-", "deco-", "ff-", "text", "arrow", "project", "target",
             "podium", "practice", "github", "linkedin", "twitter", "amongus", "statue", "berserk",
             "guts", "monument", "table", "desk", "chair",
         ];
@@ -2211,8 +3610,10 @@ function configurePostProcesses(scene_3) {
 (__unused_webpack_module, __webpack_exports__, __webpack_require__) {
 
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   addThinInstances: () => (/* binding */ addThinInstances),
 /* harmony export */   buildMesh: () => (/* binding */ buildMesh),
 /* harmony export */   clamp: () => (/* binding */ clamp),
+/* harmony export */   createLumpyBall: () => (/* binding */ createLumpyBall),
 /* harmony export */   createRandom: () => (/* binding */ createRandom),
 /* harmony export */   createRoundedBox: () => (/* binding */ createRoundedBox),
 /* harmony export */   createTemplate: () => (/* binding */ createTemplate),
@@ -2444,12 +3845,15 @@ function pushOrientedTriangle(indices, positions, normals, a, b, c) {
         indices.push(a, b, c);
     }
 }
-function buildMesh(name, positions, normals, indices, scene) {
+function buildMesh(name, positions, normals, indices, scene, uvs) {
     var mesh = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Mesh(name, scene);
     var vertexData = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.VertexData();
     vertexData.positions = positions;
     vertexData.normals = normals;
     vertexData.indices = indices;
+    if (uvs) {
+        vertexData.uvs = uvs;
+    }
     vertexData.applyToMesh(mesh);
     return mesh;
 }
@@ -2466,6 +3870,48 @@ function createRandom(seed) {
         t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
         return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
     };
+}
+/**
+ * A soft, slightly lumpy ball (radius about 1): an icosphere pushed in and out by a smooth
+ * pattern, with smooth normals so it reads as a rounded toy shape rather than a faceted rock.
+ */
+function createLumpyBall(name, scene, random, lumpiness, subdivisions) {
+    if (lumpiness === void 0) { lumpiness = 1; }
+    if (subdivisions === void 0) { subdivisions = 3; }
+    var ball = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateIcoSphere(name, { radius: 1, subdivisions: subdivisions }, scene);
+    var positions = ball.getVerticesData(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.VertexBuffer.PositionKind);
+    var indices = ball.getIndices();
+    if (!positions || !indices) {
+        return ball;
+    }
+    var a = random() * 10;
+    var b = random() * 10;
+    var c = random() * 10;
+    for (var i = 0; i < positions.length; i += 3) {
+        var x = positions[i];
+        var y = positions[i + 1];
+        var z = positions[i + 2];
+        var bump = 1 + (lumpiness * ((0.08 * Math.sin((x * 3.1) + a) * Math.sin((y * 2.7) + b))
+            + (0.06 * Math.sin((z * 3.7) + c) * Math.cos((x * 2.3) + b))));
+        positions[i] = x * bump;
+        positions[i + 1] = y * bump;
+        positions[i + 2] = z * bump;
+    }
+    var normals = [];
+    _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.VertexData.ComputeNormals(positions, indices, normals);
+    ball.setVerticesData(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.VertexBuffer.PositionKind, positions);
+    ball.setVerticesData(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.VertexBuffer.NormalKind, normals);
+    return ball;
+}
+/** Adds many copies of a mesh with one draw call (thin instances). */
+function addThinInstances(mesh, matrices) {
+    if (!matrices.length) {
+        mesh.setEnabled(false);
+        return;
+    }
+    mesh.thinInstanceAdd(matrices, true);
+    mesh.thinInstanceRefreshBoundingInfo(false);
+    mesh.isPickable = false;
 }
 
 
@@ -3061,6 +4507,7 @@ function wrapAngle(angle) {
 
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   TREE_POSITIONS: () => (/* binding */ TREE_POSITIONS),
 /* harmony export */   instantiateTrees: () => (/* binding */ instantiateTrees)
 /* harmony export */ });
 /* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core */ "./node_modules/@babylonjs/core/index.js");
@@ -3085,6 +4532,14 @@ var TRUNK_TOP_DIAMETER = 3;
 var CANOPY_PIVOT_Y = 6;
 var GROUND_Y = -0.5;
 // Natural sakura tones: pale blush blossoms rather than candy pink, on dark bark.
+/** Trunk centers; the trunk is centered vertically on these points. */
+var TREE_POSITIONS = [
+    new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(78.3985, 5.1848, -11.2018),
+    new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(47.5043, 5.1848, -36.9549),
+    new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(-39.5430, 5.1848, -44.9435),
+    new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(-54.0394, 5.1848, -22.0382),
+    new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(57.1332, 5.1848, 77.0256),
+];
 var PALETTE = {
     bark: "#5E4436",
     barkDark: "#47332A",
@@ -3094,14 +4549,7 @@ var PALETTE = {
 };
 function instantiateTrees(_this) {
     var scene = _this.scene;
-    // Trunk centers; the trunk is centered vertically on these points.
-    var treeCoordinates = [
-        new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(78.3985, 5.1848, -11.2018),
-        new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(47.5043, 5.1848, -36.9549),
-        new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(-39.5430, 5.1848, -44.9435),
-        new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(-54.0394, 5.1848, -22.0382),
-        new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(57.1332, 5.1848, 77.0256),
-    ];
+    var treeCoordinates = TREE_POSITIONS;
     var templates = createTreeTemplates(scene);
     var petalTexture = createPetalTexture(scene);
     var swayingCanopies = [];
@@ -3152,42 +4600,11 @@ function createTreeTemplates(scene) {
     var random = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRandom)(7);
     var puffs = PALETTE.puffs.map(function (hex, i) {
         var material = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-tree-puff-".concat(i), hex, { roughness: 0.65, clearCoat: 0.15 });
-        return (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createTemplate)(createPuffMesh("tree-puff-".concat(i), scene, random), material);
+        return (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createTemplate)((0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createLumpyBall)("tree-puff-".concat(i), scene, random), material);
     });
     var blossomMesh = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateSphere("tree-blossom", { diameter: 1, segments: 6 }, scene);
     var blossomTemplate = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createTemplate)(blossomMesh, blossom);
     return { trunk: trunk, rootFlare: rootFlare, branch: branch, puffs: puffs, blossom: blossomTemplate };
-}
-/**
- * A soft, slightly lumpy ball: an icosphere pushed in and out by a smooth pattern, with smooth
- * normals so it reads as a rounded toy shape rather than a faceted rock.
- */
-function createPuffMesh(name, scene, random) {
-    var puff = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateIcoSphere(name, { radius: 1, subdivisions: 3 }, scene);
-    var positions = puff.getVerticesData(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.VertexBuffer.PositionKind);
-    var indices = puff.getIndices();
-    if (!positions || !indices) {
-        return puff;
-    }
-    var a = random() * 10;
-    var b = random() * 10;
-    var c = random() * 10;
-    for (var i = 0; i < positions.length; i += 3) {
-        var x = positions[i];
-        var y = positions[i + 1];
-        var z = positions[i + 2];
-        var bump = 1
-            + (0.08 * Math.sin((x * 3.1) + a) * Math.sin((y * 2.7) + b))
-            + (0.06 * Math.sin((z * 3.7) + c) * Math.cos((x * 2.3) + b));
-        positions[i] = x * bump;
-        positions[i + 1] = y * bump;
-        positions[i + 2] = z * bump;
-    }
-    var normals = [];
-    _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.VertexData.ComputeNormals(positions, indices, normals);
-    puff.setVerticesData(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.VertexBuffer.PositionKind, positions);
-    puff.setVerticesData(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.VertexBuffer.NormalKind, normals);
-    return puff;
 }
 /**
  * Builds one tree and returns its canopy node (for the sway animation).
@@ -3322,4 +4739,4 @@ function createPetalTexture(scene) {
 /***/ }
 
 }]);
-//# sourceMappingURL=src_scenes_tools_ts.ef5ccc08b74120695654.js.map
+//# sourceMappingURL=src_scenes_tools_ts.4b271a46420ca02200a0.js.map

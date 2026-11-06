@@ -11,5 +11,7 @@ import * as BABYLON from "@babylonjs/core";
 type TreeContext = {
     scene: BABYLON.Scene;
 };
+/** Trunk centers; the trunk is centered vertically on these points. */
+export declare const TREE_POSITIONS: BABYLON.Vector3[];
 export declare function instantiateTrees(_this: TreeContext): void;
 export {};

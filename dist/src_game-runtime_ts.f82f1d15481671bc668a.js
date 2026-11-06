@@ -1,4 +1,4 @@
-/*! babylonjs-editor-generated-template 4.1.0 Fri Nov 06 2026 15:54:09 GMT+0100 (Central European Standard Time) */
+/*! babylonjs-editor-generated-template 4.1.0 Fri Nov 06 2026 16:57:14 GMT+0100 (Central European Standard Time) */
 "use strict";
 (self["webpackChunkgame"] = self["webpackChunkgame"] || []).push([["src_game-runtime_ts"],{
 
@@ -213,4 +213,4 @@ var GameRuntime = /** @class */ (function () {
 /***/ }
 
 }]);
-//# sourceMappingURL=src_game-runtime_ts.b346a0c483f87295662d.js.map
+//# sourceMappingURL=src_game-runtime_ts.f82f1d15481671bc668a.js.map

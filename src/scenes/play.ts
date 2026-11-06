@@ -3,10 +3,13 @@ import { Texture } from "@babylonjs/core/Materials/Textures/texture";
 import { Node } from "@babylonjs/core/node";
 import type { AdvancedDynamicTexture, Rectangle, TextBlock } from "@babylonjs/gui";
 
-import { instantiateTrees } from "./trees";
+import { instantiateTrees, TREE_POSITIONS } from "./trees";
 import { instantiateBricks } from "./bricks";
 import { initializeTankMovement, initializeShooting } from "./tank";
 import { createToyTank, type ToyTank } from "./toyTank";
+import { restyleLandmarks } from "./landmarks";
+import { decorateGround } from "./ground";
+import { restyleFruitFactory } from "./fruitFactory";
 
 export default class Play extends Node {
     private scene!: BABYLON.Scene;
@@ -86,10 +89,14 @@ export default class Play extends Node {
 
         this.initializeTankModel();
         instantiateTrees({ scene: this.scene });
+        restyleLandmarks(this.scene);
+        restyleFruitFactory(this.scene);
         instantiateBricks({ scene: this.scene, tank: this.tank, brickSound: this.brickSound }, -5, 8, -30, 3, [6, 6, 4, 2], 0);
         // Center and angle match where this wall has always been placed (it was previously
         // built at (130, -50) and then rotated 300 rad around the world origin).
         instantiateBricks({ scene: this.scene, tank: this.tank, brickSound: this.brickSound }, 47.1152, 8, 131.0731, 4, [6, 6, 6, 4], 4.6903);
+        // After the bricks: walls measure the ground height with a ray, and decorations avoid them.
+        decorateGround(this.scene, TREE_POSITIONS);
         try {
             this.initializeShadows();
         } catch (error) {
@@ -175,7 +182,7 @@ export default class Play extends Node {
         ]);
 
         const shadowCasterKeywords = [
-            "tank", "brick", "tree-", "text", "arrow", "project", "target",
+            "tank", "brick", "tree-", "deco-", "ff-", "text", "arrow", "project", "target",
             "podium", "practice", "github", "linkedin", "twitter", "amongus", "statue", "berserk",
             "guts", "monument", "table", "desk", "chair",
         ];

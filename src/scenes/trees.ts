@@ -1,6 +1,6 @@
 import * as BABYLON from "@babylonjs/core";
 
-import { createRandom, createTemplate, createToyMaterial } from "./toyStyle";
+import { createLumpyBall, createRandom, createTemplate, createToyMaterial } from "./toyStyle";
 
 /**
  * Toy-style cherry blossom trees: a smooth tapered trunk with a root flare and two branches, a
@@ -32,6 +32,15 @@ const CANOPY_PIVOT_Y = 6;
 const GROUND_Y = -0.5;
 
 // Natural sakura tones: pale blush blossoms rather than candy pink, on dark bark.
+/** Trunk centers; the trunk is centered vertically on these points. */
+export const TREE_POSITIONS = [
+    new BABYLON.Vector3(78.3985, 5.1848, -11.2018),
+    new BABYLON.Vector3(47.5043, 5.1848, -36.9549),
+    new BABYLON.Vector3(-39.5430, 5.1848, -44.9435),
+    new BABYLON.Vector3(-54.0394, 5.1848, -22.0382),
+    new BABYLON.Vector3(57.1332, 5.1848, 77.0256),
+];
+
 const PALETTE = {
     bark: "#5E4436",
     barkDark: "#47332A",
@@ -43,14 +52,7 @@ const PALETTE = {
 export function instantiateTrees(_this: TreeContext): void {
     const scene = _this.scene;
 
-    // Trunk centers; the trunk is centered vertically on these points.
-    const treeCoordinates = [
-        new BABYLON.Vector3(78.3985, 5.1848, -11.2018),
-        new BABYLON.Vector3(47.5043, 5.1848, -36.9549),
-        new BABYLON.Vector3(-39.5430, 5.1848, -44.9435),
-        new BABYLON.Vector3(-54.0394, 5.1848, -22.0382),
-        new BABYLON.Vector3(57.1332, 5.1848, 77.0256),
-    ];
+    const treeCoordinates = TREE_POSITIONS;
 
     const templates = createTreeTemplates(scene);
     const petalTexture = createPetalTexture(scene);
@@ -108,47 +110,13 @@ function createTreeTemplates(scene: BABYLON.Scene): TreeTemplates {
     const random = createRandom(7);
     const puffs = PALETTE.puffs.map((hex, i) => {
         const material = createToyMaterial(scene, `toy-tree-puff-${i}`, hex, { roughness: 0.65, clearCoat: 0.15 });
-        return createTemplate(createPuffMesh(`tree-puff-${i}`, scene, random), material);
+        return createTemplate(createLumpyBall(`tree-puff-${i}`, scene, random), material);
     });
 
     const blossomMesh = BABYLON.MeshBuilder.CreateSphere("tree-blossom", { diameter: 1, segments: 6 }, scene);
     const blossomTemplate = createTemplate(blossomMesh, blossom);
 
     return { trunk, rootFlare, branch, puffs, blossom: blossomTemplate };
-}
-
-/**
- * A soft, slightly lumpy ball: an icosphere pushed in and out by a smooth pattern, with smooth
- * normals so it reads as a rounded toy shape rather than a faceted rock.
- */
-function createPuffMesh(name: string, scene: BABYLON.Scene, random: () => number): BABYLON.Mesh {
-    const puff = BABYLON.MeshBuilder.CreateIcoSphere(name, { radius: 1, subdivisions: 3 }, scene);
-    const positions = puff.getVerticesData(BABYLON.VertexBuffer.PositionKind);
-    const indices = puff.getIndices();
-    if (!positions || !indices) {
-        return puff;
-    }
-
-    const a = random() * 10;
-    const b = random() * 10;
-    const c = random() * 10;
-    for (let i = 0; i < positions.length; i += 3) {
-        const x = positions[i];
-        const y = positions[i + 1];
-        const z = positions[i + 2];
-        const bump = 1
-            + (0.08 * Math.sin((x * 3.1) + a) * Math.sin((y * 2.7) + b))
-            + (0.06 * Math.sin((z * 3.7) + c) * Math.cos((x * 2.3) + b));
-        positions[i] = x * bump;
-        positions[i + 1] = y * bump;
-        positions[i + 2] = z * bump;
-    }
-
-    const normals: number[] = [];
-    BABYLON.VertexData.ComputeNormals(positions, indices, normals);
-    puff.setVerticesData(BABYLON.VertexBuffer.PositionKind, positions);
-    puff.setVerticesData(BABYLON.VertexBuffer.NormalKind, normals);
-    return puff;
 }
 
 /**

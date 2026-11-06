@@ -1,6 +1,8 @@
 import * as BABYLON from "@babylonjs/core";
 import type { AdvancedDynamicTexture, Ellipse, Rectangle, TextBlock } from "@babylonjs/gui";
 
+import { createToyTarget, type ToyTarget } from "./toyTarget";
+
 type GuiModule = typeof import("@babylonjs/gui");
 
 type TankContext = {
@@ -348,8 +350,25 @@ export async function initializeShooting(_this: TankContext, forward: BABYLON.Ve
         targets.push({ mesh: target, hitRadiusSquared: getHitRadiusSquared(target), url, label });
     });
 
+    // Toy target models; the original meshes stay (hidden) for hit tests and labels.
+    const targetMarks: Record<string, string> = { GitHub: "GH", LinkedIn: "in", "X / Twitter": "X" };
+    const toyTargets = new Map<BABYLON.Mesh, ToyTarget>();
+    const highlightColor = BABYLON.Color3.FromHexString("#f7b955");
     targets.forEach((target) => {
-        highlightLayer.addMesh(target.mesh, BABYLON.Color3.FromHexString("#f7b955"));
+        let toyTarget: ToyTarget | null = null;
+        try {
+            toyTarget = createToyTarget(_this.scene, target.mesh, targetMarks[target.label] ?? "");
+        } catch (error) {
+            console.error("Toy target creation failed, keeping the original", error);
+            target.mesh.isVisible = true;
+        }
+
+        if (toyTarget) {
+            toyTargets.set(target.mesh, toyTarget);
+            toyTarget.meshes.forEach((mesh) => highlightLayer.addMesh(mesh, highlightColor));
+        } else {
+            highlightLayer.addMesh(target.mesh, highlightColor);
+        }
         targetLabels.set(target.mesh, createTargetLabel(gui, targetUi, target.mesh, target.label));
     });
 
@@ -484,6 +503,7 @@ export async function initializeShooting(_this: TankContext, forward: BABYLON.Ve
                 // several units per frame and could otherwise skip straight past a target.
                 if (segmentDistanceSquared(activeShot.previousPosition, shotPosition, target.mesh.absolutePosition) <= target.hitRadiusSquared) {
                     didHit = true;
+                    toyTargets.get(target.mesh)?.hit();
                     window.open(target.url, "_blank", "noopener,noreferrer");
                     currentObjectiveText = `Direct hit. Opening ${target.label} in a new tab.`;
                     objectiveHint.text = currentObjectiveText;

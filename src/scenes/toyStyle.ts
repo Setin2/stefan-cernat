@@ -235,12 +235,15 @@ export function pushOrientedTriangle(indices: number[], positions: number[], nor
     }
 }
 
-export function buildMesh(name: string, positions: number[], normals: number[], indices: number[], scene: BABYLON.Scene): BABYLON.Mesh {
+export function buildMesh(name: string, positions: number[], normals: number[], indices: number[], scene: BABYLON.Scene, uvs?: number[]): BABYLON.Mesh {
     const mesh = new BABYLON.Mesh(name, scene);
     const vertexData = new BABYLON.VertexData();
     vertexData.positions = positions;
     vertexData.normals = normals;
     vertexData.indices = indices;
+    if (uvs) {
+        vertexData.uvs = uvs;
+    }
     vertexData.applyToMesh(mesh);
     return mesh;
 }
@@ -259,4 +262,50 @@ export function createRandom(seed: number): () => number {
         t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
         return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
     };
+}
+
+/**
+ * A soft, slightly lumpy ball (radius about 1): an icosphere pushed in and out by a smooth
+ * pattern, with smooth normals so it reads as a rounded toy shape rather than a faceted rock.
+ */
+export function createLumpyBall(name: string, scene: BABYLON.Scene, random: () => number, lumpiness = 1, subdivisions = 3): BABYLON.Mesh {
+    const ball = BABYLON.MeshBuilder.CreateIcoSphere(name, { radius: 1, subdivisions }, scene);
+    const positions = ball.getVerticesData(BABYLON.VertexBuffer.PositionKind);
+    const indices = ball.getIndices();
+    if (!positions || !indices) {
+        return ball;
+    }
+
+    const a = random() * 10;
+    const b = random() * 10;
+    const c = random() * 10;
+    for (let i = 0; i < positions.length; i += 3) {
+        const x = positions[i];
+        const y = positions[i + 1];
+        const z = positions[i + 2];
+        const bump = 1 + (lumpiness * (
+            (0.08 * Math.sin((x * 3.1) + a) * Math.sin((y * 2.7) + b))
+            + (0.06 * Math.sin((z * 3.7) + c) * Math.cos((x * 2.3) + b))
+        ));
+        positions[i] = x * bump;
+        positions[i + 1] = y * bump;
+        positions[i + 2] = z * bump;
+    }
+
+    const normals: number[] = [];
+    BABYLON.VertexData.ComputeNormals(positions, indices, normals);
+    ball.setVerticesData(BABYLON.VertexBuffer.PositionKind, positions);
+    ball.setVerticesData(BABYLON.VertexBuffer.NormalKind, normals);
+    return ball;
+}
+
+/** Adds many copies of a mesh with one draw call (thin instances). */
+export function addThinInstances(mesh: BABYLON.Mesh, matrices: BABYLON.Matrix[]): void {
+    if (!matrices.length) {
+        mesh.setEnabled(false);
+        return;
+    }
+    mesh.thinInstanceAdd(matrices, true);
+    mesh.thinInstanceRefreshBoundingInfo(false);
+    mesh.isPickable = false;
 }
