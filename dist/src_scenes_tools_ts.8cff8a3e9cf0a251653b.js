@@ -1660,6 +1660,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _ground__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./ground */ "./src/scenes/ground.ts");
 /* harmony import */ var _fruitFactory__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./fruitFactory */ "./src/scenes/fruitFactory.ts");
 /* harmony import */ var _mascots__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./mascots */ "./src/scenes/mascots.ts");
+/* harmony import */ var _shadows__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./shadows */ "./src/scenes/shadows.ts");
 var __extends = (undefined && undefined.__extends) || (function () {
     var extendStatics = function (d, b) {
         extendStatics = Object.setPrototypeOf ||
@@ -1711,6 +1712,7 @@ var __generator = (undefined && undefined.__generator) || function (thisArg, bod
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+
 
 
 
@@ -1840,68 +1842,13 @@ var Play = /** @class */ (function (_super) {
         }
     };
     /**
-     * Creates a dedicated shadow-casting light and applies shadows to visible scene meshes.
+     * Sunlight and shadows (see shadows.ts).
      */
     Play.prototype.initializeShadows = function () {
-        var lightDirection = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(-1, -2, -1).normalize();
-        var shadowLight = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.DirectionalLight("shadow_sun", lightDirection, this.scene);
-        shadowLight.position = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(60, 220, 40);
-        shadowLight.intensity = 0.65;
-        shadowLight.shadowMinZ = 1;
-        shadowLight.shadowMaxZ = 500;
-        shadowLight.autoCalcShadowZBounds = false;
-        shadowLight.autoUpdateExtends = false;
-        shadowLight.orthoLeft = -220;
-        shadowLight.orthoRight = 220;
-        shadowLight.orthoTop = 220;
-        shadowLight.orthoBottom = -220;
-        var shadowGenerator = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.ShadowGenerator(2048, shadowLight);
-        shadowGenerator.usePercentageCloserFiltering = true;
-        shadowGenerator.filteringQuality = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.ShadowGenerator.QUALITY_HIGH;
-        shadowGenerator.bias = 0.0015;
-        shadowGenerator.normalBias = 0.05;
-        shadowGenerator.depthScale = 25;
-        shadowGenerator.forceBackFacesOnly = true;
-        shadowGenerator.setDarkness(0.25);
-        var shadowMap = shadowGenerator.getShadowMap();
-        if (!shadowMap) {
-            return;
-        }
-        var excludedShadowMeshes = new Set([
-            "ball",
-            "splatter1",
-            "splatter2",
-            "splatter3",
-            "ffdescription",
-            "monitor",
-        ]);
-        var shadowCasterKeywords = [
-            "tank", "brick", "tree-", "deco-", "ff-", "robot-", "text", "arrow", "project", "target",
-            "podium", "practice", "github", "linkedin", "twitter", "amongus", "statue", "berserk",
-            "guts", "monument", "table", "desk", "chair",
-        ];
-        var shouldCastShadow = function (mesh) {
-            if (excludedShadowMeshes.has(mesh.name)) {
-                return false;
-            }
-            var normalizedName = mesh.name.toLowerCase();
-            var sourceName = mesh instanceof _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.InstancedMesh ? mesh.sourceMesh.name.toLowerCase() : "";
-            var searchableName = "".concat(normalizedName, " ").concat(sourceName);
-            return shadowCasterKeywords.some(function (keyword) { return searchableName.includes(keyword); });
-        };
-        this.scene.meshes.forEach(function (mesh) {
-            if (!mesh.isEnabled() || !mesh.isVisible) {
-                return;
-            }
-            if (mesh instanceof _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Mesh && mesh.material) {
-                mesh.receiveShadows = true;
-            }
-            else if (mesh instanceof _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.InstancedMesh && mesh.sourceMesh.material) {
-                mesh.sourceMesh.receiveShadows = true;
-            }
-            if (shouldCastShadow(mesh)) {
-                shadowGenerator.addShadowCaster(mesh, false);
-            }
+        var _this = this;
+        (0,_shadows__WEBPACK_IMPORTED_MODULE_11__.initializeShadows)(this.scene, {
+            camera: this.camera,
+            focus: function () { return _this.tank.position; },
         });
     };
     /**
@@ -2229,6 +2176,149 @@ var scriptsMap = {
     "src/scenes/tank.ts": __webpack_require__(/*! ./tank */ "./src/scenes/tank.ts"),
     "src/scenes/trees.ts": __webpack_require__(/*! ./trees */ "./src/scenes/trees.ts"),
 };
+
+
+/***/ },
+
+/***/ "./src/scenes/shadows.ts"
+/*!*******************************!*\
+  !*** ./src/scenes/shadows.ts ***!
+  \*******************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   initializeShadows: () => (/* binding */ initializeShadows)
+/* harmony export */ });
+/* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core */ "./node_modules/@babylonjs/core/index.js");
+
+/**
+ * Sunlight and shadows for the world.
+ *
+ * The scene's own directional light ("dir_light") is the sun: it gets a slightly lower, angled
+ * direction so shadows fall away from the camera and a little to the side, which shows them
+ * behind every object. A weak second light from the opposite side keeps the shaded faces from
+ * going flat, without casting shadows of its own (two shadow directions look muddy).
+ *
+ * Shadows come from one high-resolution shadow map that follows the area the camera looks at.
+ */
+/** Sun direction: from behind the camera's right, about 50 degrees above the horizon. */
+var SUN_DIRECTION = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0.14, -1.3, -0.99).normalize();
+var SUN_INTENSITY = 1.2;
+var FILL_DIRECTION = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(1, -1.2, 0.4).normalize();
+var FILL_INTENSITY = 0.3;
+/** Shadow map coverage: a square this many units either side of its centre. */
+var SHADOW_HALF_SIZE = 150;
+var SHADOW_MAP_SIZE = 4096;
+/** How far ahead of the tank (in the camera's view direction) the map is centred. */
+var SHADOW_AHEAD = 60;
+/** How far back along the sun direction the shadow camera sits. */
+var SUN_DISTANCE = 200;
+/** Meshes that never cast: effects, overlays and flat decals. */
+var NO_CAST = ["ball", "splatter", "ffdescription", "monitor", "ground", "road-slab", "ground-petal", "collider"];
+/** Meshes thinner than this (world units) lie flat on the ground and only receive. */
+var MIN_CASTER_HEIGHT = 0.3;
+function initializeShadows(scene, options) {
+    var sun = setUpLights(scene);
+    var generator = createGenerator(scene, sun, options);
+    var isCaster = function (mesh) {
+        // Physics colliders are hidden with visibility 0, which still renders into shadow maps.
+        if (!mesh.isEnabled() || !mesh.isVisible || mesh.visibility <= 0) {
+            return false;
+        }
+        var name = "".concat(mesh.name, " ").concat(mesh instanceof _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.InstancedMesh ? mesh.sourceMesh.name : "").toLowerCase();
+        if (NO_CAST.some(function (keyword) { return name.includes(keyword); })) {
+            return false;
+        }
+        var box = mesh.getBoundingInfo().boundingBox;
+        return box.maximumWorld.y - box.minimumWorld.y >= MIN_CASTER_HEIGHT;
+    };
+    var register = function (mesh) {
+        if (mesh instanceof _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Mesh && mesh.material) {
+            mesh.receiveShadows = true;
+        }
+        else if (mesh instanceof _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.InstancedMesh && mesh.sourceMesh.material) {
+            mesh.sourceMesh.receiveShadows = true;
+        }
+        if (isCaster(mesh)) {
+            generator.addShadowCaster(mesh, false);
+        }
+    };
+    scene.meshes.forEach(function (mesh) {
+        mesh.computeWorldMatrix(true);
+        register(mesh);
+    });
+    // Shots and anything else created during play cast shadows too (they are small and move, so
+    // they only cast; receiving would need their materials recompiled).
+    var added = scene.onNewMeshAddedObservable.add(function (mesh) {
+        // Wait a frame: the mesh gets its material, position and visibility after creation.
+        scene.onAfterRenderObservable.addOnce(function () {
+            if (!mesh.isDisposed() && isCaster(mesh)) {
+                generator.addShadowCaster(mesh, false);
+            }
+        });
+    });
+    scene.onDisposeObservable.addOnce(function () { return scene.onNewMeshAddedObservable.remove(added); });
+    return generator;
+}
+function setUpLights(scene) {
+    var _a;
+    var sun = scene.getLightByName("dir_light");
+    if (!(sun instanceof _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.DirectionalLight)) {
+        sun = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.DirectionalLight("dir_light", SUN_DIRECTION.clone(), scene);
+    }
+    var directional = sun;
+    // The scene file comes with an empty shadow generator on this light; replace it.
+    (_a = directional.getShadowGenerator()) === null || _a === void 0 ? void 0 : _a.dispose();
+    directional.direction.copyFrom(SUN_DIRECTION);
+    directional.intensity = SUN_INTENSITY;
+    directional.diffuse = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.FromHexString("#FFF4E3");
+    directional.specular = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.FromHexString("#FFF4E3");
+    var fill = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.DirectionalLight("fill_light", FILL_DIRECTION.clone(), scene);
+    fill.intensity = FILL_INTENSITY;
+    fill.diffuse = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.FromHexString("#D6E4F5");
+    fill.specular = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.Black();
+    return directional;
+}
+function createGenerator(scene, sun, options) {
+    // One high-resolution map covering the area around what the camera looks at. (Cascaded
+    // shadow maps would be sharper close up, but they split the camera's view range, and this
+    // camera's far plane is effectively infinite, which breaks them.)
+    sun.autoUpdateExtends = false;
+    sun.autoCalcShadowZBounds = false;
+    sun.orthoLeft = -SHADOW_HALF_SIZE;
+    sun.orthoRight = SHADOW_HALF_SIZE;
+    sun.orthoTop = SHADOW_HALF_SIZE;
+    sun.orthoBottom = -SHADOW_HALF_SIZE;
+    sun.shadowMinZ = SUN_DISTANCE - 120;
+    sun.shadowMaxZ = SUN_DISTANCE + 120;
+    var generator = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.ShadowGenerator(SHADOW_MAP_SIZE, sun);
+    applyCommonSettings(generator);
+    // Centre the map a little ahead of the focus point, in the direction the camera looks, and
+    // snap it to whole texels so shadow edges don't shimmer while driving.
+    var texel = (SHADOW_HALF_SIZE * 2) / SHADOW_MAP_SIZE;
+    var forward = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3();
+    var center = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3();
+    var observer = scene.onBeforeRenderObservable.add(function () {
+        options.camera.getDirectionToRef(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Axis.Z, forward);
+        forward.y = 0;
+        if (forward.lengthSquared() > 0.0001) {
+            forward.normalize().scaleInPlace(SHADOW_AHEAD);
+        }
+        center.copyFrom(options.focus()).addInPlace(forward);
+        center.set(Math.round(center.x / texel) * texel, 0, Math.round(center.z / texel) * texel);
+        center.subtractToRef(SUN_DIRECTION.scale(SUN_DISTANCE), sun.position);
+    });
+    scene.onDisposeObservable.addOnce(function () { return scene.onBeforeRenderObservable.remove(observer); });
+    return generator;
+}
+function applyCommonSettings(generator) {
+    generator.usePercentageCloserFiltering = true;
+    generator.filteringQuality = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.ShadowGenerator.QUALITY_MEDIUM;
+    generator.bias = 0.001;
+    generator.normalBias = 0.02;
+    // Keep some sunlight in the shadows so the plain ground material doesn't go too dark.
+    generator.setDarkness(0.3);
+}
 
 
 /***/ },
@@ -5059,4 +5149,4 @@ function createPetalTexture(scene) {
 /***/ }
 
 }]);
-//# sourceMappingURL=src_scenes_tools_ts.6cc9a8a7de6943fd54fc.js.map
+//# sourceMappingURL=src_scenes_tools_ts.8cff8a3e9cf0a251653b.js.map

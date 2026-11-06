@@ -11,6 +11,7 @@ import { restyleLandmarks } from "./landmarks";
 import { decorateGround } from "./ground";
 import { restyleFruitFactory } from "./fruitFactory";
 import { restyleMascots } from "./mascots";
+import { initializeShadows } from "./shadows";
 
 export default class Play extends Node {
     private scene!: BABYLON.Scene;
@@ -139,82 +140,12 @@ export default class Play extends Node {
     }
 
     /**
-     * Creates a dedicated shadow-casting light and applies shadows to visible scene meshes.
+     * Sunlight and shadows (see shadows.ts).
      */
     public initializeShadows(): void {
-        const lightDirection = new BABYLON.Vector3(-1, -2, -1).normalize();
-
-        const shadowLight = new BABYLON.DirectionalLight(
-            "shadow_sun",
-            lightDirection,
-            this.scene,
-        );
-        shadowLight.position = new BABYLON.Vector3(60, 220, 40);
-        shadowLight.intensity = 0.65;
-        shadowLight.shadowMinZ = 1;
-        shadowLight.shadowMaxZ = 500;
-        shadowLight.autoCalcShadowZBounds = false;
-        shadowLight.autoUpdateExtends = false;
-        shadowLight.orthoLeft = -220;
-        shadowLight.orthoRight = 220;
-        shadowLight.orthoTop = 220;
-        shadowLight.orthoBottom = -220;
-
-        const shadowGenerator = new BABYLON.ShadowGenerator(2048, shadowLight);
-        shadowGenerator.usePercentageCloserFiltering = true;
-        shadowGenerator.filteringQuality = BABYLON.ShadowGenerator.QUALITY_HIGH;
-        shadowGenerator.bias = 0.0015;
-        shadowGenerator.normalBias = 0.05;
-        shadowGenerator.depthScale = 25;
-        shadowGenerator.forceBackFacesOnly = true;
-        shadowGenerator.setDarkness(0.25);
-
-        const shadowMap = shadowGenerator.getShadowMap();
-        if (!shadowMap) {
-            return;
-        }
-
-        const excludedShadowMeshes = new Set([
-            "ball",
-            "splatter1",
-            "splatter2",
-            "splatter3",
-            "ffdescription",
-            "monitor",
-        ]);
-
-        const shadowCasterKeywords = [
-            "tank", "brick", "tree-", "deco-", "ff-", "robot-", "text", "arrow", "project", "target",
-            "podium", "practice", "github", "linkedin", "twitter", "amongus", "statue", "berserk",
-            "guts", "monument", "table", "desk", "chair",
-        ];
-
-        const shouldCastShadow = (mesh: BABYLON.AbstractMesh): boolean => {
-            if (excludedShadowMeshes.has(mesh.name)) {
-                return false;
-            }
-
-            const normalizedName = mesh.name.toLowerCase();
-            const sourceName = mesh instanceof BABYLON.InstancedMesh ? mesh.sourceMesh.name.toLowerCase() : "";
-            const searchableName = `${normalizedName} ${sourceName}`;
-
-            return shadowCasterKeywords.some((keyword) => searchableName.includes(keyword));
-        };
-
-        this.scene.meshes.forEach((mesh) => {
-            if (!mesh.isEnabled() || !mesh.isVisible) {
-                return;
-            }
-
-            if (mesh instanceof BABYLON.Mesh && mesh.material) {
-                mesh.receiveShadows = true;
-            } else if (mesh instanceof BABYLON.InstancedMesh && mesh.sourceMesh.material) {
-                mesh.sourceMesh.receiveShadows = true;
-            }
-
-            if (shouldCastShadow(mesh)) {
-                shadowGenerator.addShadowCaster(mesh, false);
-            }
+        initializeShadows(this.scene, {
+            camera: this.camera,
+            focus: () => this.tank.position,
         });
     }
 

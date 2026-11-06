@@ -34,7 +34,7 @@ export default class Play extends Node {
      */
     private initializeTankModel;
     /**
-     * Creates a dedicated shadow-casting light and applies shadows to visible scene meshes.
+     * Sunlight and shadows (see shadows.ts).
      */
     initializeShadows(): void;
     /**
