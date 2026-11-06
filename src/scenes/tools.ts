@@ -163,11 +163,14 @@ async function loadGuiComponent(path: string, node: (Scene | Node | AbstractMesh
 
     images.forEach((i) => {
         const source = i.source ?? "";
-        if (source.startsWith("http://") || source.startsWith("https://")) {
+        // Only plain relative paths are resolved against the GUI file's folder. Empty sources,
+        // root-relative paths and any URL with a scheme (http:, https:, data:, blob:, ...) or
+        // protocol-relative "//" prefix are left untouched.
+        if (!source || source.startsWith("/") || /^[a-z][a-z0-9+.-]*:/i.test(source)) {
             return;
         }
 
-        i.source = basePath + i.source;
+        i.source = basePath + source;
     });
 }
 

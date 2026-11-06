@@ -107,7 +107,7 @@ return /******/ (() => { // webpackBootstrap
 /******/ 		// This function allow to reference async chunks
 /******/ 		__webpack_require__.u = (chunkId) => {
 /******/ 			// return url for filenames based on template
-/******/ 			return "" + chunkId + "." + {"vendors-node_modules_babylonjs_core_index_js":"671c31e5764e6891ab32","src_game-runtime_ts":"ac1fcf32aae89f57d410","vendors-node_modules_cannon_build_cannon_js":"849980e783b37925e48d","src_scenes_tools_ts":"54a40a838beed9722df5","vendors-node_modules_babylonjs_gui_index_js":"ace565c7e9467265ad7d"}[chunkId] + ".js";
+/******/ 			return "" + chunkId + "." + {"vendors-node_modules_babylonjs_core_index_js":"671c31e5764e6891ab32","src_game-runtime_ts":"8ffe2737db82c37b838b","vendors-node_modules_cannon_build_cannon_js":"849980e783b37925e48d","src_scenes_tools_ts":"0385841a89cd9de33122","vendors-node_modules_babylonjs_gui_index_js":"ace565c7e9467265ad7d"}[chunkId] + ".js";
 /******/ 		};
 /******/ 	})();
 /******/ 	
@@ -352,14 +352,36 @@ var Game = /** @class */ (function () {
     }
     Game.prototype._bootstrap = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var GameRuntime;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0: return [4 /*yield*/, Promise.all(/*! import() */[__webpack_require__.e("vendors-node_modules_babylonjs_core_index_js"), __webpack_require__.e("src_game-runtime_ts")]).then(__webpack_require__.bind(__webpack_require__, /*! ./game-runtime */ "./src/game-runtime.ts"))];
+            var GameRuntime, error_1, overlay, retryButton;
+            var _a, _b;
+            return __generator(this, function (_c) {
+                switch (_c.label) {
+                    case 0:
+                        _c.trys.push([0, 2, , 3]);
+                        return [4 /*yield*/, Promise.all(/*! import() */[__webpack_require__.e("vendors-node_modules_babylonjs_core_index_js"), __webpack_require__.e("src_game-runtime_ts")]).then(__webpack_require__.bind(__webpack_require__, /*! ./game-runtime */ "./src/game-runtime.ts"))];
                     case 1:
-                        GameRuntime = (_a.sent()).GameRuntime;
+                        GameRuntime = (_c.sent()).GameRuntime;
                         this.runtime = new GameRuntime();
-                        return [2 /*return*/];
+                        return [3 /*break*/, 3];
+                    case 2:
+                        error_1 = _c.sent();
+                        // The runtime chunk failed to load or the runtime could not start: surface it instead of
+                        // leaving the static "Loading scene" overlay up forever.
+                        console.error("Failed to start the game runtime", error_1);
+                        (_a = document.getElementById("statusTitle")) === null || _a === void 0 ? void 0 : _a.replaceChildren("Scene failed to load");
+                        (_b = document.getElementById("statusMessage")) === null || _b === void 0 ? void 0 : _b.replaceChildren("Refresh the page to try again. If the problem persists, check the browser console for details.");
+                        overlay = document.getElementById("statusOverlay");
+                        if (overlay) {
+                            overlay.hidden = false;
+                            overlay.dataset.state = "error";
+                        }
+                        retryButton = document.getElementById("statusRetryButton");
+                        if (retryButton) {
+                            retryButton.hidden = false;
+                            retryButton.addEventListener("click", function () { return window.location.reload(); }, { once: true });
+                        }
+                        return [3 /*break*/, 3];
+                    case 3: return [2 /*return*/];
                 }
             });
         });

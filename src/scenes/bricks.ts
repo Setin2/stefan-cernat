@@ -7,7 +7,9 @@ type BrickContext = {
 };
 
 /**
- * Set up a wall of bricks in the scene at a specified position.
+ * Set up a wall of bricks centered at (x, z) and rotated around its own center.
+ * @param y fallback ground height used if no ground is found below the wall.
+ * @param rotationY rotation of the wall around its own vertical axis, in radians.
  */
 export function instantiateBricks(
     _this: BrickContext,
@@ -23,7 +25,6 @@ export function instantiateBricks(
     const brickLength = 6 * brickScaleFactor;
     const brickDepth = 3 * brickScaleFactor;
     const brickHeight = brickLength * 0.5 * brickScaleFactor;
-    const initialX = x;
     const groundY = getGroundHeight(x, y, z);
     const initialY = groundY + brickHeight / 2;
     const tankImpostor = _this.tank.physicsImpostor;
@@ -41,7 +42,12 @@ export function instantiateBricks(
     // Define a small buffer to prevent collision
     const buffer = 0; // Adjust this value as needed
 
+    // The wall is built in the parent's local space (centered on x = 0, z = 0) so that
+    // rotating the parent turns the wall around its own center.
     const wallParent = new BABYLON.TransformNode("wallParent", _this.scene);
+    wallParent.position.set(x, 0, z);
+    wallParent.rotation.y = rotationY;
+    wallParent.computeWorldMatrix(true);
     brick.parent = wallParent;
 
     // Create the wall of bricks
@@ -52,21 +58,19 @@ export function instantiateBricks(
         // Calculate the total width of the current row
         const totalRowWidth = numBricksInRow * (brickLength + buffer);
         
-        // Calculate the center position for the current row
-        const rowCenterX = initialX;
-        
-        // Start placing bricks from the center
-        let x = rowCenterX - (totalRowWidth / 2);
-        let y = initialY + j * (brickHeight + buffer);
-        
+        // Start placing bricks so the row is centered on the wall's center
+        let localX = -(totalRowWidth / 2);
+        const localY = initialY + j * (brickHeight + buffer);
+
         for (let i = 0; i < numBricksInRow; i++) {
             const brickInstance = brick.createInstance(`brick${j}-${i}`);
-            positionBrick(_this, brickInstance, x, y, z, brickMass);
-            x += brickLength + buffer; // Increment x position with buffer
+            positionBrick(_this, brickInstance, localX, localY, 0, brickMass);
+            // Parent only after the impostor exists: Babylon skips creating the physics
+            // body for meshes that already have a parent.
             brickInstance.parent = wallParent;
+            localX += brickLength + buffer; // Increment x position with buffer
         }
     }
-    wallParent.rotate(BABYLON.Axis.Y, rotationY, BABYLON.Space.WORLD);
 
     /**
      * Create a brick mesh.

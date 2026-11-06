@@ -15,7 +15,9 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core */ "./node_modules/@babylonjs/core/index.js");
 
 /**
- * Set up a wall of bricks in the scene at a specified position.
+ * Set up a wall of bricks centered at (x, z) and rotated around its own center.
+ * @param y fallback ground height used if no ground is found below the wall.
+ * @param rotationY rotation of the wall around its own vertical axis, in radians.
  */
 function instantiateBricks(_this, x, y, z, numRows, numColumnsPerRow, rotationY) {
     var _a;
@@ -25,7 +27,6 @@ function instantiateBricks(_this, x, y, z, numRows, numColumnsPerRow, rotationY)
     var brickLength = 6 * brickScaleFactor;
     var brickDepth = 3 * brickScaleFactor;
     var brickHeight = brickLength * 0.5 * brickScaleFactor;
-    var initialX = x;
     var groundY = getGroundHeight(x, y, z);
     var initialY = groundY + brickHeight / 2;
     var tankImpostor = _this.tank.physicsImpostor;
@@ -39,7 +40,12 @@ function instantiateBricks(_this, x, y, z, numRows, numColumnsPerRow, rotationY)
     brick.isPickable = false;
     // Define a small buffer to prevent collision
     var buffer = 0; // Adjust this value as needed
+    // The wall is built in the parent's local space (centered on x = 0, z = 0) so that
+    // rotating the parent turns the wall around its own center.
     var wallParent = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.TransformNode("wallParent", _this.scene);
+    wallParent.position.set(x, 0, z);
+    wallParent.rotation.y = rotationY;
+    wallParent.computeWorldMatrix(true);
     brick.parent = wallParent;
     // Create the wall of bricks
     for (var j = 0; j < numRows; j++) {
@@ -47,19 +53,18 @@ function instantiateBricks(_this, x, y, z, numRows, numColumnsPerRow, rotationY)
         var numBricksInRow = (_a = numColumnsPerRow[j]) !== null && _a !== void 0 ? _a : 0;
         // Calculate the total width of the current row
         var totalRowWidth = numBricksInRow * (brickLength + buffer);
-        // Calculate the center position for the current row
-        var rowCenterX = initialX;
-        // Start placing bricks from the center
-        var x_1 = rowCenterX - (totalRowWidth / 2);
-        var y_1 = initialY + j * (brickHeight + buffer);
+        // Start placing bricks so the row is centered on the wall's center
+        var localX = -(totalRowWidth / 2);
+        var localY = initialY + j * (brickHeight + buffer);
         for (var i = 0; i < numBricksInRow; i++) {
             var brickInstance = brick.createInstance("brick".concat(j, "-").concat(i));
-            positionBrick(_this, brickInstance, x_1, y_1, z, brickMass);
-            x_1 += brickLength + buffer; // Increment x position with buffer
+            positionBrick(_this, brickInstance, localX, localY, 0, brickMass);
+            // Parent only after the impostor exists: Babylon skips creating the physics
+            // body for meshes that already have a parent.
             brickInstance.parent = wallParent;
+            localX += brickLength + buffer; // Increment x position with buffer
         }
     }
-    wallParent.rotate(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Axis.Y, rotationY, _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Space.WORLD);
     /**
      * Create a brick mesh.
      */
@@ -210,7 +215,6 @@ var Play = /** @class */ (function (_super) {
         this.divFps = document.getElementById("fps");
         this.configureFpsCounter();
         // Set physics after the required scene nodes are available.
-        this.camera.lockedTarget = this.tank;
         this.scene.enablePhysics();
         (_a = this.scene.getPhysicsEngine()) === null || _a === void 0 ? void 0 : _a.setGravity(new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, -40, 0));
         this.easterEgg();
@@ -234,7 +238,9 @@ var Play = /** @class */ (function (_super) {
         var forward = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, 0, 1);
         (0,_trees__WEBPACK_IMPORTED_MODULE_3__.instantiateTrees)({ scene: this.scene });
         (0,_bricks__WEBPACK_IMPORTED_MODULE_4__.instantiateBricks)({ scene: this.scene, tank: this.tank, brickSound: this.brickSound }, -5, 8, -30, 3, [6, 6, 4, 2], 0);
-        (0,_bricks__WEBPACK_IMPORTED_MODULE_4__.instantiateBricks)({ scene: this.scene, tank: this.tank, brickSound: this.brickSound }, 130, 8, -50, 4, [6, 6, 6, 4], 300);
+        // Center and angle match where this wall has always been placed (it was previously
+        // built at (130, -50) and then rotated 300 rad around the world origin).
+        (0,_bricks__WEBPACK_IMPORTED_MODULE_4__.instantiateBricks)({ scene: this.scene, tank: this.tank, brickSound: this.brickSound }, 47.1152, 8, 131.0731, 4, [6, 6, 6, 4], 4.6903);
         try {
             this.initializeShadows();
         }
@@ -281,6 +287,11 @@ var Play = /** @class */ (function (_super) {
             "ffdescription",
             "monitor",
         ]);
+        var shadowCasterKeywords = [
+            "tank", "brick", "tree-trunk", "tree-leaves", "text", "arrow", "project", "target",
+            "podium", "practice", "github", "linkedin", "twitter", "amongus", "statue", "berserk",
+            "guts", "monument", "table", "desk", "chair",
+        ];
         var shouldCastShadow = function (mesh) {
             if (excludedShadowMeshes.has(mesh.name)) {
                 return false;
@@ -288,27 +299,7 @@ var Play = /** @class */ (function (_super) {
             var normalizedName = mesh.name.toLowerCase();
             var sourceName = mesh instanceof _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.InstancedMesh ? mesh.sourceMesh.name.toLowerCase() : "";
             var searchableName = "".concat(normalizedName, " ").concat(sourceName);
-            return searchableName.includes("tank") ||
-                searchableName.includes("brick") ||
-                searchableName.includes("tree-trunk") ||
-                searchableName.includes("tree-leaves") ||
-                searchableName.includes("text") ||
-                searchableName.includes("arrow") ||
-                searchableName.includes("project") ||
-                searchableName.includes("target") ||
-                searchableName.includes("podium") ||
-                searchableName.includes("practice") ||
-                searchableName.includes("github") ||
-                searchableName.includes("linkedin") ||
-                searchableName.includes("twitter") ||
-                searchableName.includes("amongus") ||
-                searchableName.includes("statue") ||
-                searchableName.includes("berserk") ||
-                searchableName.includes("guts") ||
-                searchableName.includes("monument") ||
-                searchableName.includes("table") ||
-                searchableName.includes("desk") ||
-                searchableName.includes("chair");
+            return shadowCasterKeywords.some(function (keyword) { return searchableName.includes(keyword); });
         };
         this.scene.meshes.forEach(function (mesh) {
             if (!mesh.isEnabled() || !mesh.isVisible) {
@@ -422,7 +413,7 @@ var Play = /** @class */ (function (_super) {
         this.scene.pointerMovePredicate = function () { return false; };
         this.scene.pointerDownPredicate = function () { return false; };
         this.scene.pointerUpPredicate = function () { return false; };
-        var movableMeshes = new Set(["tank", "tank_holder", "amongus", "splatter1"]);
+        var movableMeshes = new Set(["tank", "tank_holder", "amongus", "splatter1", "splatter2", "splatter3"]);
         this.scene.meshes
             .filter(function (mesh) { return !mesh.physicsImpostor && !movableMeshes.has(mesh.name); })
             .forEach(function (mesh) {
@@ -431,11 +422,14 @@ var Play = /** @class */ (function (_super) {
             mesh.freezeWorldMatrix();
         });
     };
-    Play.prototype.disposeControlOverlay = function () {
+    Play.prototype.clearControlDismissTimer = function () {
         if (this.controlDismissTimer) {
             clearTimeout(this.controlDismissTimer);
             this.controlDismissTimer = null;
         }
+    };
+    Play.prototype.disposeControlOverlay = function () {
+        this.clearControlDismissTimer();
         window.removeEventListener("keydown", this.handleControlHotkeys);
         if (this.controlOverlayTexture) {
             this.controlOverlayTexture.dispose();
@@ -448,10 +442,13 @@ var Play = /** @class */ (function (_super) {
         if (!this.controlOverlayPanel) {
             return;
         }
+        // Manual interaction takes over; don't let the first-load auto-dismiss hide a reopened panel.
+        this.clearControlDismissTimer();
         this.controlOverlayPanel.isVisible = !this.controlOverlayPanel.isVisible;
         this.updateControlHint();
     };
     Play.prototype.hideControlOverlay = function () {
+        this.clearControlDismissTimer();
         if (!this.controlOverlayPanel || !this.controlOverlayPanel.isVisible) {
             return;
         }
@@ -689,7 +686,14 @@ function initializeTankMovement(_this, rotationSpeed) {
     var translationDelta = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.Zero();
     var cameraOffset = _this.camera.position.subtract(_this.tank.position);
     var baseTankY = _this.tank.position.y;
-    var treeTrunks = _this.scene.meshes.filter(function (mesh) { return mesh.name.startsWith("tree-trunk"); });
+    // Tree trunks are static, so their collision footprint is computed once instead of every frame.
+    var treeColliders = _this.scene.meshes
+        .filter(function (mesh) { return mesh.name.startsWith("tree-trunk"); })
+        .map(function (trunk) {
+        var radius = getHorizontalRadius(trunk);
+        return { x: trunk.absolutePosition.x, z: trunk.absolutePosition.z, radius: radius };
+    });
+    var maxDeltaSeconds = 0.1;
     var maxForwardSpeed = 38;
     var maxReverseSpeed = 20;
     var acceleration = 48;
@@ -712,6 +716,14 @@ function initializeTankMovement(_this, rotationSpeed) {
     var handleKeyEvent = function (evt) {
         inputMap[evt.sourceEvent.key.toLowerCase()] = evt.sourceEvent.type === "keydown";
     };
+    // Key-up events are lost when the window loses focus, so release every key on blur.
+    var releaseAllKeys = function () {
+        for (var key in inputMap) {
+            inputMap[key] = false;
+        }
+    };
+    window.addEventListener("blur", releaseAllKeys);
+    _this.scene.onDisposeObservable.addOnce(function () { return window.removeEventListener("blur", releaseAllKeys); });
     _this.scene.actionManager = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.ActionManager(_this.scene);
     _this.scene.actionManager.registerAction(new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.ExecuteCodeAction(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.ActionManager.OnKeyDownTrigger, handleKeyEvent));
     _this.scene.actionManager.registerAction(new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.ExecuteCodeAction(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.ActionManager.OnKeyUpTrigger, handleKeyEvent));
@@ -771,7 +783,8 @@ function initializeTankMovement(_this, rotationSpeed) {
                 lastFpsUpdateTime = now;
             }
         }
-        var deltaSeconds = engine.getDeltaTime() / 1000;
+        // Clamp so a long pause (hidden tab, stalled frame) can't teleport the tank through obstacles.
+        var deltaSeconds = Math.min(engine.getDeltaTime() / 1000, maxDeltaSeconds);
         var moveInput = (inputMap["w"] ? 1 : 0) - (inputMap["s"] ? 1 : 0);
         var turnInput = (inputMap["d"] ? 1 : 0) - (inputMap["a"] ? 1 : 0);
         var currentForwardSpeed = applyMovement(_this.tank, moveInput, deltaSeconds);
@@ -820,12 +833,11 @@ function initializeTankMovement(_this, rotationSpeed) {
         return Math.max(extent.x, extent.z);
     }
     function collidesWithTree(position) {
-        for (var _i = 0, treeTrunks_1 = treeTrunks; _i < treeTrunks_1.length; _i++) {
-            var trunk = treeTrunks_1[_i];
-            var trunkRadius = getHorizontalRadius(trunk);
-            var dx = position.x - trunk.absolutePosition.x;
-            var dz = position.z - trunk.absolutePosition.z;
-            var minimumDistance = tankCollisionRadius + trunkRadius;
+        for (var _i = 0, treeColliders_1 = treeColliders; _i < treeColliders_1.length; _i++) {
+            var tree = treeColliders_1[_i];
+            var dx = position.x - tree.x;
+            var dz = position.z - tree.z;
+            var minimumDistance = tankCollisionRadius + tree.radius;
             if ((dx * dx) + (dz * dz) < minimumDistance * minimumDistance) {
                 return true;
             }
@@ -915,8 +927,12 @@ function initializeShooting(_this, forward) {
                     hitFeedback = createHitFeedback(gui, targetUi);
                     impactBurst = createImpactBurst(gui, targetUi);
                     getHitRadiusSquared = function (mesh) {
+                        // Derive the world radius from the local sphere and absolute scaling: radiusWorld is stale for
+                        // meshes with doNotSyncBoundingInfo (set by Play.optimizeScene and copied onto clones).
                         mesh.computeWorldMatrix(true);
-                        var radius = mesh.getBoundingInfo().boundingSphere.radiusWorld + shotRadius;
+                        var scaling = mesh.absoluteScaling;
+                        var maxScale = Math.max(Math.abs(scaling.x), Math.abs(scaling.y), Math.abs(scaling.z));
+                        var radius = mesh.getBoundingInfo().boundingSphere.radius * maxScale + shotRadius;
                         return radius * radius;
                     };
                     targetLabels = new Map();
@@ -1452,10 +1468,13 @@ function loadGuiComponent(path, node, exports) {
                     images.forEach(function (i) {
                         var _a;
                         var source = (_a = i.source) !== null && _a !== void 0 ? _a : "";
-                        if (source.startsWith("http://") || source.startsWith("https://")) {
+                        // Only plain relative paths are resolved against the GUI file's folder. Empty sources,
+                        // root-relative paths and any URL with a scheme (http:, https:, data:, blob:, ...) or
+                        // protocol-relative "//" prefix are left untouched.
+                        if (!source || source.startsWith("/") || /^[a-z][a-z0-9+.-]*:/i.test(source)) {
                             return;
                         }
-                        i.source = basePath + i.source;
+                        i.source = basePath + source;
                     });
                     return [2 /*return*/];
             }
@@ -2195,4 +2214,4 @@ function instantiateTree(templates, position, index, scene) {
 /***/ }
 
 }]);
-//# sourceMappingURL=src_scenes_tools_ts.54a40a838beed9722df5.js.map
+//# sourceMappingURL=src_scenes_tools_ts.0385841a89cd9de33122.js.map

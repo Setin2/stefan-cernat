@@ -45,6 +45,7 @@ export default class Play extends Node {
      */
     initializeTextures(): void;
     optimizeScene(): void;
+    private clearControlDismissTimer;
     private disposeControlOverlay;
     private toggleControlOverlay;
     private hideControlOverlay;

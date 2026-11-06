@@ -42,7 +42,14 @@ export function initializeTankMovement(_this: TankContext, rotationSpeed: number
     const translationDelta = BABYLON.Vector3.Zero();
     const cameraOffset = _this.camera.position.subtract(_this.tank.position);
     const baseTankY = _this.tank.position.y;
-    const treeTrunks = _this.scene.meshes.filter((mesh) => mesh.name.startsWith("tree-trunk"));
+    // Tree trunks are static, so their collision footprint is computed once instead of every frame.
+    const treeColliders = _this.scene.meshes
+        .filter((mesh) => mesh.name.startsWith("tree-trunk"))
+        .map((trunk) => {
+            const radius = getHorizontalRadius(trunk);
+            return { x: trunk.absolutePosition.x, z: trunk.absolutePosition.z, radius };
+        });
+    const maxDeltaSeconds = 0.1;
     const maxForwardSpeed = 38;
     const maxReverseSpeed = 20;
     const acceleration = 48;
@@ -68,6 +75,15 @@ export function initializeTankMovement(_this: TankContext, rotationSpeed: number
     const handleKeyEvent = (evt: BABYLON.ActionEvent) => {
         inputMap[evt.sourceEvent.key.toLowerCase()] = evt.sourceEvent.type === "keydown";
     };
+
+    // Key-up events are lost when the window loses focus, so release every key on blur.
+    const releaseAllKeys = () => {
+        for (const key in inputMap) {
+            inputMap[key] = false;
+        }
+    };
+    window.addEventListener("blur", releaseAllKeys);
+    _this.scene.onDisposeObservable.addOnce(() => window.removeEventListener("blur", releaseAllKeys));
 
     _this.scene.actionManager = new BABYLON.ActionManager(_this.scene);
     _this.scene.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnKeyDownTrigger, handleKeyEvent));
@@ -139,7 +155,8 @@ export function initializeTankMovement(_this: TankContext, rotationSpeed: number
             }
         }
 
-        const deltaSeconds = engine.getDeltaTime() / 1000;
+        // Clamp so a long pause (hidden tab, stalled frame) can't teleport the tank through obstacles.
+        const deltaSeconds = Math.min(engine.getDeltaTime() / 1000, maxDeltaSeconds);
         const moveInput = (inputMap["w"] ? 1 : 0) - (inputMap["s"] ? 1 : 0);
         const turnInput = (inputMap["d"] ? 1 : 0) - (inputMap["a"] ? 1 : 0);
         const currentForwardSpeed = applyMovement(_this.tank, moveInput, deltaSeconds);
@@ -204,11 +221,10 @@ export function initializeTankMovement(_this: TankContext, rotationSpeed: number
     }
 
     function collidesWithTree(position: BABYLON.Vector3): boolean {
-        for (const trunk of treeTrunks) {
-            const trunkRadius = getHorizontalRadius(trunk);
-            const dx = position.x - trunk.absolutePosition.x;
-            const dz = position.z - trunk.absolutePosition.z;
-            const minimumDistance = tankCollisionRadius + trunkRadius;
+        for (const tree of treeColliders) {
+            const dx = position.x - tree.x;
+            const dz = position.z - tree.z;
+            const minimumDistance = tankCollisionRadius + tree.radius;
 
             if ((dx * dx) + (dz * dz) < minimumDistance * minimumDistance) {
                 return true;
@@ -301,8 +317,12 @@ export async function initializeShooting(_this: TankContext, forward: BABYLON.Ve
     const impactBurst = createImpactBurst(gui, targetUi);
 
     const getHitRadiusSquared = (mesh: BABYLON.Mesh): number => {
+        // Derive the world radius from the local sphere and absolute scaling: radiusWorld is stale for
+        // meshes with doNotSyncBoundingInfo (set by Play.optimizeScene and copied onto clones).
         mesh.computeWorldMatrix(true);
-        const radius = mesh.getBoundingInfo().boundingSphere.radiusWorld + shotRadius;
+        const scaling = mesh.absoluteScaling;
+        const maxScale = Math.max(Math.abs(scaling.x), Math.abs(scaling.y), Math.abs(scaling.z));
+        const radius = mesh.getBoundingInfo().boundingSphere.radius * maxScale + shotRadius;
         return radius * radius;
     };
 

@@ -55,7 +55,6 @@ export default class Play extends Node {
         this.configureFpsCounter();
 
         // Set physics after the required scene nodes are available.
-        this.camera.lockedTarget = this.tank;
         this.scene.enablePhysics();
         this.scene.getPhysicsEngine()?.setGravity(new BABYLON.Vector3(0, -40, 0));
 
@@ -84,7 +83,9 @@ export default class Play extends Node {
 
         instantiateTrees({ scene: this.scene });
         instantiateBricks({ scene: this.scene, tank: this.tank, brickSound: this.brickSound }, -5, 8, -30, 3, [6, 6, 4, 2], 0);
-        instantiateBricks({ scene: this.scene, tank: this.tank, brickSound: this.brickSound }, 130, 8, -50, 4, [6, 6, 6, 4], 300);
+        // Center and angle match where this wall has always been placed (it was previously
+        // built at (130, -50) and then rotated 300 rad around the world origin).
+        instantiateBricks({ scene: this.scene, tank: this.tank, brickSound: this.brickSound }, 47.1152, 8, 131.0731, 4, [6, 6, 6, 4], 4.6903);
         try {
             this.initializeShadows();
         } catch (error) {
@@ -140,6 +141,12 @@ export default class Play extends Node {
             "monitor",
         ]);
 
+        const shadowCasterKeywords = [
+            "tank", "brick", "tree-trunk", "tree-leaves", "text", "arrow", "project", "target",
+            "podium", "practice", "github", "linkedin", "twitter", "amongus", "statue", "berserk",
+            "guts", "monument", "table", "desk", "chair",
+        ];
+
         const shouldCastShadow = (mesh: BABYLON.AbstractMesh): boolean => {
             if (excludedShadowMeshes.has(mesh.name)) {
                 return false;
@@ -149,27 +156,7 @@ export default class Play extends Node {
             const sourceName = mesh instanceof BABYLON.InstancedMesh ? mesh.sourceMesh.name.toLowerCase() : "";
             const searchableName = `${normalizedName} ${sourceName}`;
 
-            return searchableName.includes("tank") ||
-                searchableName.includes("brick") ||
-                searchableName.includes("tree-trunk") ||
-                searchableName.includes("tree-leaves") ||
-                searchableName.includes("text") ||
-                searchableName.includes("arrow") ||
-                searchableName.includes("project") ||
-                searchableName.includes("target") ||
-                searchableName.includes("podium") ||
-                searchableName.includes("practice") ||
-                searchableName.includes("github") ||
-                searchableName.includes("linkedin") ||
-                searchableName.includes("twitter") ||
-                searchableName.includes("amongus") ||
-                searchableName.includes("statue") ||
-                searchableName.includes("berserk") ||
-                searchableName.includes("guts") ||
-                searchableName.includes("monument") ||
-                searchableName.includes("table") ||
-                searchableName.includes("desk") ||
-                searchableName.includes("chair");
+            return shadowCasterKeywords.some((keyword) => searchableName.includes(keyword));
         };
 
         this.scene.meshes.forEach((mesh) => {
@@ -294,7 +281,7 @@ export default class Play extends Node {
         this.scene.pointerDownPredicate = () => false;
         this.scene.pointerUpPredicate = () => false;
 
-        const movableMeshes = new Set(["tank", "tank_holder", "amongus", "splatter1"]);
+        const movableMeshes = new Set(["tank", "tank_holder", "amongus", "splatter1", "splatter2", "splatter3"]);
         this.scene.meshes
             .filter((mesh) => !mesh.physicsImpostor && !movableMeshes.has(mesh.name))
             .forEach((mesh) => {
@@ -304,11 +291,15 @@ export default class Play extends Node {
             });
     }
 
-    private disposeControlOverlay(): void {
+    private clearControlDismissTimer(): void {
         if (this.controlDismissTimer) {
             clearTimeout(this.controlDismissTimer);
             this.controlDismissTimer = null;
         }
+    }
+
+    private disposeControlOverlay(): void {
+        this.clearControlDismissTimer();
 
         window.removeEventListener("keydown", this.handleControlHotkeys);
 
@@ -326,11 +317,15 @@ export default class Play extends Node {
             return;
         }
 
+        // Manual interaction takes over; don't let the first-load auto-dismiss hide a reopened panel.
+        this.clearControlDismissTimer();
         this.controlOverlayPanel.isVisible = !this.controlOverlayPanel.isVisible;
         this.updateControlHint();
     }
 
     private hideControlOverlay(): void {
+        this.clearControlDismissTimer();
+
         if (!this.controlOverlayPanel || !this.controlOverlayPanel.isVisible) {
             return;
         }
