@@ -6,6 +6,10 @@ type BrickContext = {
     brickSound: BABYLON.Sound;
 };
 
+/** Shared by every wall, since they all play the same sound. */
+const brickSoundCooldownMs = 150;
+let lastBrickSoundTime = 0;
+
 /**
  * Set up a wall of bricks centered at (x, z) and rotated around its own center.
  * @param y fallback ground height used if no ground is found below the wall.
@@ -109,10 +113,18 @@ export function instantiateBricks(
             _this.scene
         );
 
-        // Play sound on collision with the tank
+        // Play sound on collision with the tank. Driving into a wall makes many bricks touch the
+        // tank in the same moment, and they all share one sound, so throttle it to avoid
+        // restarting it many times in a row.
         brick.physicsImpostor.registerOnPhysicsCollide(
             tankImpostor,
             () => {
+                const now = performance.now();
+                if (now - lastBrickSoundTime < brickSoundCooldownMs) {
+                    return;
+                }
+
+                lastBrickSoundTime = now;
                 _this.brickSound.play();
             }
         );

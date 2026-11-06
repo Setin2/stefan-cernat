@@ -14,6 +14,9 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ });
 /* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core */ "./node_modules/@babylonjs/core/index.js");
 
+/** Shared by every wall, since they all play the same sound. */
+var brickSoundCooldownMs = 150;
+var lastBrickSoundTime = 0;
 /**
  * Set up a wall of bricks centered at (x, z) and rotated around its own center.
  * @param y fallback ground height used if no ground is found below the wall.
@@ -79,8 +82,15 @@ function instantiateBricks(_this, x, y, z, numRows, numColumnsPerRow, rotationY)
     function positionBrick(_this, brick, x, y, z, mass) {
         brick.position.set(x, y, z);
         brick.physicsImpostor = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.PhysicsImpostor(brick, _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.PhysicsImpostor.BoxImpostor, { mass: mass, friction: 1 }, _this.scene);
-        // Play sound on collision with the tank
+        // Play sound on collision with the tank. Driving into a wall makes many bricks touch the
+        // tank in the same moment, and they all share one sound, so throttle it to avoid
+        // restarting it many times in a row.
         brick.physicsImpostor.registerOnPhysicsCollide(tankImpostor, function () {
+            var now = performance.now();
+            if (now - lastBrickSoundTime < brickSoundCooldownMs) {
+                return;
+            }
+            lastBrickSoundTime = now;
             _this.brickSound.play();
         });
         var physicsBody = brick.physicsImpostor.physicsBody;
@@ -217,6 +227,7 @@ var Play = /** @class */ (function (_super) {
         // Set physics after the required scene nodes are available.
         this.scene.enablePhysics();
         (_a = this.scene.getPhysicsEngine()) === null || _a === void 0 ? void 0 : _a.setGravity(new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, -40, 0));
+        this.configurePhysicsSubsteps();
         this.easterEgg();
         this.play();
         this.optimizeScene();
@@ -378,11 +389,35 @@ var Play = /** @class */ (function (_super) {
         this.tankSound = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Sound("tank", "assets/sounds/splash.mp3", this.scene, null, { loop: false, volume: 1 });
         this.brickSound = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Sound("brick", "assets/sounds/brick.mp3", this.scene, null, { loop: false, volume: 0.5 });
         this.tank.physicsImpostor = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.PhysicsImpostor(this.tank, _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.PhysicsImpostor.BoxImpostor, { mass: 1000, restitution: 0 }, this.scene);
+        // Movement sets the tank's velocity every frame, so linear damping isn't needed. Keep strong
+        // angular damping so knocks from bricks can't spin the tank between frames.
         var physicsBody = this.tank.physicsImpostor.physicsBody;
         if (physicsBody) {
-            physicsBody.linearDamping = 0.6;
             physicsBody.angularDamping = 0.98;
         }
+    };
+    /**
+     * By default Babylon advances cannon.js with one step per frame, sized to the frame time. At
+     * 60 fps a shot (200 units/s) moves ~3.3 units per step, about the thickness of a brick, so it
+     * can pass straight through; at lower frame rates it gets worse. Splitting each frame into
+     * equal sub-steps of at most 1/120s keeps the simulation stable at any frame rate while still
+     * advancing exactly the frame's time, so motion stays smooth.
+     */
+    Play.prototype.configurePhysicsSubsteps = function () {
+        var _a;
+        var plugin = (_a = this.scene.getPhysicsEngine()) === null || _a === void 0 ? void 0 : _a.getPhysicsPlugin();
+        if (!plugin) {
+            return;
+        }
+        var maxSubStepSeconds = 1 / 120;
+        var executeStep = plugin.executeStep.bind(plugin);
+        plugin.executeStep = function (delta, impostors) {
+            var subSteps = Math.max(1, Math.ceil(delta / maxSubStepSeconds - 1e-6));
+            var subStepSeconds = delta / subSteps;
+            for (var i = 0; i < subSteps; i++) {
+                executeStep(subStepSeconds, impostors);
+            }
+        };
     };
     /**
      * Initializes textures manually to keep them loading reliably in production builds.
@@ -676,15 +711,14 @@ function initializeTankMovement(_this, rotationSpeed) {
     var inputMap = {};
     var engine = _this.scene.getEngine();
     var forwardDirection = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.Zero();
-    var angularVelocity = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.Zero();
-    var nextVelocity = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.Zero();
+    var zeroVector = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.Zero();
+    var tankVelocity = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.Zero();
     var cameraTargetPosition = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.Zero();
     var cameraFocusPoint = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.Zero();
     var nextPosition = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.Zero();
     var uprightRotation = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Quaternion.Identity();
     var previousTankPosition = _this.tank.position.clone();
     var translationDelta = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.Zero();
-    var cameraOffset = _this.camera.position.subtract(_this.tank.position);
     var baseTankY = _this.tank.position.y;
     // Tree trunks are static, so their collision footprint is computed once instead of every frame.
     var treeColliders = _this.scene.meshes
@@ -705,7 +739,6 @@ function initializeTankMovement(_this, rotationSpeed) {
     var lastFpsUpdateTime = 0;
     var currentTurnSpeed = 0;
     var currentMoveSpeed = 0;
-    var didTranslateThisFrame = false;
     _this.camera.lockedTarget = null;
     _this.tank.computeWorldMatrix(true);
     cameraFocusPoint.copyFrom(_this.tank.getBoundingInfo().boundingBox.centerWorld);
@@ -753,37 +786,33 @@ function initializeTankMovement(_this, rotationSpeed) {
         if (!physicsImpostor) {
             return 0;
         }
-        didTranslateThisFrame = false;
         var desiredSpeed = moveInput > 0 ? maxForwardSpeed : moveInput < 0 ? -maxReverseSpeed : 0;
         var speedDelta = (moveInput === 0 ? deceleration : acceleration) * deltaSeconds;
         currentMoveSpeed = moveToward(currentMoveSpeed, desiredSpeed, speedDelta);
         var yaw = getYaw(mesh);
         forwardDirection.set(Math.sin(yaw), 0, Math.cos(yaw));
         forwardDirection.normalize();
+        // Trees are checked against where the tank will be after this step, so it stops cleanly
+        // before a trunk instead of grinding against it.
         nextPosition.copyFrom(mesh.position);
         nextPosition.y = baseTankY;
         nextPosition.addInPlace(forwardDirection.scale(currentMoveSpeed * deltaSeconds));
         if (collidesWithTree(nextPosition)) {
             currentMoveSpeed = 0;
         }
-        else {
-            mesh.position.x = nextPosition.x;
-            mesh.position.z = nextPosition.z;
-            didTranslateThisFrame = Math.abs(currentMoveSpeed) > 0;
-        }
-        nextVelocity.set(0, 0, 0);
-        physicsImpostor.setLinearVelocity(nextVelocity);
+        // The tank is moved by the physics engine using this velocity (rather than by setting its
+        // position directly), so the engine knows how fast it is going: bricks and other loose
+        // objects get knocked away with real momentum, and static objects still block it.
+        forwardDirection.scaleToRef(currentMoveSpeed, tankVelocity);
+        physicsImpostor.setLinearVelocity(tankVelocity);
+        physicsImpostor.setAngularVelocity(zeroVector);
         return currentMoveSpeed;
     };
-    _this.scene.registerBeforeRender(function () {
-        if (_this.divFps) {
-            var now = performance.now();
-            if (now - lastFpsUpdateTime >= 250) {
-                _this.divFps.textContent = "".concat(engine.getFps().toFixed(), " fps");
-                lastFpsUpdateTime = now;
-            }
-        }
+    // Runs once per frame, right before the physics step, so the velocity set here is what the
+    // physics engine uses to move the tank this frame.
+    var tankControllerObserver = _this.scene.onBeforePhysicsObservable.add(function () {
         // Clamp so a long pause (hidden tab, stalled frame) can't teleport the tank through obstacles.
+        // Babylon clamps the physics step to the same 0.1s.
         var deltaSeconds = Math.min(engine.getDeltaTime() / 1000, maxDeltaSeconds);
         var moveInput = (inputMap["w"] ? 1 : 0) - (inputMap["s"] ? 1 : 0);
         var turnInput = (inputMap["d"] ? 1 : 0) - (inputMap["a"] ? 1 : 0);
@@ -793,10 +822,6 @@ function initializeTankMovement(_this, rotationSpeed) {
         }
         var desiredTurnSpeed = turnInput * maxTurnSpeed;
         currentTurnSpeed = moveToward(currentTurnSpeed, desiredTurnSpeed, turnAcceleration * deltaSeconds);
-        if (_this.tank.physicsImpostor) {
-            angularVelocity.set(0, 0, 0);
-            _this.tank.physicsImpostor.setAngularVelocity(angularVelocity);
-        }
         if (currentTurnSpeed !== 0) {
             _this.tank.rotate(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Axis.Y, currentTurnSpeed * deltaSeconds, _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Space.WORLD);
         }
@@ -810,13 +835,25 @@ function initializeTankMovement(_this, rotationSpeed) {
             _this.tank.rotation.x = 0;
             _this.tank.rotation.z = 0;
         }
-        if (didTranslateThisFrame) {
-            _this.tank.position.subtractToRef(previousTankPosition, translationDelta);
-            translationDelta.y = 0;
-            cameraTargetPosition.addInPlace(translationDelta);
+    });
+    // Runs after the physics step has moved the tank this frame.
+    _this.scene.registerBeforeRender(function () {
+        if (_this.divFps) {
+            var now = performance.now();
+            if (now - lastFpsUpdateTime >= 250) {
+                _this.divFps.textContent = "".concat(engine.getFps().toFixed(), " fps");
+                lastFpsUpdateTime = now;
+            }
         }
+        var deltaSeconds = Math.min(engine.getDeltaTime() / 1000, maxDeltaSeconds);
+        _this.tank.position.subtractToRef(previousTankPosition, translationDelta);
+        translationDelta.y = 0;
+        cameraTargetPosition.addInPlace(translationDelta);
         _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.LerpToRef(_this.camera.position, cameraTargetPosition, Math.min(1, cameraFollowSharpness * deltaSeconds), _this.camera.position);
         previousTankPosition.copyFrom(_this.tank.position);
+    });
+    _this.scene.onDisposeObservable.addOnce(function () {
+        _this.scene.onBeforePhysicsObservable.remove(tankControllerObserver);
     });
     function moveToward(current, target, maxDelta) {
         if (Math.abs(target - current) <= maxDelta) {
@@ -1056,9 +1093,13 @@ function initializeShooting(_this, forward) {
                         for (var shotIndex = activeShots.length - 1; shotIndex >= 0; shotIndex--) {
                             var activeShot = activeShots[shotIndex];
                             var shotPosition = activeShot.mesh.absolutePosition;
+                            var didHit = false;
                             for (var _a = 0, targets_2 = targets; _a < targets_2.length; _a++) {
                                 var target = targets_2[_a];
-                                if (_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.DistanceSquared(shotPosition, target.mesh.absolutePosition) <= target.hitRadiusSquared) {
+                                // Test the whole path travelled since the last frame: at 200 units/s a shot moves
+                                // several units per frame and could otherwise skip straight past a target.
+                                if (segmentDistanceSquared(activeShot.previousPosition, shotPosition, target.mesh.absolutePosition) <= target.hitRadiusSquared) {
+                                    didHit = true;
                                     window.open(target.url, "_blank", "noopener,noreferrer");
                                     currentObjectiveText = "Direct hit. Opening ".concat(target.label, " in a new tab.");
                                     objectiveHint.text = currentObjectiveText;
@@ -1080,9 +1121,13 @@ function initializeShooting(_this, forward) {
                                     break;
                                 }
                             }
+                            if (!didHit) {
+                                activeShot.previousPosition.copyFrom(shotPosition);
+                            }
                         }
                     });
                     handleShoot = function () {
+                        var _a;
                         if (!canShoot) {
                             return;
                         }
@@ -1099,6 +1144,11 @@ function initializeShooting(_this, forward) {
                         shotSpawnPosition.y += shotHeightOffset;
                         shotBall.position.copyFrom(shotSpawnPosition);
                         shotBall.physicsImpostor = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.PhysicsImpostor(shotBall, _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.PhysicsImpostor.SphereImpostor, { mass: 0.5, restitution: 0 }, _this.scene);
+                        // Shots inherit the tank's motion, so firing while driving still goes where you aim.
+                        var tankVelocity = (_a = _this.tank.physicsImpostor) === null || _a === void 0 ? void 0 : _a.getLinearVelocity();
+                        if (tankVelocity) {
+                            shotBall.physicsImpostor.setLinearVelocity(tankVelocity);
+                        }
                         applyVelocity(shotBall, shotDirection, 200);
                         setTimeout(function () { canShoot = true; }, shotCooldownMs);
                         var disposeShot = function () {
@@ -1115,7 +1165,7 @@ function initializeShooting(_this, forward) {
                                 activeShots.splice(shotIndex, 1);
                             }
                         }, shotLifetimeMs);
-                        activeShots.push({ mesh: shotBall, dispose: disposeShot, disposeTimeout: disposeTimeout });
+                        activeShots.push({ mesh: shotBall, previousPosition: shotSpawnPosition.clone(), dispose: disposeShot, disposeTimeout: disposeTimeout });
                     };
                     _this.scene.actionManager.registerAction(new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.ExecuteCodeAction({ trigger: _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.ActionManager.OnKeyDownTrigger, parameter: 'e' }, handleShoot));
                     _this.scene.onDisposeObservable.addOnce(function () {
@@ -1272,6 +1322,24 @@ function createTargetLabel(gui, ui, mesh, label) {
     container.linkWithMesh(mesh);
     ui.addControl(container);
     return container;
+}
+/**
+ * Squared distance from a point to the segment between start and end.
+ */
+function segmentDistanceSquared(start, end, point) {
+    var sx = end.x - start.x;
+    var sy = end.y - start.y;
+    var sz = end.z - start.z;
+    var lengthSquared = (sx * sx) + (sy * sy) + (sz * sz);
+    var t = 0;
+    if (lengthSquared > 0) {
+        t = (((point.x - start.x) * sx) + ((point.y - start.y) * sy) + ((point.z - start.z) * sz)) / lengthSquared;
+        t = Math.max(0, Math.min(1, t));
+    }
+    var dx = start.x + (sx * t) - point.x;
+    var dy = start.y + (sy * t) - point.y;
+    var dz = start.z + (sz * t) - point.z;
+    return (dx * dx) + (dy * dy) + (dz * dz);
 }
 
 
@@ -2214,4 +2282,4 @@ function instantiateTree(templates, position, index, scene) {
 /***/ }
 
 }]);
-//# sourceMappingURL=src_scenes_tools_ts.0385841a89cd9de33122.js.map
+//# sourceMappingURL=src_scenes_tools_ts.b45ebbb27e21842f73f1.js.map

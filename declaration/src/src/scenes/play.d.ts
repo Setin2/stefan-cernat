@@ -41,6 +41,14 @@ export default class Play extends Node {
      */
     initializeGlobalVariables(): void;
     /**
+     * By default Babylon advances cannon.js with one step per frame, sized to the frame time. At
+     * 60 fps a shot (200 units/s) moves ~3.3 units per step, about the thickness of a brick, so it
+     * can pass straight through; at lower frame rates it gets worse. Splitting each frame into
+     * equal sub-steps of at most 1/120s keeps the simulation stable at any frame rate while still
+     * advancing exactly the frame's time, so motion stays smooth.
+     */
+    private configurePhysicsSubsteps;
+    /**
      * Initializes textures manually to keep them loading reliably in production builds.
      */
     initializeTextures(): void;

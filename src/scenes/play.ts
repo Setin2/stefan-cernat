@@ -57,6 +57,7 @@ export default class Play extends Node {
         // Set physics after the required scene nodes are available.
         this.scene.enablePhysics();
         this.scene.getPhysicsEngine()?.setGravity(new BABYLON.Vector3(0, -40, 0));
+        this.configurePhysicsSubsteps();
 
         this.easterEgg();
         this.play();
@@ -241,11 +242,36 @@ export default class Play extends Node {
 
         this.tank.physicsImpostor = new BABYLON.PhysicsImpostor(this.tank, BABYLON.PhysicsImpostor.BoxImpostor, { mass: 1000, restitution: 0 }, this.scene);
 
+        // Movement sets the tank's velocity every frame, so linear damping isn't needed. Keep strong
+        // angular damping so knocks from bricks can't spin the tank between frames.
         const physicsBody = this.tank.physicsImpostor.physicsBody;
         if (physicsBody) {
-            physicsBody.linearDamping = 0.6;
             physicsBody.angularDamping = 0.98;
         }
+    }
+
+    /**
+     * By default Babylon advances cannon.js with one step per frame, sized to the frame time. At
+     * 60 fps a shot (200 units/s) moves ~3.3 units per step, about the thickness of a brick, so it
+     * can pass straight through; at lower frame rates it gets worse. Splitting each frame into
+     * equal sub-steps of at most 1/120s keeps the simulation stable at any frame rate while still
+     * advancing exactly the frame's time, so motion stays smooth.
+     */
+    private configurePhysicsSubsteps(): void {
+        const plugin = this.scene.getPhysicsEngine()?.getPhysicsPlugin();
+        if (!plugin) {
+            return;
+        }
+
+        const maxSubStepSeconds = 1 / 120;
+        const executeStep = plugin.executeStep.bind(plugin);
+        plugin.executeStep = (delta, impostors) => {
+            const subSteps = Math.max(1, Math.ceil(delta / maxSubStepSeconds - 1e-6));
+            const subStepSeconds = delta / subSteps;
+            for (let i = 0; i < subSteps; i++) {
+                executeStep(subStepSeconds, impostors);
+            }
+        };
     }
 
     /**
