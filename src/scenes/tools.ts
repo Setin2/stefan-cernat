@@ -591,7 +591,12 @@ export async function configurePostProcesses(scene: Scene, rootUrl: Nullable<str
     // Load  post-processes configuration. SSAO is left out on purpose: it re-renders the whole
     // scene into a depth/normal buffer and adds five full-screen passes every frame, for a darkening
     // that is barely visible now that the scene has real shadows.
-    const data = { ...scene.metadata.postProcesses, ssao: undefined };
+    // The default pipeline is left out too: it renders the scene into an HDR buffer and then runs
+    // image processing, sharpen and FXAA as three more full-screen passes. Its image processing
+    // settings are neutral (no tone mapping or curves), so materials apply them directly instead,
+    // and the canvas's own multisampling (MSAA) smooths the edges. The cost of those passes grows
+    // with the screen size, which made large (2K/4K) screens much slower.
+    const data = { ...scene.metadata.postProcesses, ssao: undefined, default: undefined };
 
     const [ssaoModule, ssrModule, defaultPipelineModule, colorCurvesModule, colorGradingModule, motionBlurModule] = await Promise.all([
         data.ssao && !ssao2RenderingPipelineRef ? import("@babylonjs/core/PostProcesses/RenderPipeline/Pipelines/ssao2RenderingPipeline") : Promise.resolve(null),

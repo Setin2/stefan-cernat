@@ -14,6 +14,11 @@ import { createToyTarget, type ToyTarget } from "./toyTarget";
  */
 const SHOT_PHYSICS = { mass: 0.3, friction: 0.4, restitution: 0.8 };
 
+/** The link targets are drawn after everything else, in this rendering group (see the glow). */
+const TARGET_RENDERING_GROUP = 1;
+/** Further than this from the tank, the targets are off screen and don't need their glow. */
+const GLOW_DISTANCE = 150;
+
 type TargetLink = {
     mesh: BABYLON.Mesh;
     hitRadiusSquared: number;
@@ -70,15 +75,28 @@ export async function initializeShooting(_this: TankContext, forward: BABYLON.Ve
         githubMaterial.albedoTexture = new BABYLON.Texture("assets/models/target/target (Base Color).png", _this.scene);
     }
 
+    const highlightColor = BABYLON.Color3.FromHexString("#f7b955");
     const gui = await import("@babylonjs/gui");
     if (_this.scene.isDisposed) {
         return;
     }
 
+    // The glow only renders the targets (they're drawn in their own rendering group, keeping the
+    // depth of everything drawn before them so they're still hidden behind things in front). By
+    // default a highlight layer re-renders every visible mesh each frame, ~250 extra draw calls,
+    // just to glow two targets. It's also switched off while the tank is far from them.
     const highlightLayer = new BABYLON.HighlightLayer("target-highlight", _this.scene, {
         blurHorizontalSize: 0.6,
         blurVerticalSize: 0.6,
+        renderingGroupId: TARGET_RENDERING_GROUP,
     });
+    _this.scene.setRenderingAutoClearDepthStencil(TARGET_RENDERING_GROUP, false, false, false);
+    const addGlow = (mesh: BABYLON.AbstractMesh) => {
+        mesh.renderingGroupId = TARGET_RENDERING_GROUP;
+        if (mesh instanceof BABYLON.Mesh) {
+            highlightLayer.addMesh(mesh, highlightColor);
+        }
+    };
     const targetUi = gui.AdvancedDynamicTexture.CreateFullscreenUI("target-hints", true, _this.scene);
     const objectiveHint = createObjectiveHint(gui, targetUi);
     const reticle = createReticle(gui, targetUi);
@@ -111,7 +129,6 @@ export async function initializeShooting(_this: TankContext, forward: BABYLON.Ve
     // Toy target models; the original meshes stay (hidden) for hit tests and labels.
     const targetMarks: Record<string, string> = { GitHub: "GH", LinkedIn: "in" };
     const toyTargets = new Map<BABYLON.Mesh, ToyTarget>();
-    const highlightColor = BABYLON.Color3.FromHexString("#f7b955");
     targets.forEach((target) => {
         let toyTarget: ToyTarget | null = null;
         try {
@@ -123,10 +140,14 @@ export async function initializeShooting(_this: TankContext, forward: BABYLON.Ve
 
         if (toyTarget) {
             toyTargets.set(target.mesh, toyTarget);
-            toyTarget.meshes.forEach((mesh) => highlightLayer.addMesh(mesh, highlightColor));
+            toyTarget.meshes.forEach(addGlow);
         } else {
-            highlightLayer.addMesh(target.mesh, highlightColor);
+            addGlow(target.mesh);
         }
+        // The rest of the target (its mark) is drawn with it, so the target can't cover it.
+        target.mesh.getChildMeshes(false).forEach((mesh) => {
+            mesh.renderingGroupId = TARGET_RENDERING_GROUP;
+        });
         targetLabels.set(target.mesh, createTargetLabel(gui, targetUi, target.mesh, target.label));
     });
 
@@ -213,6 +234,8 @@ export async function initializeShooting(_this: TankContext, forward: BABYLON.Ve
                 aimedTargetDistanceSquared = distanceSquared;
             }
         }
+
+        highlightLayer.isEnabled = nearestTargetDistanceSquared <= GLOW_DISTANCE * GLOW_DISTANCE;
 
         // Only the nearest target gets its name bubble: they stand close together on the podium.
         if (nearestTargetMesh && nearestTargetDistanceSquared <= targetHintRangeSquared) {

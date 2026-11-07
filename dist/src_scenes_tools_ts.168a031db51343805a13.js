@@ -1006,6 +1006,95 @@ function prepareLooseBodies(scene, tank) {
 
 /***/ },
 
+/***/ "./src/scenes/core/resolution.ts"
+/*!***************************************!*\
+  !*** ./src/scenes/core/resolution.ts ***!
+  \***************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   adaptResolution: () => (/* binding */ adaptResolution)
+/* harmony export */ });
+/**
+ * A safety net for big screens: renders at a slightly lower resolution when the frame rate stays
+ * low. Everything the GPU draws per pixel (the scene, shadows' lookups, the GUI) grows with the
+ * screen size, so a 4K screen is four times the work of 1080p.
+ *
+ * - Screens with more pixels than MAX_PIXELS (beyond 2K) start scaled down to about that size.
+ * - If the frame rate stays under LOW_FPS for a few seconds, the resolution steps down a little,
+ *   at most to 1 / MAX_SCALE of the screen's. It's never raised again in the same visit, so it
+ *   can't flicker between sizes.
+ *
+ * On machines that keep up, nothing changes.
+ */
+var MAX_PIXELS = 2560 * 1440;
+var MAX_SCALE = 1.5;
+var SCALE_STEP = 0.125;
+var LOW_FPS = 45;
+var SAMPLE_SECONDS = 3;
+/** The first frames (shadow maps, physics settling) can be slow; don't judge those. */
+var SETTLE_SECONDS = 4;
+/** Only consecutive slow samples count, so one hiccup doesn't lower the resolution. */
+var SLOW_SAMPLES_NEEDED = 2;
+function adaptResolution(scene) {
+    var engine = scene.getEngine();
+    var scale = engine.getHardwareScalingLevel();
+    var apply = function (next) {
+        var clamped = Math.min(MAX_SCALE, Math.max(1, next));
+        if (Math.abs(clamped - scale) > 0.001) {
+            scale = clamped;
+            engine.setHardwareScalingLevel(scale);
+        }
+    };
+    var capPixels = function () {
+        var _a, _b;
+        var canvas = engine.getRenderingCanvas();
+        var pixels = ((_a = canvas === null || canvas === void 0 ? void 0 : canvas.clientWidth) !== null && _a !== void 0 ? _a : 0) * ((_b = canvas === null || canvas === void 0 ? void 0 : canvas.clientHeight) !== null && _b !== void 0 ? _b : 0);
+        if (pixels > MAX_PIXELS) {
+            apply(Math.max(scale, Math.sqrt(pixels / MAX_PIXELS)));
+        }
+    };
+    capPixels();
+    var onResize = engine.onResizeObservable.add(capPixels);
+    var frames = 0;
+    var sampleStart = -1;
+    var slowSamples = 0;
+    var observer = scene.onAfterRenderObservable.add(function () {
+        var now = performance.now();
+        if (sampleStart < 0) {
+            // Counted from the first rendered frame, after loading.
+            sampleStart = now + (SETTLE_SECONDS * 1000);
+        }
+        if (now < sampleStart) {
+            return;
+        }
+        frames++;
+        var elapsed = (now - sampleStart) / 1000;
+        if (elapsed < SAMPLE_SECONDS) {
+            return;
+        }
+        var fps = frames / elapsed;
+        frames = 0;
+        sampleStart = now;
+        // A hidden tab or a stalled frame isn't the GPU struggling.
+        if (document.hidden || elapsed > SAMPLE_SECONDS * 2) {
+            return;
+        }
+        slowSamples = fps < LOW_FPS ? slowSamples + 1 : 0;
+        if (slowSamples >= SLOW_SAMPLES_NEEDED && scale < MAX_SCALE) {
+            slowSamples = 0;
+            apply(scale + SCALE_STEP);
+        }
+    });
+    scene.onDisposeObservable.addOnce(function () {
+        scene.onAfterRenderObservable.remove(observer);
+        engine.onResizeObservable.remove(onResize);
+    });
+}
+
+
+/***/ },
+
 /***/ "./src/scenes/core/shadows.ts"
 /*!************************************!*\
   !*** ./src/scenes/core/shadows.ts ***!
@@ -1674,25 +1763,27 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _audio_impactSounds__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./audio/impactSounds */ "./src/scenes/audio/impactSounds.ts");
 /* harmony import */ var _audio_soundBoard__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./audio/soundBoard */ "./src/scenes/audio/soundBoard.ts");
 /* harmony import */ var _core_performance__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./core/performance */ "./src/scenes/core/performance.ts");
-/* harmony import */ var _core_physics__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./core/physics */ "./src/scenes/core/physics.ts");
-/* harmony import */ var _core_shadows__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./core/shadows */ "./src/scenes/core/shadows.ts");
-/* harmony import */ var _tank_movement__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./tank/movement */ "./src/scenes/tank/movement.ts");
-/* harmony import */ var _tank_shooting__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./tank/shooting */ "./src/scenes/tank/shooting.ts");
-/* harmony import */ var _tank_tankTrail__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./tank/tankTrail */ "./src/scenes/tank/tankTrail.ts");
-/* harmony import */ var _tank_toyTank__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./tank/toyTank */ "./src/scenes/tank/toyTank.ts");
-/* harmony import */ var _ui_controlsOverlay__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./ui/controlsOverlay */ "./src/scenes/ui/controlsOverlay.ts");
-/* harmony import */ var _ui_fpsCounter__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ./ui/fpsCounter */ "./src/scenes/ui/fpsCounter.ts");
-/* harmony import */ var _world_aiTrophies__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ./world/aiTrophies */ "./src/scenes/world/aiTrophies.ts");
-/* harmony import */ var _world_bricks__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ./world/bricks */ "./src/scenes/world/bricks.ts");
-/* harmony import */ var _world_clouds__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ./world/clouds */ "./src/scenes/world/clouds.ts");
-/* harmony import */ var _world_fruitFactory__WEBPACK_IMPORTED_MODULE_16__ = __webpack_require__(/*! ./world/fruitFactory */ "./src/scenes/world/fruitFactory.ts");
-/* harmony import */ var _world_fruitFactorySigns__WEBPACK_IMPORTED_MODULE_17__ = __webpack_require__(/*! ./world/fruitFactorySigns */ "./src/scenes/world/fruitFactorySigns.ts");
-/* harmony import */ var _world_ground__WEBPACK_IMPORTED_MODULE_18__ = __webpack_require__(/*! ./world/ground */ "./src/scenes/world/ground.ts");
-/* harmony import */ var _world_landmarks__WEBPACK_IMPORTED_MODULE_19__ = __webpack_require__(/*! ./world/landmarks */ "./src/scenes/world/landmarks.ts");
-/* harmony import */ var _world_mascots__WEBPACK_IMPORTED_MODULE_20__ = __webpack_require__(/*! ./world/mascots */ "./src/scenes/world/mascots.ts");
-/* harmony import */ var _world_playground__WEBPACK_IMPORTED_MODULE_21__ = __webpack_require__(/*! ./world/playground */ "./src/scenes/world/playground.ts");
-/* harmony import */ var _world_trees__WEBPACK_IMPORTED_MODULE_22__ = __webpack_require__(/*! ./world/trees */ "./src/scenes/world/trees.ts");
-/* harmony import */ var _world_waypointSigns__WEBPACK_IMPORTED_MODULE_23__ = __webpack_require__(/*! ./world/waypointSigns */ "./src/scenes/world/waypointSigns.ts");
+/* harmony import */ var _core_resolution__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./core/resolution */ "./src/scenes/core/resolution.ts");
+/* harmony import */ var _core_physics__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./core/physics */ "./src/scenes/core/physics.ts");
+/* harmony import */ var _core_shadows__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./core/shadows */ "./src/scenes/core/shadows.ts");
+/* harmony import */ var _core_warmUp__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./core/warmUp */ "./src/scenes/core/warmUp.ts");
+/* harmony import */ var _tank_movement__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./tank/movement */ "./src/scenes/tank/movement.ts");
+/* harmony import */ var _tank_shooting__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./tank/shooting */ "./src/scenes/tank/shooting.ts");
+/* harmony import */ var _tank_tankTrail__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./tank/tankTrail */ "./src/scenes/tank/tankTrail.ts");
+/* harmony import */ var _tank_toyTank__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ./tank/toyTank */ "./src/scenes/tank/toyTank.ts");
+/* harmony import */ var _ui_controlsOverlay__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ./ui/controlsOverlay */ "./src/scenes/ui/controlsOverlay.ts");
+/* harmony import */ var _ui_fpsCounter__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ./ui/fpsCounter */ "./src/scenes/ui/fpsCounter.ts");
+/* harmony import */ var _world_aiTrophies__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ./world/aiTrophies */ "./src/scenes/world/aiTrophies.ts");
+/* harmony import */ var _world_bricks__WEBPACK_IMPORTED_MODULE_16__ = __webpack_require__(/*! ./world/bricks */ "./src/scenes/world/bricks.ts");
+/* harmony import */ var _world_clouds__WEBPACK_IMPORTED_MODULE_17__ = __webpack_require__(/*! ./world/clouds */ "./src/scenes/world/clouds.ts");
+/* harmony import */ var _world_fruitFactory__WEBPACK_IMPORTED_MODULE_18__ = __webpack_require__(/*! ./world/fruitFactory */ "./src/scenes/world/fruitFactory.ts");
+/* harmony import */ var _world_fruitFactorySigns__WEBPACK_IMPORTED_MODULE_19__ = __webpack_require__(/*! ./world/fruitFactorySigns */ "./src/scenes/world/fruitFactorySigns.ts");
+/* harmony import */ var _world_ground__WEBPACK_IMPORTED_MODULE_20__ = __webpack_require__(/*! ./world/ground */ "./src/scenes/world/ground.ts");
+/* harmony import */ var _world_landmarks__WEBPACK_IMPORTED_MODULE_21__ = __webpack_require__(/*! ./world/landmarks */ "./src/scenes/world/landmarks.ts");
+/* harmony import */ var _world_mascots__WEBPACK_IMPORTED_MODULE_22__ = __webpack_require__(/*! ./world/mascots */ "./src/scenes/world/mascots.ts");
+/* harmony import */ var _world_playground__WEBPACK_IMPORTED_MODULE_23__ = __webpack_require__(/*! ./world/playground */ "./src/scenes/world/playground.ts");
+/* harmony import */ var _world_trees__WEBPACK_IMPORTED_MODULE_24__ = __webpack_require__(/*! ./world/trees */ "./src/scenes/world/trees.ts");
+/* harmony import */ var _world_waypointSigns__WEBPACK_IMPORTED_MODULE_25__ = __webpack_require__(/*! ./world/waypointSigns */ "./src/scenes/world/waypointSigns.ts");
 var __extends = (undefined && undefined.__extends) || (function () {
     var extendStatics = function (d, b) {
         extendStatics = Object.setPrototypeOf ||
@@ -1708,6 +1799,8 @@ var __extends = (undefined && undefined.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
+
+
 
 
 
@@ -1757,16 +1850,17 @@ var Play = /** @class */ (function (_super) {
         this.findSceneObjects();
         this.loadScreenTexture();
         console.log("%c Very sly of you, but there is nothing to see here ;)", "color: #CE718F");
-        (0,_core_physics__WEBPACK_IMPORTED_MODULE_5__.enablePhysics)(this.scene);
-        (0,_core_physics__WEBPACK_IMPORTED_MODULE_5__.createTankBody)(this.scene, this.tank);
-        (0,_ui_fpsCounter__WEBPACK_IMPORTED_MODULE_12__.attachFpsCounter)(this.scene);
+        (0,_core_physics__WEBPACK_IMPORTED_MODULE_6__.enablePhysics)(this.scene);
+        (0,_core_physics__WEBPACK_IMPORTED_MODULE_6__.createTankBody)(this.scene, this.tank);
+        (0,_ui_fpsCounter__WEBPACK_IMPORTED_MODULE_14__.attachFpsCounter)(this.scene);
+        (0,_core_resolution__WEBPACK_IMPORTED_MODULE_5__.adaptResolution)(this.scene);
         this.buildWorld();
         this.initializeTank();
         // Last, once every mesh and physics body exists.
         (0,_core_performance__WEBPACK_IMPORTED_MODULE_4__.optimizeScene)(this.scene, this.tank);
-        (0,_core_physics__WEBPACK_IMPORTED_MODULE_5__.prepareLooseBodies)(this.scene, this.tank);
-        var controls = new _ui_controlsOverlay__WEBPACK_IMPORTED_MODULE_11__.ControlOverlay(this.scene);
-        void controls.show();
+        (0,_core_physics__WEBPACK_IMPORTED_MODULE_6__.prepareLooseBodies)(this.scene, this.tank);
+        var controls = new _ui_controlsOverlay__WEBPACK_IMPORTED_MODULE_13__.ControlOverlay(this.scene);
+        (0,_core_warmUp__WEBPACK_IMPORTED_MODULE_8__.registerLoadingTask)(controls.show());
         this.onDisposeObservable.addOnce(function () { return controls.dispose(); });
     };
     Play.prototype.findSceneObjects = function () {
@@ -1795,21 +1889,21 @@ var Play = /** @class */ (function (_super) {
         var _this = this;
         var scene = this.scene;
         this.createToyTankModel();
-        (0,_tank_tankTrail__WEBPACK_IMPORTED_MODULE_9__.createTankTrail)(scene, this.tank);
-        (0,_world_trees__WEBPACK_IMPORTED_MODULE_22__.instantiateTrees)({ scene: scene });
-        (0,_world_landmarks__WEBPACK_IMPORTED_MODULE_19__.restyleLandmarks)(scene);
-        (0,_world_fruitFactory__WEBPACK_IMPORTED_MODULE_16__.restyleFruitFactory)(scene);
-        (0,_world_fruitFactorySigns__WEBPACK_IMPORTED_MODULE_17__.createFruitFactorySigns)(scene);
-        (0,_world_mascots__WEBPACK_IMPORTED_MODULE_20__.restyleMascots)(scene);
-        tryTo("AI trophies", function () { return (0,_world_aiTrophies__WEBPACK_IMPORTED_MODULE_13__.createAiTrophies)(scene); });
-        (0,_world_waypointSigns__WEBPACK_IMPORTED_MODULE_23__.createWaypointSigns)(scene);
-        tryTo("Playground", function () { return (0,_world_playground__WEBPACK_IMPORTED_MODULE_21__.createPlayground)(scene); });
-        (0,_world_bricks__WEBPACK_IMPORTED_MODULE_14__.createBrickBuilds)({ scene: scene, tank: this.tank });
+        (0,_tank_tankTrail__WEBPACK_IMPORTED_MODULE_11__.createTankTrail)(scene, this.tank);
+        (0,_world_trees__WEBPACK_IMPORTED_MODULE_24__.instantiateTrees)({ scene: scene });
+        (0,_world_landmarks__WEBPACK_IMPORTED_MODULE_21__.restyleLandmarks)(scene);
+        (0,_world_fruitFactory__WEBPACK_IMPORTED_MODULE_18__.restyleFruitFactory)(scene);
+        (0,_world_fruitFactorySigns__WEBPACK_IMPORTED_MODULE_19__.createFruitFactorySigns)(scene);
+        (0,_world_mascots__WEBPACK_IMPORTED_MODULE_22__.restyleMascots)(scene);
+        tryTo("AI trophies", function () { return (0,_world_aiTrophies__WEBPACK_IMPORTED_MODULE_15__.createAiTrophies)(scene); });
+        (0,_world_waypointSigns__WEBPACK_IMPORTED_MODULE_25__.createWaypointSigns)(scene);
+        tryTo("Playground", function () { return (0,_world_playground__WEBPACK_IMPORTED_MODULE_23__.createPlayground)(scene); });
+        (0,_world_bricks__WEBPACK_IMPORTED_MODULE_16__.createBrickBuilds)({ scene: scene, tank: this.tank });
         // After the bricks: walls measure the ground height with a ray, and decorations avoid them.
-        (0,_world_ground__WEBPACK_IMPORTED_MODULE_18__.decorateGround)(scene, _world_trees__WEBPACK_IMPORTED_MODULE_22__.TREE_POSITIONS);
-        tryTo("Clouds", function () { return (0,_world_clouds__WEBPACK_IMPORTED_MODULE_15__.createClouds)(scene, _this.tank, _this.camera); });
+        (0,_world_ground__WEBPACK_IMPORTED_MODULE_20__.decorateGround)(scene, _world_trees__WEBPACK_IMPORTED_MODULE_24__.TREE_POSITIONS);
+        tryTo("Clouds", function () { return (0,_world_clouds__WEBPACK_IMPORTED_MODULE_17__.createClouds)(scene, _this.tank, _this.camera); });
         // After everything else, so every mesh is considered as a shadow caster.
-        tryTo("Shadows", function () { return (0,_core_shadows__WEBPACK_IMPORTED_MODULE_6__.initializeShadows)(scene, { camera: _this.camera, focus: function () { return _this.tank.position; } }); });
+        tryTo("Shadows", function () { return (0,_core_shadows__WEBPACK_IMPORTED_MODULE_7__.initializeShadows)(scene, { camera: _this.camera, focus: function () { return _this.tank.position; } }); });
     };
     /**
      * Swaps the imported tank model for the toy tank built in code. Add `?tank=classic` to the URL
@@ -1821,7 +1915,7 @@ var Play = /** @class */ (function (_super) {
             return;
         }
         try {
-            this.toyTank = (0,_tank_toyTank__WEBPACK_IMPORTED_MODULE_10__.createToyTank)(this.scene, this.tank);
+            this.toyTank = (0,_tank_toyTank__WEBPACK_IMPORTED_MODULE_12__.createToyTank)(this.scene, this.tank);
             (_a = this.scene.getMeshByName("tank")) === null || _a === void 0 ? void 0 : _a.setEnabled(false);
         }
         catch (error) {
@@ -1844,8 +1938,8 @@ var Play = /** @class */ (function (_super) {
             onShoot: this.toyTank ? function () { var _a; return (_a = _this.toyTank) === null || _a === void 0 ? void 0 : _a.fire(); } : undefined,
             shotOrigin: (_a = this.toyTank) === null || _a === void 0 ? void 0 : _a.muzzle,
         };
-        (0,_tank_movement__WEBPACK_IMPORTED_MODULE_7__.initializeTankMovement)(context, 0.07);
-        void (0,_tank_shooting__WEBPACK_IMPORTED_MODULE_8__.initializeShooting)(context, new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, 0, 1));
+        (0,_tank_movement__WEBPACK_IMPORTED_MODULE_9__.initializeTankMovement)(context, 0.07);
+        (0,_core_warmUp__WEBPACK_IMPORTED_MODULE_8__.registerLoadingTask)((0,_tank_shooting__WEBPACK_IMPORTED_MODULE_10__.initializeShooting)(context, new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, 0, 1)));
     };
     return Play;
 }(_babylonjs_core_node__WEBPACK_IMPORTED_MODULE_1__.Node));
@@ -2278,12 +2372,16 @@ var __generator = (undefined && undefined.__generator) || function (thisArg, bod
  * away), and bouncy enough to hop off the ground.
  */
 var SHOT_PHYSICS = { mass: 0.3, friction: 0.4, restitution: 0.8 };
+/** The link targets are drawn after everything else, in this rendering group (see the glow). */
+var TARGET_RENDERING_GROUP = 1;
+/** Further than this from the tank, the targets are off screen and don't need their glow. */
+var GLOW_DISTANCE = 150;
 /**
  * Gives the player the ability to shoot with the tank.
  */
 function initializeShooting(_this, forward) {
     return __awaiter(this, void 0, void 0, function () {
-        var activeShots, shotOffset, shotHeightOffset, shotRadius, shotLifetimeMs, shotCooldownMs, targetHintRangeSquared, targetAimRangeSquared, aimLockThreshold, recoilRecoverSpeed, shotDirection, shotSpawnPosition, targetPosition, tankForward, toTarget, recoilOffset, recoilStep, targetConfigs, github, githubMaterial, gui, highlightLayer, targetUi, objectiveHint, reticle, hitFeedback, impactBurst, getHitRadiusSquared, targetLabels, targets, targetMarks, toyTargets, highlightColor, applyVelocity, ball, canShoot, shotCooldownUntil, hitFeedbackUntil, impactBurstUntil, currentStatusUntil, currentObjectiveText, currentMood, hitTarget, impactTarget, discoveredTargets, totalTargetCount, recoilRestoreObserver, shotObserver, handleShoot;
+        var activeShots, shotOffset, shotHeightOffset, shotRadius, shotLifetimeMs, shotCooldownMs, targetHintRangeSquared, targetAimRangeSquared, aimLockThreshold, recoilRecoverSpeed, shotDirection, shotSpawnPosition, targetPosition, tankForward, toTarget, recoilOffset, recoilStep, targetConfigs, github, githubMaterial, highlightColor, gui, highlightLayer, addGlow, targetUi, objectiveHint, reticle, hitFeedback, impactBurst, getHitRadiusSquared, targetLabels, targets, targetMarks, toyTargets, applyVelocity, ball, canShoot, shotCooldownUntil, hitFeedbackUntil, impactBurstUntil, currentStatusUntil, currentObjectiveText, currentMood, hitTarget, impactTarget, discoveredTargets, totalTargetCount, recoilRestoreObserver, shotObserver, handleShoot;
         var _a, _b, _c, _d;
         return __generator(this, function (_e) {
             switch (_e.label) {
@@ -2323,6 +2421,7 @@ function initializeShooting(_this, forward) {
                     if (githubMaterial && "albedoTexture" in githubMaterial) {
                         githubMaterial.albedoTexture = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Texture("assets/models/target/target (Base Color).png", _this.scene);
                     }
+                    highlightColor = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.FromHexString("#f7b955");
                     return [4 /*yield*/, __webpack_require__.e(/*! import() */ "vendors-node_modules_babylonjs_gui_index_js").then(__webpack_require__.bind(__webpack_require__, /*! @babylonjs/gui */ "./node_modules/@babylonjs/gui/index.js"))];
                 case 1:
                     gui = _e.sent();
@@ -2332,7 +2431,15 @@ function initializeShooting(_this, forward) {
                     highlightLayer = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.HighlightLayer("target-highlight", _this.scene, {
                         blurHorizontalSize: 0.6,
                         blurVerticalSize: 0.6,
+                        renderingGroupId: TARGET_RENDERING_GROUP,
                     });
+                    _this.scene.setRenderingAutoClearDepthStencil(TARGET_RENDERING_GROUP, false, false, false);
+                    addGlow = function (mesh) {
+                        mesh.renderingGroupId = TARGET_RENDERING_GROUP;
+                        if (mesh instanceof _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Mesh) {
+                            highlightLayer.addMesh(mesh, highlightColor);
+                        }
+                    };
                     targetUi = gui.AdvancedDynamicTexture.CreateFullscreenUI("target-hints", true, _this.scene);
                     objectiveHint = (0,_ui_targetHud__WEBPACK_IMPORTED_MODULE_3__.createObjectiveHint)(gui, targetUi);
                     reticle = (0,_ui_targetHud__WEBPACK_IMPORTED_MODULE_3__.createReticle)(gui, targetUi);
@@ -2361,7 +2468,6 @@ function initializeShooting(_this, forward) {
                     });
                     targetMarks = { GitHub: "GH", LinkedIn: "in" };
                     toyTargets = new Map();
-                    highlightColor = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.FromHexString("#f7b955");
                     targets.forEach(function (target) {
                         var _a;
                         var toyTarget = null;
@@ -2374,11 +2480,15 @@ function initializeShooting(_this, forward) {
                         }
                         if (toyTarget) {
                             toyTargets.set(target.mesh, toyTarget);
-                            toyTarget.meshes.forEach(function (mesh) { return highlightLayer.addMesh(mesh, highlightColor); });
+                            toyTarget.meshes.forEach(addGlow);
                         }
                         else {
-                            highlightLayer.addMesh(target.mesh, highlightColor);
+                            addGlow(target.mesh);
                         }
+                        // The rest of the target (its mark) is drawn with it, so the target can't cover it.
+                        target.mesh.getChildMeshes(false).forEach(function (mesh) {
+                            mesh.renderingGroupId = TARGET_RENDERING_GROUP;
+                        });
                         targetLabels.set(target.mesh, (0,_ui_targetHud__WEBPACK_IMPORTED_MODULE_3__.createTargetLabel)(gui, targetUi, target.mesh, target.label));
                     });
                     applyVelocity = function (mesh, direction, power) {
@@ -2454,6 +2564,7 @@ function initializeShooting(_this, forward) {
                                 aimedTargetDistanceSquared = distanceSquared;
                             }
                         }
+                        highlightLayer.isEnabled = nearestTargetDistanceSquared <= GLOW_DISTANCE * GLOW_DISTANCE;
                         // Only the nearest target gets its name bubble: they stand close together on the podium.
                         if (nearestTargetMesh && nearestTargetDistanceSquared <= targetHintRangeSquared) {
                             var label = targetLabels.get(nearestTargetMesh);
@@ -4313,7 +4424,7 @@ function configurePostProcesses(scene_3) {
                     if (rootUrl === null || !((_b = scene.metadata) === null || _b === void 0 ? void 0 : _b.postProcesses)) {
                         return [2 /*return*/];
                     }
-                    data = __assign(__assign({}, scene.metadata.postProcesses), { ssao: undefined });
+                    data = __assign(__assign({}, scene.metadata.postProcesses), { ssao: undefined, default: undefined });
                     return [4 /*yield*/, Promise.all([
                             data.ssao && !ssao2RenderingPipelineRef ? Promise.resolve(/*! import() */).then(__webpack_require__.bind(__webpack_require__, /*! @babylonjs/core/PostProcesses/RenderPipeline/Pipelines/ssao2RenderingPipeline */ "./node_modules/@babylonjs/core/PostProcesses/RenderPipeline/Pipelines/ssao2RenderingPipeline.js")) : Promise.resolve(null),
                             ((_c = data.screenSpaceReflections) === null || _c === void 0 ? void 0 : _c.json) && !screenSpaceReflectionPostProcessRef ? Promise.resolve(/*! import() */).then(__webpack_require__.bind(__webpack_require__, /*! @babylonjs/core/PostProcesses/screenSpaceReflectionPostProcess */ "./node_modules/@babylonjs/core/PostProcesses/screenSpaceReflectionPostProcess.js")) : Promise.resolve(null),
@@ -5854,6 +5965,11 @@ function createClouds(scene, tank, camera) {
     material.emissiveColor = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.FromHexString("#DCE6F2").toLinearSpace().scale(0.35);
     // Fading a cloud made of overlapping puffs needs a depth pre-pass, or the inner puffs show through.
     material.needDepthPrePass = true;
+    // Always blended (not just while fading), so fading never switches to a different shader that
+    // would have to be compiled mid-game. (Babylon only blends a PBR material whose alpha is below
+    // 1, hence 0.999 rather than 1.)
+    material.transparencyMode = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Material.MATERIAL_ALPHABLEND;
+    material.alpha = 0.999;
     var shadowMaterial = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.StandardMaterial("cloud-shadow-material", scene);
     shadowMaterial.diffuseColor = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.Black();
     shadowMaterial.specularColor = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.Black();
@@ -8905,4 +9021,4 @@ function addBullseye(scene, id, parent, y, materials) {
 /***/ }
 
 }]);
-//# sourceMappingURL=src_scenes_tools_ts.43f17f2e4ea1ea53b6f0.js.map
+//# sourceMappingURL=src_scenes_tools_ts.168a031db51343805a13.js.map

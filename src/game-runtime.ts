@@ -1,6 +1,7 @@
 import { BabylonFileLoaderConfiguration, Engine, Scene } from "@babylonjs/core";
 
 import { configureEngine } from "./engine-config";
+import { warmUpShaders } from "./scenes/core/warmUp";
 
 export class GameRuntime {
     /**
@@ -57,6 +58,8 @@ export class GameRuntime {
             }
 
             this.scene.activeCamera.attachControl(this.engine.getRenderingCanvas(), false);
+            // Compile all shaders now, so nothing stutters the first time it comes into view.
+            await warmUpShaders(this.scene);
             this.sceneReady = true;
             this._hideStatus();
             this._syncRenderLoop();

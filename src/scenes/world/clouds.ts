@@ -45,6 +45,11 @@ export function createClouds(scene: BABYLON.Scene, tank: BABYLON.AbstractMesh, c
     material.emissiveColor = BABYLON.Color3.FromHexString("#DCE6F2").toLinearSpace().scale(0.35);
     // Fading a cloud made of overlapping puffs needs a depth pre-pass, or the inner puffs show through.
     material.needDepthPrePass = true;
+    // Always blended (not just while fading), so fading never switches to a different shader that
+    // would have to be compiled mid-game. (Babylon only blends a PBR material whose alpha is below
+    // 1, hence 0.999 rather than 1.)
+    material.transparencyMode = BABYLON.Material.MATERIAL_ALPHABLEND;
+    material.alpha = 0.999;
 
     const shadowMaterial = new BABYLON.StandardMaterial("cloud-shadow-material", scene);
     shadowMaterial.diffuseColor = BABYLON.Color3.Black();

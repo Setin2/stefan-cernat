@@ -4,8 +4,10 @@ import { Node } from "@babylonjs/core/node";
 import { createImpactSounds } from "./audio/impactSounds";
 import { SoundBoard } from "./audio/soundBoard";
 import { optimizeScene } from "./core/performance";
+import { adaptResolution } from "./core/resolution";
 import { createTankBody, enablePhysics, prepareLooseBodies } from "./core/physics";
 import { initializeShadows } from "./core/shadows";
+import { registerLoadingTask } from "./core/warmUp";
 import { initializeTankMovement } from "./tank/movement";
 import { initializeShooting } from "./tank/shooting";
 import { createTankTrail } from "./tank/tankTrail";
@@ -54,6 +56,7 @@ export default class Play extends Node {
         enablePhysics(this.scene);
         createTankBody(this.scene, this.tank);
         attachFpsCounter(this.scene);
+        adaptResolution(this.scene);
 
         this.buildWorld();
         this.initializeTank();
@@ -63,7 +66,7 @@ export default class Play extends Node {
         prepareLooseBodies(this.scene, this.tank);
 
         const controls = new ControlOverlay(this.scene);
-        void controls.show();
+        registerLoadingTask(controls.show());
         this.onDisposeObservable.addOnce(() => controls.dispose());
     }
 
@@ -146,7 +149,7 @@ export default class Play extends Node {
             shotOrigin: this.toyTank?.muzzle,
         };
         initializeTankMovement(context, 0.07);
-        void initializeShooting(context, new BABYLON.Vector3(0, 0, 1));
+        registerLoadingTask(initializeShooting(context, new BABYLON.Vector3(0, 0, 1)));
     }
 }
 
