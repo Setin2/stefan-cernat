@@ -3,18 +3,15 @@ import * as BABYLON from "@babylonjs/core";
 import { createRoundedBox, createToyMaterial } from "./toyStyle";
 
 /**
- * Gives the imported character models (the three small figures, the big sword and the big
- * symbol) the same toy finish as the rest of the world: glossy plastic materials in the site's
- * palette, plus a few small set pieces around them. Their geometry, positions and physics are
+ * Gives the imported models (the big sword and the big symbol) the same toy finish as the rest
+ * of the world: glossy plastic materials in the site's palette, plus a few small set pieces
+ * around them. Their geometry, positions and physics are
  * unchanged.
  */
 
 const GROUND_Y = -0.5;
 
 const PALETTE = {
-    figureBodies: ["#4F6F8F", "#E8869F", "#D9A13B"],
-    visor: "#A9D8EA",
-    outline: "#22313F",
     steel: "#C9D2DA",
     symbolInside: "#E8869F",
     symbolOutside: "#344B63",
@@ -23,12 +20,6 @@ const PALETTE = {
 };
 
 export function restyleMascots(scene: BABYLON.Scene): void {
-    try {
-        restyleFigures(scene);
-    } catch (error) {
-        console.error("Figure restyle failed, keeping the originals", error);
-    }
-
     try {
         restyleSword(scene);
     } catch (error) {
@@ -40,45 +31,6 @@ export function restyleMascots(scene: BABYLON.Scene): void {
     } catch (error) {
         console.error("Symbol restyle failed, keeping the original", error);
     }
-}
-
-/**
- * Each figure is a hidden collider with three visible children: an outline shell (drawn with
- * flipped faces to give the cartoon outline), the body, and the visor (the smallest part).
- */
-function restyleFigures(scene: BABYLON.Scene): void {
-    const figures = scene.meshes.filter((mesh) => mesh.name === "amongus" && !mesh.parent);
-    const visor = createToyMaterial(scene, "toy-figure-visor", PALETTE.visor, { roughness: 0.12, clearCoat: 1 });
-    visor.emissiveColor = BABYLON.Color3.FromHexString(PALETTE.visor).toLinearSpace().scale(0.12);
-    let outline: BABYLON.Material | null = null;
-
-    figures.forEach((figure, index) => {
-        const parts = figure.getChildMeshes();
-        if (!parts.length) {
-            return;
-        }
-
-        const body = createToyMaterial(scene, `toy-figure-body-${index}`, PALETTE.figureBodies[index % PALETTE.figureBodies.length], { roughness: 0.42, clearCoat: 0.6 });
-        const smallest = parts.reduce((a, b) => (a.getTotalVertices() < b.getTotalVertices() ? a : b));
-
-        for (const part of parts) {
-            if (part.material?.name === "Outline.002") {
-                // Keep the outline's flipped-face setup, just tint it navy instead of black.
-                if (!outline && part.material instanceof BABYLON.PBRMaterial) {
-                    const clone = part.material.clone("toy-figure-outline");
-                    clone.albedoColor = BABYLON.Color3.FromHexString(PALETTE.outline).toLinearSpace();
-                    outline = clone;
-                }
-                if (outline) {
-                    part.material = outline;
-                }
-            } else if (part === smallest) {
-                part.material = visor;
-            } else {
-                part.material = body;
-            }
-        }
-    });
 }
 
 /** The sword in toy steel, with a ring of stones where it's stuck in the ground. */

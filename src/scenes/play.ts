@@ -11,6 +11,7 @@ import { restyleLandmarks } from "./landmarks";
 import { decorateGround } from "./ground";
 import { restyleFruitFactory } from "./fruitFactory";
 import { restyleMascots } from "./mascots";
+import { createAiTrophies } from "./aiTrophies";
 import { initializeShadows } from "./shadows";
 
 export default class Play extends Node {
@@ -94,6 +95,11 @@ export default class Play extends Node {
         restyleLandmarks(this.scene);
         restyleFruitFactory(this.scene);
         restyleMascots(this.scene);
+        try {
+            createAiTrophies(this.scene);
+        } catch (error) {
+            console.error("AI trophies failed", error);
+        }
         instantiateBricks({ scene: this.scene, tank: this.tank, brickSound: this.brickSound }, -5, 8, -30, 3, [6, 6, 4, 2], 0);
         // Center and angle match where this wall has always been placed (it was previously
         // built at (130, -50) and then rotated 300 rad around the world origin).

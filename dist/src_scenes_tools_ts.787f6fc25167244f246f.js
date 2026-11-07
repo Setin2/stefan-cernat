@@ -2,6 +2,582 @@
 "use strict";
 (self["webpackChunkgame"] = self["webpackChunkgame"] || []).push([["src_scenes_tools_ts"],{
 
+/***/ "./src/scenes/aiTrophies.ts"
+/*!**********************************!*\
+  !*** ./src/scenes/aiTrophies.ts ***!
+  \**********************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   createAiTrophies: () => (/* binding */ createAiTrophies)
+/* harmony export */ });
+/* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core */ "./node_modules/@babylonjs/core/index.js");
+/* harmony import */ var _toyStyle__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./toyStyle */ "./src/scenes/toyStyle.ts");
+var __assign = (undefined && undefined.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
+var __spreadArray = (undefined && undefined.__spreadArray) || function (to, from, pack) {
+    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
+        if (ar || !(i in from)) {
+            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
+            ar[i] = from[i];
+        }
+    }
+    return to.concat(ar || Array.prototype.slice.call(from));
+};
+
+
+var GROUND_Y = -0.5;
+var HALF_HEIGHT = 4;
+var LOGO_Y = 1.5;
+/** The logo is drawn a bit larger than the plinth so it's easy to recognise. */
+var LOGO_SCALE = 1.15;
+/** Turns trophy space's -Z (the logo's front) towards the camera, which looks along (0.8, -0.6) in x/z. */
+var FACE_CAMERA_YAW = Math.atan2(0.8, -0.6);
+var PALETTE = {
+    plinth: "#344B63",
+    plinthTop: "#E8DCC6",
+    gold: "#C9A35B",
+    nameplate: "#F4EBDD",
+};
+/** Where the figure at the desk stood. */
+var FIGURE_AT_DESK = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector2(-86.3, -4.8);
+/** Size of the standing trophies (1 = the old figures' 4 x 8 x 4 box). */
+var STANDING_SCALE = 1.5;
+/**
+ * Standing trophies: ChatGPT and Gemini on the camera's side of the brick wall by the Berserk
+ * sword (so the wall doesn't hide them), Mistral close to the tank's start (visible straight
+ * away), and DeepSeek and Hugging Face out in open areas of the world. All spots are clear of
+ * other physics bodies so nothing starts out overlapping.
+ */
+var SPOTS = [
+    { logo: "claude", label: "Claude", x: FIGURE_AT_DESK.x, z: FIGURE_AT_DESK.y, yawOffset: 0, pushable: false, scale: 1.1 },
+    { logo: "chatgpt", label: "ChatGPT", x: 23, z: 114, yawOffset: 0.12, pushable: true, scale: STANDING_SCALE },
+    { logo: "gemini", label: "Gemini", x: 31, z: 124, yawOffset: -0.1, pushable: true, scale: STANDING_SCALE },
+    { logo: "mistral", label: "Mistral", x: 30, z: -4, yawOffset: 0.08, pushable: true, scale: STANDING_SCALE },
+    { logo: "deepseek", label: "DeepSeek", x: -48, z: 40, yawOffset: -0.12, pushable: true, scale: STANDING_SCALE },
+    { logo: "huggingface", label: "Hugging Face", x: 64, z: -72, yawOffset: 0.14, pushable: true, scale: STANDING_SCALE },
+];
+function createAiTrophies(scene) {
+    removeFigures(scene);
+    var shared = {
+        plinth: (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "ai-trophy-plinth", PALETTE.plinth, { roughness: 0.45, clearCoat: 0.4 }),
+        plinthTop: (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "ai-trophy-plinth-top", PALETTE.plinthTop, { roughness: 0.45, clearCoat: 0.35 }),
+        gold: (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "ai-trophy-gold", PALETTE.gold, { roughness: 0.25, metallic: 0.6, clearCoat: 0.6 }),
+    };
+    for (var _i = 0, SPOTS_1 = SPOTS; _i < SPOTS_1.length; _i++) {
+        var spot = SPOTS_1[_i];
+        try {
+            createTrophy(scene, spot, shared);
+        }
+        catch (error) {
+            console.error("AI trophy \"".concat(spot.label, "\" failed"), error);
+        }
+    }
+}
+function removeFigures(scene) {
+    var _a, _b;
+    var physics = scene.getPhysicsEngine();
+    var figures = scene.meshes.filter(function (mesh) { return mesh.name === "amongus" && !mesh.parent; });
+    for (var _i = 0, figures_1 = figures; _i < figures_1.length; _i++) {
+        var figure = figures_1[_i];
+        // The scene loader creates the physics bodies without setting mesh.physicsImpostor, so
+        // disposing the mesh alone would leave an invisible body behind for the trophies to hit.
+        (_b = ((_a = figure.physicsImpostor) !== null && _a !== void 0 ? _a : physics === null || physics === void 0 ? void 0 : physics.getImpostorForPhysicsObject(figure))) === null || _b === void 0 ? void 0 : _b.dispose();
+        figure.dispose();
+    }
+}
+function createTrophy(scene, spot, shared) {
+    var _a;
+    var id = "ai-trophy-".concat(spot.logo);
+    var yaw = FACE_CAMERA_YAW + spot.yawOffset;
+    var centerY = GROUND_Y + (HALF_HEIGHT * spot.scale) + 0.05;
+    // Root: a physics box for the pushable ones (impostor created before any children are added),
+    // a plain node for the one at the desk.
+    var holder;
+    if (spot.pushable) {
+        var collider = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateBox("".concat(id, "-collider"), { width: 4 * spot.scale, height: HALF_HEIGHT * 2 * spot.scale, depth: 4 * spot.scale }, scene);
+        collider.position.set(spot.x, centerY, spot.z);
+        collider.rotation.y = yaw;
+        collider.isVisible = false;
+        collider.isPickable = false;
+        // No bounce, decent grip and some damping: a bump from the tank slides and tips them
+        // instead of sending them flying.
+        var impostor = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.PhysicsImpostor(collider, _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.PhysicsImpostor.BoxImpostor, { mass: 3, friction: 0.6, restitution: 0 }, scene);
+        collider.physicsImpostor = impostor;
+        var body = impostor.physicsBody;
+        if (body) {
+            body.linearDamping = 0.4;
+            body.angularDamping = 0.6;
+        }
+        holder = collider;
+    }
+    else {
+        holder = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.TransformNode("".concat(id, "-holder"), scene);
+        holder.position.set(spot.x, centerY, spot.z);
+        holder.rotation.y = yaw;
+    }
+    // Everything visible is built at size 1 under this node.
+    var root = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.TransformNode(id, scene);
+    root.parent = holder;
+    root.scaling.setAll(spot.scale);
+    var parts = [];
+    var attach = function (mesh) {
+        var _a;
+        mesh.parent = root;
+        mesh.isPickable = false;
+        mesh.metadata = __assign(__assign({}, ((_a = mesh.metadata) !== null && _a !== void 0 ? _a : {})), { keepUnfrozen: true });
+        parts.push(mesh);
+        return mesh;
+    };
+    // Plinth with a sand top and a nameplate on the front.
+    var plinth = attach((0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRoundedBox)("".concat(id, "-plinth"), 3.8, 1.5, 3.8, 0.3, scene));
+    plinth.material = shared.plinth;
+    plinth.position.y = -HALF_HEIGHT + 0.75;
+    var top = attach((0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRoundedBox)("".concat(id, "-plinth-top"), 3.3, 0.3, 3.3, 0.12, scene));
+    top.material = shared.plinthTop;
+    top.position.y = -HALF_HEIGHT + 1.55;
+    var collar = attach(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder("".concat(id, "-collar"), { diameterTop: 0.8, diameterBottom: 1.3, height: 0.45, tessellation: 24 }, scene));
+    collar.material = shared.gold;
+    collar.position.y = -HALF_HEIGHT + 1.9;
+    var stem = attach(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder("".concat(id, "-stem"), { diameter: 0.45, height: 3, tessellation: 16 }, scene));
+    stem.material = shared.gold;
+    stem.position.set(0, -HALF_HEIGHT + 3.4, 0.15);
+    var plate = createNameplate(scene, "".concat(id, "-nameplate"), spot.label);
+    if (plate) {
+        attach(plate);
+        plate.position.set(0, -HALF_HEIGHT + 0.75, -1.92);
+    }
+    // The logo itself.
+    var logo = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.TransformNode("".concat(id, "-logo"), scene);
+    logo.parent = root;
+    logo.position.y = LOGO_Y;
+    logo.scaling.setAll(LOGO_SCALE);
+    for (var _i = 0, _b = LOGO_BUILDERS[spot.logo](scene, id); _i < _b.length; _i++) {
+        var mesh = _b[_i];
+        mesh.parent = logo;
+        mesh.isPickable = false;
+        mesh.metadata = __assign(__assign({}, ((_a = mesh.metadata) !== null && _a !== void 0 ? _a : {})), { keepUnfrozen: true });
+    }
+}
+function createNameplate(scene, name, label) {
+    var width = 512;
+    var height = 128;
+    var texture;
+    try {
+        texture = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.DynamicTexture("".concat(name, "-texture"), { width: width, height: height }, scene, true);
+    }
+    catch (_a) {
+        return null;
+    }
+    texture.hasAlpha = true;
+    var context = texture.getContext();
+    context.clearRect(0, 0, width, height);
+    context.fillStyle = PALETTE.nameplate;
+    var fontSize = label.length > 9 ? 70 : 84;
+    context.font = "900 ".concat(fontSize, "px \"Arial Rounded MT Bold\", \"Nunito\", \"Trebuchet MS\", Arial, sans-serif");
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.fillText(label, width / 2, height * 0.54);
+    texture.update();
+    var material = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.StandardMaterial("".concat(name, "-material"), scene);
+    material.diffuseTexture = texture;
+    material.useAlphaFromDiffuseTexture = true;
+    material.specularColor = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3(0.1, 0.1, 0.1);
+    material.emissiveColor = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3(0.25, 0.25, 0.25);
+    var plane = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreatePlane(name, { width: 3.3, height: 0.82 }, scene);
+    plane.material = material;
+    return plane;
+}
+var LOGO_BUILDERS = {
+    claude: buildClaude,
+    chatgpt: buildChatGpt,
+    gemini: buildGemini,
+    mistral: buildMistral,
+    deepseek: buildDeepSeek,
+    huggingface: buildHuggingFace,
+};
+/** Claude: a terracotta spark of rounded rays with slightly uneven lengths. */
+function buildClaude(scene, id) {
+    var lengths = [1.95, 1.62, 1.84, 1.55, 1.92, 1.7, 1.58, 1.88, 1.66, 1.8, 1.6, 1.86];
+    var rays = lengths.map(function (length, i) {
+        var angle = ((i / lengths.length) * Math.PI * 2) + 0.13 + (Math.sin(i * 2.3) * 0.05);
+        var outline = taperedCapsule(length, 0.13, 0.25);
+        var ray = extrudeOutline("".concat(id, "-ray-").concat(i), rotate2d(outline, angle), 0.55, 0.1, scene);
+        return ray;
+    });
+    var spark = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Mesh.MergeMeshes(rays, true, true);
+    if (!spark) {
+        return [];
+    }
+    spark.name = "".concat(id, "-spark");
+    spark.material = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "".concat(id, "-material"), "#D97757", { roughness: 0.38, clearCoat: 0.6 });
+    return [spark];
+}
+/** ChatGPT: the white six-link knot on a teal rounded tile. */
+function buildChatGpt(scene, id) {
+    var tile = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRoundedBox)("".concat(id, "-tile"), 3.8, 3.8, 0.5, 0.7, scene);
+    tile.material = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "".concat(id, "-tile-material"), "#10A37F", { roughness: 0.4, clearCoat: 0.6 });
+    tile.position.z = 0.1;
+    var links = [];
+    var halfLength = 0.5;
+    var radius = 0.36;
+    for (var k = 0; k < 6; k++) {
+        var angle = k * (Math.PI / 3);
+        var cos = Math.cos(angle);
+        var sin = Math.sin(angle);
+        var z = -0.32 - ((k % 2) * 0.06);
+        // A rounded "link" offset from the centre and slid sideways, so the six of them swirl
+        // around a hexagonal opening.
+        var path = [];
+        for (var _i = 0, _a = stadium(halfLength, radius, 40); _i < _a.length; _i++) {
+            var _b = _a[_i], x = _b[0], y = _b[1];
+            var lx = x + 0.32;
+            var ly = y - 0.62;
+            path.push(new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3((lx * cos) - (ly * sin), (lx * sin) + (ly * cos), z));
+        }
+        path.push(path[0].clone());
+        links.push(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateTube("".concat(id, "-link-").concat(k), { path: path, radius: 0.13, tessellation: 12, cap: _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Mesh.NO_CAP }, scene));
+    }
+    var knot = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Mesh.MergeMeshes(links, true, true);
+    if (knot) {
+        knot.name = "".concat(id, "-knot");
+        knot.material = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "".concat(id, "-knot-material"), "#FFFFFF", { roughness: 0.35, clearCoat: 0.6 });
+        knot.scaling.setAll(1.12);
+        return [tile, knot];
+    }
+    return [tile];
+}
+/** Gemini: a four-pointed sparkle with concave sides and a blue-to-purple-to-rose gradient. */
+function buildGemini(scene, id) {
+    var outline = [];
+    var steps = 128;
+    var radius = 1.95;
+    var power = 2.4;
+    for (var i = 0; i < steps; i++) {
+        var t = (i / steps) * Math.PI * 2;
+        var c = Math.cos(t);
+        var s = Math.sin(t);
+        outline.push([radius * Math.sign(c) * Math.pow(Math.abs(c), power), radius * Math.sign(s) * Math.pow(Math.abs(s), power)]);
+    }
+    var star = extrudeOutline("".concat(id, "-star"), outline, 0.6, 0.12, scene);
+    var stops = ["#4796E3", "#9177C7", "#CA6673"].map(function (hex) { return _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.FromHexString(hex).toLinearSpace(); });
+    paintVertices(star, function (x, y) {
+        var t = clampUnit((((x * 0.45) + (y * 0.9)) / (radius * 1.35) + 1) / 2);
+        var _a = t < 0.5 ? [stops[0], stops[1], t * 2] : [stops[1], stops[2], (t - 0.5) * 2], a = _a[0], b = _a[1], f = _a[2];
+        return _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.Lerp(a, b, f);
+    });
+    star.material = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "".concat(id, "-material"), "#FFFFFF", { roughness: 0.35, clearCoat: 0.7 });
+    return [star];
+}
+/** Mistral: a blocky "M" of toy cubes, yellow at the top to red at the bottom. */
+function buildMistral(scene, id) {
+    var pattern = [
+        "X...X",
+        "XX.XX",
+        "XXXXX",
+        "X.X.X",
+        "X...X",
+    ];
+    var rowColors = ["#FFD800", "#FFAF00", "#FF8205", "#FA500F", "#E10500"];
+    var pitch = 0.74;
+    var size = 0.7;
+    var meshes = [];
+    pattern.forEach(function (row, r) {
+        var blocks = [];
+        for (var c = 0; c < row.length; c++) {
+            if (row[c] !== "X") {
+                continue;
+            }
+            var block = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRoundedBox)("".concat(id, "-block-").concat(r, "-").concat(c), size, size, size, 0.12, scene, 2);
+            block.position.set((c - 2) * pitch, (2 - r) * pitch, 0);
+            blocks.push(block);
+        }
+        var merged = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Mesh.MergeMeshes(blocks, true, true);
+        if (merged) {
+            merged.name = "".concat(id, "-row-").concat(r);
+            merged.material = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "".concat(id, "-row-").concat(r, "-material"), rowColors[r], { roughness: 0.4, clearCoat: 0.6 });
+            meshes.push(merged);
+        }
+    });
+    return meshes;
+}
+/** DeepSeek: a friendly blue whale with a curled-up tail. */
+function buildDeepSeek(scene, id) {
+    var blue = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "".concat(id, "-material"), "#4D6BFE", { roughness: 0.38, clearCoat: 0.6 });
+    // Body: a rounded blob with a big head on the left, narrowing towards the tail.
+    var body = [];
+    for (var i = 0; i < 64; i++) {
+        var t = (i / 64) * Math.PI * 2;
+        var c = Math.cos(t);
+        var s = Math.sin(t);
+        var taper = 1 - (0.5 * Math.max(c, 0));
+        var belly_1 = s < 0 ? 0.82 : 1;
+        body.push([-0.35 + (1.45 * c), -0.35 + (0.95 * s * taper * belly_1)]);
+    }
+    var bodyMesh = extrudeOutline("".concat(id, "-body"), body, 0.75, 0.16, scene);
+    // Tail: curls up from the back of the body, ending in two flukes.
+    var tailPath = [];
+    for (var i = 0; i <= 16; i++) {
+        var t = i / 16;
+        var x = ((1 - t) * (1 - t) * 0.85) + (2 * (1 - t) * t * 1.75) + (t * t * 1.45);
+        var y = ((1 - t) * (1 - t) * -0.4) + (2 * (1 - t) * t * -0.45) + (t * t * 0.75);
+        tailPath.push(new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(x, y, 0));
+    }
+    var tail = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateTube("".concat(id, "-tail"), {
+        path: tailPath,
+        radiusFunction: function (i) { return 0.27 - ((i / 16) * 0.13); },
+        tessellation: 16,
+        cap: _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Mesh.CAP_ALL,
+    }, scene);
+    tail.scaling.z = 1.35;
+    var flukes = [-1, 1].map(function (side) {
+        var fluke = extrudeOutline("".concat(id, "-fluke-").concat(side), rotate2d(ellipse(0.5, 0.2, 24), side * 0.75), 0.4, 0.08, scene);
+        fluke.position.set(1.45 + (side * 0.33), 0.92, 0);
+        return fluke;
+    });
+    var whale = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Mesh.MergeMeshes(__spreadArray([bodyMesh, tail], flukes, true), true, true);
+    var meshes = [];
+    if (whale) {
+        whale.name = "".concat(id, "-whale");
+        whale.material = blue;
+        meshes.push(whale);
+    }
+    // Eye with a little shine.
+    var eyeWhite = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateSphere("".concat(id, "-eye"), { diameter: 0.42, segments: 12 }, scene);
+    eyeWhite.scaling.z = 0.4;
+    eyeWhite.position.set(-1.05, -0.12, -0.38);
+    eyeWhite.material = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "".concat(id, "-eye-material"), "#FFFFFF", { roughness: 0.3, clearCoat: 0.6 });
+    var pupil = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateSphere("".concat(id, "-pupil"), { diameter: 0.22, segments: 10 }, scene);
+    pupil.scaling.z = 0.4;
+    pupil.position.set(-1.1, -0.14, -0.45);
+    pupil.material = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "".concat(id, "-pupil-material"), "#1E2A4A", { roughness: 0.3, clearCoat: 0.8 });
+    meshes.push(eyeWhite, pupil);
+    // Lighter belly stripe.
+    var belly = extrudeOutline("".concat(id, "-belly"), ellipse(0.9, 0.2, 32).map(function (_a) {
+        var x = _a[0], y = _a[1];
+        return [x - 0.45, y - 0.85];
+    }), 0.2, 0.05, scene);
+    belly.position.z = -0.3;
+    belly.material = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "".concat(id, "-belly-material"), "#A9B9FF", { roughness: 0.4, clearCoat: 0.5 });
+    meshes.push(belly);
+    return meshes;
+}
+/** Hugging Face: the yellow hugging smiley with orange hands. */
+function buildHuggingFace(scene, id) {
+    var faceRadius = 1.65;
+    var faceDepth = 0.5;
+    var surfaceZ = function (x, y) { return -faceRadius * faceDepth * Math.sqrt(Math.max(0, 1 - (((x * x) + (y * y)) / (faceRadius * faceRadius)))); };
+    var dark = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "".concat(id, "-dark"), "#3A3B45", { roughness: 0.3, clearCoat: 0.8 });
+    var face = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateSphere("".concat(id, "-face"), { diameter: faceRadius * 2, segments: 32 }, scene);
+    face.scaling.z = faceDepth;
+    face.position.y = 0.2;
+    face.material = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "".concat(id, "-face-material"), "#FFD21E", { roughness: 0.38, clearCoat: 0.6 });
+    var meshes = [face];
+    for (var _i = 0, _a = [-1, 1]; _i < _a.length; _i++) {
+        var side = _a[_i];
+        var x = side * 0.6;
+        var y = 0.45;
+        var eye = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateSphere("".concat(id, "-eye-").concat(side), { diameter: 0.42, segments: 12 }, scene);
+        eye.scaling.set(1, 1.25, 0.45);
+        eye.position.set(x, y + 0.2, surfaceZ(x, y) - 0.02);
+        eye.material = dark;
+        meshes.push(eye);
+        var shine = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateSphere("".concat(id, "-shine-").concat(side), { diameter: 0.12, segments: 8 }, scene);
+        shine.scaling.z = 0.4;
+        shine.position.set(x + 0.06, y + 0.3, surfaceZ(x, y) - 0.1);
+        shine.material = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "".concat(id, "-shine-material-").concat(side), "#FFFFFF", { roughness: 0.2 });
+        meshes.push(shine);
+    }
+    // Open smile (a half disc) with a tongue in it.
+    var smile = [];
+    for (var i = 0; i <= 24; i++) {
+        var t = Math.PI + ((i / 24) * Math.PI);
+        smile.push([0.85 * Math.cos(t), 0.62 * Math.sin(t)]);
+    }
+    var mouth = extrudeOutline("".concat(id, "-mouth"), smile, 0.3, 0.06, scene);
+    mouth.position.set(0, 0.05, -0.74);
+    mouth.material = dark;
+    meshes.push(mouth);
+    var tongue = extrudeOutline("".concat(id, "-tongue"), ellipse(0.38, 0.17, 24), 0.12, 0.04, scene);
+    tongue.position.set(0, -0.38, -0.86);
+    tongue.material = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "".concat(id, "-tongue-material"), "#FF6B4A", { roughness: 0.4, clearCoat: 0.5 });
+    meshes.push(tongue);
+    // Hands coming in from the bottom corners.
+    var handMaterial = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "".concat(id, "-hands"), "#FF9D0B", { roughness: 0.4, clearCoat: 0.5 });
+    var random = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRandom)(42);
+    for (var _b = 0, _c = [-1, 1]; _b < _c.length; _b++) {
+        var side = _c[_b];
+        var hand = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createLumpyBall)("".concat(id, "-hand-").concat(side), scene, random, 1.4, 2);
+        hand.scaling.set(0.6, 0.48, 0.42);
+        hand.rotation.z = side * -0.5;
+        hand.position.set(side * 1.15, -1.15, -0.55);
+        hand.material = handMaterial;
+        meshes.push(hand);
+    }
+    return meshes;
+}
+// ==================================================================== Shape helpers
+/** Ray from the origin to `length`, `baseHalfWidth` wide at the centre and `tipHalfWidth` at the rounded tip. */
+function taperedCapsule(length, baseHalfWidth, tipHalfWidth) {
+    var points = [];
+    var tipCenter = length - tipHalfWidth;
+    for (var i = 0; i <= 12; i++) {
+        var a = -Math.PI / 2 + ((i / 12) * Math.PI);
+        points.push([tipCenter + (Math.cos(a) * tipHalfWidth), Math.sin(a) * tipHalfWidth]);
+    }
+    for (var i = 0; i <= 8; i++) {
+        var a = Math.PI / 2 + ((i / 8) * Math.PI);
+        points.push([baseHalfWidth + (Math.cos(a) * baseHalfWidth), Math.sin(a) * baseHalfWidth]);
+    }
+    return points;
+}
+/** Stadium (rounded rectangle with semicircle ends) along X. */
+function stadium(halfLength, radius, steps) {
+    var points = [];
+    var half = steps / 2;
+    for (var i = 0; i < half; i++) {
+        var a = -Math.PI / 2 + ((i / (half - 1)) * Math.PI);
+        points.push([halfLength + (Math.cos(a) * radius), Math.sin(a) * radius]);
+    }
+    for (var i = 0; i < half; i++) {
+        var a = Math.PI / 2 + ((i / (half - 1)) * Math.PI);
+        points.push([-halfLength + (Math.cos(a) * radius), Math.sin(a) * radius]);
+    }
+    return points;
+}
+function ellipse(rx, ry, steps) {
+    var points = [];
+    for (var i = 0; i < steps; i++) {
+        var t = (i / steps) * Math.PI * 2;
+        points.push([rx * Math.cos(t), ry * Math.sin(t)]);
+    }
+    return points;
+}
+function rotate2d(points, angle) {
+    var c = Math.cos(angle);
+    var s = Math.sin(angle);
+    return points.map(function (_a) {
+        var x = _a[0], y = _a[1];
+        return [(x * c) - (y * s), (x * s) + (y * c)];
+    });
+}
+function clampUnit(value) {
+    return Math.max(0, Math.min(1, value));
+}
+/**
+ * Extrudes a 2D outline (in X/Y, any winding) into a slab `depth` thick, centred on z = 0 with its
+ * front facing -Z, and a rounded bevel of size `bevel` on both edges. The outline must be visible
+ * in full from its centroid (true for all the shapes here), so the caps can be triangle fans.
+ */
+function extrudeOutline(name, outline, depth, bevel, scene) {
+    var count = outline.length;
+    var cx = 0;
+    var cy = 0;
+    for (var _i = 0, outline_1 = outline; _i < outline_1.length; _i++) {
+        var _a = outline_1[_i], x = _a[0], y = _a[1];
+        cx += x;
+        cy += y;
+    }
+    cx /= count;
+    cy /= count;
+    // Outward 2D normal at each vertex (average of the two edge normals).
+    var outward = outline.map(function (point, i) {
+        var _a = outline[(i + count - 1) % count], px = _a[0], py = _a[1];
+        var _b = outline[(i + 1) % count], nx = _b[0], ny = _b[1];
+        var ox = ny - py;
+        var oy = -(nx - px);
+        var length = Math.hypot(ox, oy) || 1;
+        ox /= length;
+        oy /= length;
+        if ((ox * (point[0] - cx)) + (oy * (point[1] - cy)) < 0) {
+            ox = -ox;
+            oy = -oy;
+        }
+        return [ox, oy];
+    });
+    var positions = [];
+    var normals = [];
+    var indices = [];
+    var front = -depth / 2;
+    var back = depth / 2;
+    // Rings from front to back: inset front edge, outer front edge, outer back edge, inset back edge.
+    var rings = [
+        { z: front, inset: bevel, nz: -0.8 },
+        { z: front + bevel, inset: 0, nz: -0.25 },
+        { z: back - bevel, inset: 0, nz: 0.25 },
+        { z: back, inset: bevel, nz: 0.8 },
+    ];
+    var ringStart = rings.map(function (ring) {
+        var start = positions.length / 3;
+        outline.forEach(function (_a, i) {
+            var x = _a[0], y = _a[1];
+            var _b = outward[i], ox = _b[0], oy = _b[1];
+            positions.push(x - (ox * ring.inset), y - (oy * ring.inset), ring.z);
+            var planar = Math.sqrt(1 - (ring.nz * ring.nz));
+            normals.push(ox * planar, oy * planar, ring.nz);
+        });
+        return start;
+    });
+    for (var r = 0; r < rings.length - 1; r++) {
+        for (var i = 0; i < count; i++) {
+            var j = (i + 1) % count;
+            var a = ringStart[r] + i;
+            var b = ringStart[r] + j;
+            var c = ringStart[r + 1] + i;
+            var d = ringStart[r + 1] + j;
+            (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.pushOrientedTriangle)(indices, positions, normals, a, b, c);
+            (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.pushOrientedTriangle)(indices, positions, normals, b, d, c);
+        }
+    }
+    // Flat caps.
+    for (var _b = 0, _c = [[0, front, -1], [3, back, 1]]; _b < _c.length; _b++) {
+        var _d = _c[_b], ringIndex = _d[0], z = _d[1], nz = _d[2];
+        var center = positions.length / 3;
+        positions.push(cx, cy, z);
+        normals.push(0, 0, nz);
+        var start = positions.length / 3;
+        for (var i = 0; i < count; i++) {
+            var source = (ringStart[ringIndex] + i) * 3;
+            positions.push(positions[source], positions[source + 1], z);
+            normals.push(0, 0, nz);
+        }
+        for (var i = 0; i < count; i++) {
+            (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.pushOrientedTriangle)(indices, positions, normals, center, start + i, start + ((i + 1) % count));
+        }
+    }
+    // Planar UVs, so these can be merged with other meshes (merging needs matching attributes).
+    var uvs = [];
+    for (var i = 0; i < positions.length; i += 3) {
+        uvs.push(positions[i], positions[i + 1]);
+    }
+    return (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.buildMesh)(name, positions, normals, indices, scene, uvs);
+}
+/** Sets per-vertex colours from each vertex's x/y position. */
+function paintVertices(mesh, color) {
+    var positions = mesh.getVerticesData(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.VertexBuffer.PositionKind);
+    if (!positions) {
+        return;
+    }
+    var colors = [];
+    for (var i = 0; i < positions.length; i += 3) {
+        var c = color(positions[i], positions[i + 1]);
+        colors.push(c.r, c.g, c.b, 1);
+    }
+    mesh.setVerticesData(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.VertexBuffer.ColorKind, colors);
+}
+
+
+/***/ },
+
 /***/ "./src/scenes/bricks.ts"
 /*!******************************!*\
   !*** ./src/scenes/bricks.ts ***!
@@ -1519,16 +2095,13 @@ function createSignPlate(scene, name, x, z, yaw, width, depth, plate, rim) {
 
 
 /**
- * Gives the imported character models (the three small figures, the big sword and the big
- * symbol) the same toy finish as the rest of the world: glossy plastic materials in the site's
- * palette, plus a few small set pieces around them. Their geometry, positions and physics are
+ * Gives the imported models (the big sword and the big symbol) the same toy finish as the rest
+ * of the world: glossy plastic materials in the site's palette, plus a few small set pieces
+ * around them. Their geometry, positions and physics are
  * unchanged.
  */
 var GROUND_Y = -0.5;
 var PALETTE = {
-    figureBodies: ["#4F6F8F", "#E8869F", "#D9A13B"],
-    visor: "#A9D8EA",
-    outline: "#22313F",
     steel: "#C9D2DA",
     symbolInside: "#E8869F",
     symbolOutside: "#344B63",
@@ -1536,12 +2109,6 @@ var PALETTE = {
     stone: "#CFC1A8",
 };
 function restyleMascots(scene) {
-    try {
-        restyleFigures(scene);
-    }
-    catch (error) {
-        console.error("Figure restyle failed, keeping the originals", error);
-    }
     try {
         restyleSword(scene);
     }
@@ -1554,45 +2121,6 @@ function restyleMascots(scene) {
     catch (error) {
         console.error("Symbol restyle failed, keeping the original", error);
     }
-}
-/**
- * Each figure is a hidden collider with three visible children: an outline shell (drawn with
- * flipped faces to give the cartoon outline), the body, and the visor (the smallest part).
- */
-function restyleFigures(scene) {
-    var figures = scene.meshes.filter(function (mesh) { return mesh.name === "amongus" && !mesh.parent; });
-    var visor = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-figure-visor", PALETTE.visor, { roughness: 0.12, clearCoat: 1 });
-    visor.emissiveColor = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.FromHexString(PALETTE.visor).toLinearSpace().scale(0.12);
-    var outline = null;
-    figures.forEach(function (figure, index) {
-        var _a;
-        var parts = figure.getChildMeshes();
-        if (!parts.length) {
-            return;
-        }
-        var body = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-figure-body-".concat(index), PALETTE.figureBodies[index % PALETTE.figureBodies.length], { roughness: 0.42, clearCoat: 0.6 });
-        var smallest = parts.reduce(function (a, b) { return (a.getTotalVertices() < b.getTotalVertices() ? a : b); });
-        for (var _i = 0, parts_1 = parts; _i < parts_1.length; _i++) {
-            var part = parts_1[_i];
-            if (((_a = part.material) === null || _a === void 0 ? void 0 : _a.name) === "Outline.002") {
-                // Keep the outline's flipped-face setup, just tint it navy instead of black.
-                if (!outline && part.material instanceof _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.PBRMaterial) {
-                    var clone = part.material.clone("toy-figure-outline");
-                    clone.albedoColor = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.FromHexString(PALETTE.outline).toLinearSpace();
-                    outline = clone;
-                }
-                if (outline) {
-                    part.material = outline;
-                }
-            }
-            else if (part === smallest) {
-                part.material = visor;
-            }
-            else {
-                part.material = body;
-            }
-        }
-    });
 }
 /** The sword in toy steel, with a ring of stones where it's stuck in the ground. */
 function restyleSword(scene) {
@@ -1660,7 +2188,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _ground__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./ground */ "./src/scenes/ground.ts");
 /* harmony import */ var _fruitFactory__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./fruitFactory */ "./src/scenes/fruitFactory.ts");
 /* harmony import */ var _mascots__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./mascots */ "./src/scenes/mascots.ts");
-/* harmony import */ var _shadows__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./shadows */ "./src/scenes/shadows.ts");
+/* harmony import */ var _aiTrophies__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./aiTrophies */ "./src/scenes/aiTrophies.ts");
+/* harmony import */ var _shadows__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ./shadows */ "./src/scenes/shadows.ts");
 var __extends = (undefined && undefined.__extends) || (function () {
     var extendStatics = function (d, b) {
         extendStatics = Object.setPrototypeOf ||
@@ -1712,6 +2241,7 @@ var __generator = (undefined && undefined.__generator) || function (thisArg, bod
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+
 
 
 
@@ -1796,6 +2326,12 @@ var Play = /** @class */ (function (_super) {
         (0,_landmarks__WEBPACK_IMPORTED_MODULE_7__.restyleLandmarks)(this.scene);
         (0,_fruitFactory__WEBPACK_IMPORTED_MODULE_9__.restyleFruitFactory)(this.scene);
         (0,_mascots__WEBPACK_IMPORTED_MODULE_10__.restyleMascots)(this.scene);
+        try {
+            (0,_aiTrophies__WEBPACK_IMPORTED_MODULE_11__.createAiTrophies)(this.scene);
+        }
+        catch (error) {
+            console.error("AI trophies failed", error);
+        }
         (0,_bricks__WEBPACK_IMPORTED_MODULE_4__.instantiateBricks)({ scene: this.scene, tank: this.tank, brickSound: this.brickSound }, -5, 8, -30, 3, [6, 6, 4, 2], 0);
         // Center and angle match where this wall has always been placed (it was previously
         // built at (130, -50) and then rotated 300 rad around the world origin).
@@ -1846,7 +2382,7 @@ var Play = /** @class */ (function (_super) {
      */
     Play.prototype.initializeShadows = function () {
         var _this = this;
-        (0,_shadows__WEBPACK_IMPORTED_MODULE_11__.initializeShadows)(this.scene, {
+        (0,_shadows__WEBPACK_IMPORTED_MODULE_12__.initializeShadows)(this.scene, {
             camera: this.camera,
             focus: function () { return _this.tank.position; },
         });
@@ -5149,4 +5685,4 @@ function createPetalTexture(scene) {
 /***/ }
 
 }]);
-//# sourceMappingURL=src_scenes_tools_ts.8cff8a3e9cf0a251653b.js.map
+//# sourceMappingURL=src_scenes_tools_ts.787f6fc25167244f246f.js.map
