@@ -1,4 +1,5 @@
 import * as BABYLON from "@babylonjs/core";
+import { clamp } from "./math";
 
 /**
  * Shared "toy" look used by the tank, trees and bricks: glossy plastic PBR materials lit by a
@@ -246,10 +247,6 @@ export function buildMesh(name: string, positions: number[], normals: number[], 
     }
     vertexData.applyToMesh(mesh);
     return mesh;
-}
-
-export function clamp(value: number, min: number, max: number): number {
-    return Math.max(min, Math.min(max, value));
 }
 
 /** Small deterministic random generator, so procedural shapes look the same on every visit. */

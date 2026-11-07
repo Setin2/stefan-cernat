@@ -1,8 +1,9 @@
 import * as BABYLON from "@babylonjs/core";
 
 import { createRoadNetwork } from "./roads";
-import { addStaticBox } from "./staticBodies";
-import { createLumpyBall, createRandom, createRoundedBox, createToyMaterial } from "./toyStyle";
+import { addStaticBox } from "../core/staticBodies";
+import { createLumpyBall, createRandom, createRoundedBox, createToyMaterial } from "../core/toyStyle";
+import { smoothStep } from "../core/math";
 
 /**
  * Restyles static landmarks from the editor scene to match the toy look: the social-media podium,
@@ -10,8 +11,6 @@ import { createLumpyBall, createRandom, createRoundedBox, createToyMaterial } fr
  * original meshes keep their role (the podium keeps its physics body and the logos parented to
  * it); they are only hidden and replaced by toy-style geometry.
  */
-
-const GROUND_Y = -0.5;
 
 const PALETTE = {
     podiumBody: "#E8DCC6",
@@ -277,11 +276,6 @@ function createCobbleMaterial(scene: BABYLON.Scene): BABYLON.PBRMaterial {
     material.albedoTexture = colorTexture;
     material.bumpTexture = normalTexture;
     return material;
-}
-
-function smoothStep(edge0: number, edge1: number, value: number): number {
-    const t = Math.max(0, Math.min(1, (value - edge0) / (edge1 - edge0)));
-    return t * t * (3 - (2 * t));
 }
 
 function clampByte(value: number): number {

@@ -1,7 +1,9 @@
 import * as BABYLON from "@babylonjs/core";
 
-import { SUN_DIRECTION } from "./shadows";
-import { createLumpyBall, createRandom, createToyMaterial } from "./toyStyle";
+import { SUN_DIRECTION } from "../core/shadows";
+import { createLumpyBall, createRandom, createToyMaterial } from "../core/toyStyle";
+import { segmentDistanceSquared } from "../core/math";
+import { GROUND_Y } from "../core/constants";
 
 /**
  * Chunky toy clouds drifting low over the world, each with a soft shadow patch sliding over the
@@ -20,7 +22,6 @@ const AREA_HALF = 260;
 const MIN_HEIGHT = 24;
 const MAX_HEIGHT = 34;
 const WIND = new BABYLON.Vector3(3.2, 0, 1.1);
-const GROUND_Y = -0.5;
 /** Shadow patches sit just above the road slabs and tread prints. */
 const SHADOW_Y = GROUND_Y + 0.19;
 /** Extra clearance (on top of the cloud's own size) kept around the camera's view of the tank. */
@@ -195,17 +196,3 @@ function createSoftDiscTexture(scene: BABYLON.Scene): BABYLON.DynamicTexture {
     return texture;
 }
 
-function segmentDistanceSquared(start: BABYLON.Vector3, end: BABYLON.Vector3, point: BABYLON.Vector3): number {
-    const sx = end.x - start.x;
-    const sy = end.y - start.y;
-    const sz = end.z - start.z;
-    const lengthSquared = (sx * sx) + (sy * sy) + (sz * sz);
-    let t = 0;
-    if (lengthSquared > 0) {
-        t = Math.max(0, Math.min(1, (((point.x - start.x) * sx) + ((point.y - start.y) * sy) + ((point.z - start.z) * sz)) / lengthSquared));
-    }
-    const dx = start.x + (sx * t) - point.x;
-    const dy = start.y + (sy * t) - point.y;
-    const dz = start.z + (sz * t) - point.z;
-    return (dx * dx) + (dy * dy) + (dz * dz);
-}

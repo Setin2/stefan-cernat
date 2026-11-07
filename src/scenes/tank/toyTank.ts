@@ -1,6 +1,7 @@
 import * as BABYLON from "@babylonjs/core";
 
-import { buildMesh, clamp, createRoundedBox, createTemplate, createToyMaterial, pushOrientedTriangle } from "./toyStyle";
+import { buildMesh, createRoundedBox, createTemplate, createToyMaterial, pushOrientedTriangle } from "../core/toyStyle";
+import { clamp, getYaw } from "../core/math";
 
 /**
  * A toy-style tank built entirely from code: rounded plastic hull and turret, rubber tracks with
@@ -650,10 +651,6 @@ function stepSpring<T extends Record<string, number>>(state: T, valueKey: keyof 
     const velocity = state[velocityKey] + (((stiffness * (target - value)) - (damping * state[velocityKey])) * deltaSeconds);
     state[velocityKey] = velocity as T[keyof T];
     state[valueKey] = (value + (velocity * deltaSeconds)) as T[keyof T];
-}
-
-function getYaw(mesh: BABYLON.AbstractMesh): number {
-    return mesh.rotationQuaternion ? mesh.rotationQuaternion.toEulerAngles().y : mesh.rotation.y;
 }
 
 function wrapAngle(angle: number): number {

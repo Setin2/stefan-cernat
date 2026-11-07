@@ -1,7 +1,9 @@
 import * as BABYLON from "@babylonjs/core";
 
-import { addStaticBox } from "./staticBodies";
-import { createRoundedBox, createToyMaterial } from "./toyStyle";
+import { addStaticBox } from "../core/staticBodies";
+import { createRoundedBox, createToyMaterial } from "../core/toyStyle";
+import { GROUND_Y, FACE_CAMERA_YAW } from "../core/constants";
+import { UI } from "../ui/style";
 
 /**
  * The Fruit Factory's signs:
@@ -12,10 +14,7 @@ import { createRoundedBox, createToyMaterial } from "./toyStyle";
  *   with the game's name, the description and a "Free on Google Play" pill.
  */
 
-const GROUND_Y = -0.5;
-/** Turns local -Z towards the camera, which looks along (0.8, -0.6) in x/z. */
-const FACE_CAMERA_YAW = Math.atan2(0.8, -0.6);
-const FONT = "Nunito, \"Arial Rounded MT Bold\", \"Trebuchet MS\", sans-serif";
+const FONT = UI.font;
 
 const PALETTE = {
     board: "#344B63",

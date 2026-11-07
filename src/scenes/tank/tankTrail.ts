@@ -1,4 +1,5 @@
 import * as BABYLON from "@babylonjs/core";
+import { GROUND_Y } from "../core/constants";
 
 /**
  * What the tank leaves behind while driving: pairs of tread prints pressed into the play mat that
@@ -8,7 +9,6 @@ import * as BABYLON from "@babylonjs/core";
  * whatever tank model is shown on it.
  */
 
-const GROUND_Y = -0.5;
 /** Prints sit just above the road slabs (whose tops are at GROUND_Y + 0.15) so they show there too. */
 const PRINT_Y = GROUND_Y + 0.17;
 

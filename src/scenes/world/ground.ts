@@ -2,8 +2,9 @@ import * as BABYLON from "@babylonjs/core";
 
 import { PLAYGROUND_LANES } from "./playground";
 import { getRoadClearAreas } from "./roads";
-import { addStaticSphere } from "./staticBodies";
-import { addThinInstances, createLumpyBall, createRandom, createTemplate, createToyMaterial } from "./toyStyle";
+import { addStaticSphere } from "../core/staticBodies";
+import { addThinInstances, createLumpyBall, createRandom, createTemplate, createToyMaterial } from "../core/toyStyle";
+import { GROUND_Y } from "../core/constants";
 
 /**
  * Gives the flat ground some character without changing its shape: a soft play-mat texture, and
@@ -15,7 +16,6 @@ import { addThinInstances, createLumpyBall, createRandom, createTemplate, create
  * bushes and boulders are solid.
  */
 
-const GROUND_Y = -0.5;
 /** Decorations are scattered within this distance of the world origin. */
 const SCATTER_RADIUS = 230;
 /** Keep the area around the tank's spawn point clear. */

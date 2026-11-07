@@ -1,6 +1,6 @@
 import * as BABYLON from "@babylonjs/core";
 
-import { createToyMaterial } from "./toyStyle";
+import { createToyMaterial } from "../core/toyStyle";
 
 /**
  * Toy-style shooting target: a navy backing disc with a rim, raised concentric rings that step up

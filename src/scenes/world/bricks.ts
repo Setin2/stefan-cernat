@@ -1,6 +1,6 @@
 import * as BABYLON from "@babylonjs/core";
 
-import { createRoundedBox, createTemplate, createToyMaterial } from "./toyStyle";
+import { createRoundedBox, createTemplate, createToyMaterial } from "../core/toyStyle";
 
 type BrickContext = {
     scene: BABYLON.Scene;
@@ -11,6 +11,27 @@ type BrickContext = {
 /** Earthy toy-block colours (brick red, mustard, teal, slate blue, sand); neighbours differ. */
 const BRICK_COLORS = ["#B9553F", "#D9A13B", "#3F8C84", "#456F99", "#DCC9A8"];
 
+/**
+ * The brick builds placed around the world: (x, z) centre, bricks per row from the bottom up,
+ * and the rotation around their own centre.
+ */
+const BRICK_BUILDS: { x: number; z: number; rows: number[]; rotationY: number }[] = [
+    { x: -5, z: -30, rows: [6, 6, 4], rotationY: 0 },
+    // Centre and angle match where this wall has always been placed (it was previously built at
+    // (130, -50) and then rotated 300 rad around the world origin).
+    { x: 47.1152, z: 131.0731, rows: [6, 6, 6, 4], rotationY: 4.6903 },
+    // A pyramid south of the start and a tower in the north-west to knock over.
+    { x: 25, z: -100, rows: [5, 4, 3, 2, 1], rotationY: 0.3 },
+    { x: -64, z: 76, rows: [1, 1, 1, 1, 1, 1], rotationY: 0.4 },
+];
+
+/** Builds every brick wall, pyramid and tower in BRICK_BUILDS. */
+export function createBrickBuilds(context: BrickContext): void {
+    for (const build of BRICK_BUILDS) {
+        instantiateBricks(context, build.x, 8, build.z, build.rows, build.rotationY);
+    }
+}
+
 /** Shared by every wall, since they all play the same sound. */
 const brickSoundCooldownMs = 150;
 let lastBrickSoundTime = 0;
@@ -20,12 +41,11 @@ let lastBrickSoundTime = 0;
  * @param y fallback ground height used if no ground is found below the wall.
  * @param rotationY rotation of the wall around its own vertical axis, in radians.
  */
-export function instantiateBricks(
+function instantiateBricks(
     _this: BrickContext,
     x: number,
     y: number,
     z: number,
-    numRows: number,
     numColumnsPerRow: number[],
     rotationY: number = 0
 ): void {
@@ -58,7 +78,7 @@ export function instantiateBricks(
     wallParent.computeWorldMatrix(true);
 
     // Create the wall of bricks
-    for (let j = 0; j < numRows; j++) {
+    for (let j = 0; j < numColumnsPerRow.length; j++) {
         // Number of bricks in the current row
         const numBricksInRow = numColumnsPerRow[j] ?? 0;
         

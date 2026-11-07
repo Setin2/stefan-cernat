@@ -1,7 +1,8 @@
 import * as BABYLON from "@babylonjs/core";
 
-import { createLumpyBall, createRandom, createTemplate, createToyMaterial } from "./toyStyle";
-import { addStaticBox } from "./staticBodies";
+import { createLumpyBall, createRandom, createTemplate, createToyMaterial } from "../core/toyStyle";
+import { addStaticBox } from "../core/staticBodies";
+import { GROUND_Y } from "../core/constants";
 
 /**
  * Toy-style cherry blossom trees: a smooth tapered trunk with a root flare and two branches, a
@@ -30,7 +31,6 @@ const TRUNK_BOTTOM_DIAMETER = 5;
 const TRUNK_TOP_DIAMETER = 3;
 /** Height of the canopy's sway pivot (top of the trunk), relative to the tree's origin. */
 const CANOPY_PIVOT_Y = 6;
-const GROUND_Y = -0.5;
 
 // Natural sakura tones: pale blush blossoms rather than candy pink, on dark bark.
 /** Trunk centers; the trunk is centered vertically on these points. */

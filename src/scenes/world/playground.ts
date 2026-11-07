@@ -1,7 +1,8 @@
 import * as BABYLON from "@babylonjs/core";
 
-import { buildMesh, createRoundedBox, createToyMaterial, pushOrientedTriangle } from "./toyStyle";
-import { addStaticBox } from "./staticBodies";
+import { buildMesh, createRoundedBox, createToyMaterial, pushOrientedTriangle } from "../core/toyStyle";
+import { addStaticBox } from "../core/staticBodies";
+import { GROUND_Y } from "../core/constants";
 
 /**
  * Toy playground pieces to drive over and knock around:
@@ -10,11 +11,10 @@ import { addStaticBox } from "./staticBodies";
  * - a hump bridge near the start: up a ramp, over a platform and down the other side.
  *
  * Ramps and platforms are solid for loose objects (bricks, cones, shots), but not for the tank: the
- * tank rides on them through `getPlaygroundHeight`, which tank.ts uses for its own simple vertical
+ * tank rides on them through `getPlaygroundHeight`, which tank/movement.ts uses for its own simple vertical
  * movement (so it follows the slopes smoothly, flies off ramp ends and lands).
  */
 
-const GROUND_Y = -0.5;
 /** Ramps and platforms sit this far above the ground, just above any road under them. */
 const SURFACE_LIFT = 0.05;
 /**

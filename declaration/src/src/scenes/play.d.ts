@@ -1,74 +1,33 @@
 import { Node } from "@babylonjs/core/node";
+/**
+ * The game's entry point: the Babylon.js Editor attaches this script to the scene (see
+ * scripts-map.ts), and onInitialize builds everything on top of the imported scene.
+ *
+ * - core/  engine-level setup: physics, shadows, performance, shared toy-style mesh helpers
+ * - tank/  the player tank: model, driving, shooting, tread trail, link targets
+ * - world/ everything placed in the world: trees, roads, landmarks, trophies, signs, clouds
+ * - ui/    the 2D overlay: help card, target HUD, FPS counter, shared UI style
+ */
 export default class Play extends Node {
     private scene;
     private camera;
-    private bullet;
-    private tankSound;
-    private brickSound;
     private tank;
     private toyTank;
-    private divFps;
-    private controlOverlayTexture;
-    private controlOverlayPanel;
-    private controlOverlayHint;
-    private controlDismissTimer;
-    private isAudioMuted;
-    private readonly handleControlHotkeys;
     protected constructor();
     /**
      * Called when the node is being initialized.
      * This function is called immediately after the constructor has been called.
      */
     onInitialize(): void;
-    /**
-     * Might add other easter eggs later if I feel like it
-     */
-    easterEgg(): void;
-    /**
-     * Initialize constant variables and functionalities of the game
-     */
-    play(): void;
+    private findSceneObjects;
+    /** Loaded by hand so the desk monitor's texture loads reliably in production builds. */
+    private loadScreenTexture;
+    /** Restyles the imported scene and adds everything built in code. Order matters where noted. */
+    private buildWorld;
     /**
      * Swaps the imported tank model for the toy tank built in code. Add `?tank=classic` to the URL
      * to get the original model back for comparison.
      */
-    private initializeTankModel;
-    /**
-     * Sunlight and shadows (see shadows.ts).
-     */
-    initializeShadows(): void;
-    /**
-     * Creates the reusable help overlay and shows it on first load.
-     */
-    showControl(): Promise<void>;
-    configureFpsCounter(): void;
-    /**
-     * Initializes the shared scene objects used across the gameplay helpers.
-     */
-    initializeGlobalVariables(): void;
-    /**
-     * By default Babylon advances cannon.js with one step per frame, sized to the frame time. At
-     * 60 fps a shot (200 units/s) moves ~3.3 units per step, about the thickness of a brick, so it
-     * can pass straight through; at lower frame rates it gets worse. Splitting each frame into
-     * equal sub-steps of at most 1/120s keeps the simulation stable at any frame rate while still
-     * advancing exactly the frame's time, so motion stays smooth.
-     */
-    /**
-     * Babylon copies every physics body's transform to its mesh (and back) on every physics step.
-     * Bodies that cannon.js has put to sleep (settled bricks, cones, trophies) don't move, so that
-     * work is skipped for them until something wakes them up.
-     */
-    private skipSleepingBodySync;
-    private configurePhysicsSubsteps;
-    /**
-     * Initializes textures manually to keep them loading reliably in production builds.
-     */
-    initializeTextures(): void;
-    optimizeScene(): void;
-    private clearControlDismissTimer;
-    private disposeControlOverlay;
-    private toggleControlOverlay;
-    private hideControlOverlay;
-    private toggleAudioMute;
-    private updateControlHint;
+    private createToyTankModel;
+    private initializeTank;
 }

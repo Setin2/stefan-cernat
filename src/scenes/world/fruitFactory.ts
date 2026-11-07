@@ -1,6 +1,7 @@
 import * as BABYLON from "@babylonjs/core";
 
-import { addThinInstances, buildMesh, createLumpyBall, createRandom, createRoundedBox, createToyMaterial, pushOrientedTriangle } from "./toyStyle";
+import { addThinInstances, buildMesh, createLumpyBall, createRandom, createRoundedBox, createToyMaterial, pushOrientedTriangle } from "../core/toyStyle";
+import { GROUND_Y } from "../core/constants";
 
 /**
  * Rebuilds the Fruit Factory corner (the desk with the PC, and the C# trophy) as a toy desk setup.
@@ -10,8 +11,6 @@ import { addThinInstances, buildMesh, createLumpyBall, createRandom, createRound
  * and speakers, plus a few props. The originals are hidden; the invisible "fruit factory" box keeps
  * doing the physics.
  */
-
-const GROUND_Y = -0.5;
 
 const PALETTE = {
     deskTop: "#E2B57E",

@@ -1,6 +1,7 @@
 import * as BABYLON from "@babylonjs/core";
 
-import { createLumpyBall, createRandom, createRoundedBox, createToyMaterial, extrudeOutline } from "./toyStyle";
+import { createLumpyBall, createRandom, createRoundedBox, createToyMaterial, extrudeOutline } from "../core/toyStyle";
+import { GROUND_Y, FACE_CAMERA_YAW } from "../core/constants";
 
 /**
  * Toy trophies with the logos of the AI assistants used while building the site, in place of the
@@ -28,13 +29,10 @@ type Spot = {
     scale: number;
 };
 
-const GROUND_Y = -0.5;
 const HALF_HEIGHT = 4;
 const LOGO_Y = 1.5;
 /** The logo is drawn a bit larger than the plinth so it's easy to recognise. */
 const LOGO_SCALE = 1.15;
-/** Turns trophy space's -Z (the logo's front) towards the camera, which looks along (0.8, -0.6) in x/z. */
-const FACE_CAMERA_YAW = Math.atan2(0.8, -0.6);
 
 const PALETTE = {
     plinth: "#344B63",

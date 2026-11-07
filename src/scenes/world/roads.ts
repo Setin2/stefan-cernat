@@ -1,7 +1,9 @@
 import * as BABYLON from "@babylonjs/core";
 
 import { getPlaygroundHeight } from "./playground";
-import { addThinInstances, buildMesh, createRandom, pushOrientedTriangle } from "./toyStyle";
+import { addThinInstances, buildMesh, createRandom, pushOrientedTriangle } from "../core/toyStyle";
+import { smoothStep } from "../core/math";
+import { GROUND_Y } from "../core/constants";
 
 /**
  * The road network:
@@ -21,7 +23,6 @@ import { addThinInstances, buildMesh, createRandom, pushOrientedTriangle } from 
  * cobble texture is mapped in world space, so slabs of different roads match where they meet.
  */
 
-const GROUND_Y = -0.5;
 const ROAD_Y = GROUND_Y + 0.06;
 /** Clearance kept around roads for decorations. */
 const EDGE_MARGIN = 1;
@@ -367,7 +368,3 @@ function buildDisc(name: string, cx: number, cz: number, radiusX: number, radius
     return buildMesh(name, positions, normals, indices, scene, uvs);
 }
 
-function smoothStep(edge0: number, edge1: number, value: number): number {
-    const t = Math.max(0, Math.min(1, (value - edge0) / (edge1 - edge0)));
-    return t * t * (3 - (2 * t));
-}

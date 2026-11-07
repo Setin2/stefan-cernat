@@ -1,6 +1,7 @@
 import * as BABYLON from "@babylonjs/core";
 
-import { createRoundedBox, createToyMaterial } from "./toyStyle";
+import { createRoundedBox, createToyMaterial } from "../core/toyStyle";
+import { GROUND_Y } from "../core/constants";
 
 /**
  * Gives the imported models (the big sword and the big symbol) the same toy finish as the rest
@@ -8,8 +9,6 @@ import { createRoundedBox, createToyMaterial } from "./toyStyle";
  * around them. Their geometry, positions and physics are
  * unchanged.
  */
-
-const GROUND_Y = -0.5;
 
 const PALETTE = {
     steel: "#C9D2DA",

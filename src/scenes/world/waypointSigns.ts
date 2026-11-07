@@ -1,7 +1,8 @@
 import * as BABYLON from "@babylonjs/core";
 
-import { addStaticBox } from "./staticBodies";
-import { createRoundedBox, createToyMaterial, extrudeOutline } from "./toyStyle";
+import { addStaticBox } from "../core/staticBodies";
+import { createRoundedBox, createToyMaterial, extrudeOutline } from "../core/toyStyle";
+import { GROUND_Y, FACE_CAMERA_YAW } from "../core/constants";
 
 /**
  * Toy signposts in place of the flat 3D text lying on the ground ("PROJECTS -->" and
@@ -31,13 +32,7 @@ type Signpost = {
     bullseye?: boolean;
 };
 
-const GROUND_Y = -0.5;
 const SCALE = 1.3;
-/**
- * Turns local -Z (the boards' front) towards the camera, which looks along (0.8, -0.6) in x/z.
- * Local +X then points to the right of the screen.
- */
-const FACE_CAMERA_YAW = Math.atan2(0.8, -0.6);
 
 const PALETTE = {
     board: "#F4EBDD",
