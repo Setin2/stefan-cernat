@@ -322,13 +322,6 @@ export async function initializeShooting(_this: TankContext, forward: BABYLON.Ve
             scaling: new BABYLON.Vector3(1.75, 1.75, 1.75),
             url: "https://www.linkedin.com/in/stefan-cernat/",
         },
-        {
-            name: "twitter",
-            label: "X / Twitter",
-            position: new BABYLON.Vector3(69.8356, 2.1121, 17.2901),
-            scaling: new BABYLON.Vector3(1.5, 1.5, 1.5),
-            url: "https://x.com/Setin2",
-        },
     ];
 
     const github = _this.scene.getMeshByName("target_github");
@@ -381,7 +374,7 @@ export async function initializeShooting(_this: TankContext, forward: BABYLON.Ve
     });
 
     // Toy target models; the original meshes stay (hidden) for hit tests and labels.
-    const targetMarks: Record<string, string> = { GitHub: "GH", LinkedIn: "in", "X / Twitter": "X" };
+    const targetMarks: Record<string, string> = { GitHub: "GH", LinkedIn: "in" };
     const toyTargets = new Map<BABYLON.Mesh, ToyTarget>();
     const highlightColor = BABYLON.Color3.FromHexString("#f7b955");
     targets.forEach((target) => {

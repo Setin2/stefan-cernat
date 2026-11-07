@@ -1,6 +1,7 @@
 import * as BABYLON from "@babylonjs/core";
 
 import { createRoadNetwork } from "./roads";
+import { addStaticBox } from "./staticBodies";
 import { createLumpyBall, createRandom, createRoundedBox, createToyMaterial } from "./toyStyle";
 
 /**
@@ -15,8 +16,8 @@ const GROUND_Y = -0.5;
 const PALETTE = {
     podiumBody: "#E8DCC6",
     first: "#C9A35B",
-    second: "#AEB8C2",
     third: "#B07A52",
+    second: "#AEB8C2",
     numbers: "#344B63",
     logoBlue: "#456F99",
     logoSakura: "#E8869F",
@@ -24,8 +25,6 @@ const PALETTE = {
     mortar: "#8F8372",
     edgePebbles: ["#9C9282", "#B3A893"],
     cobbleTint: "#C4C2BC",
-    signPlate: "#344B63",
-    signRim: "#E8DCC6",
 };
 
 export function restyleLandmarks(scene: BABYLON.Scene): void {
@@ -53,6 +52,7 @@ export function restyleLandmarks(scene: BABYLON.Scene): void {
 /**
  * The podium mesh is three boxes side by side (2nd, 1st, 3rd place). These are their extents in
  * the podium's local space, taken from its geometry; local +Z is up and local +Y is the front.
+ * The third step no longer has a logo or target (X/Twitter was removed).
  */
 const PODIUM_STEPS = [
     { place: 2, minX: -2.7, maxX: -1, topZ: 0.3 },
@@ -118,14 +118,23 @@ function restylePodium(scene: BABYLON.Scene): void {
         [body, cap, number].forEach((mesh) => {
             mesh.isPickable = false;
         });
+
+        // Solid step (replacing the old three-step physics body below).
+        addStaticBox(scene, center, size.x, size.y, size.z);
     }
 
-    // Hide the old blocks but keep the physics body and the logos parented to it.
+    // Hide the old blocks (the logos stay parented to it). Its physics body is replaced by the
+    // per-step boxes above, which follow the steps' shapes more closely. The scene loader doesn't
+    // set mesh.physicsImpostor, so look the body up through the physics engine.
     podium.isVisible = false;
+    (podium.physicsImpostor ?? scene.getPhysicsEngine()?.getImpostorForPhysicsObject(podium))?.dispose();
+    podium.physicsImpostor = null;
 
     for (const child of podium.getChildMeshes()) {
         const name = child.name.toLowerCase();
-        if (name.includes("linkedin") || name.includes("twitter")) {
+        if (name.includes("twitter")) {
+            child.setEnabled(false);
+        } else if (name.includes("linkedin")) {
             child.material = createToyMaterial(scene, `toy-logo-${name}`, PALETTE.logoBlue, { roughness: 0.4, clearCoat: 0.6 });
         } else if (name.includes("stlmesh")) {
             child.material = createToyMaterial(scene, "toy-logo-sakura", PALETTE.logoSakura, { roughness: 0.45, clearCoat: 0.5 });
@@ -287,37 +296,7 @@ function clampByte(value: number): number {
  * plate, and the 3D letters get a glossy cream plastic finish.
  */
 function restyleSigns(scene: BABYLON.Scene): void {
-    const plate = createToyMaterial(scene, "toy-sign-plate", PALETTE.signPlate, { roughness: 0.5, clearCoat: 0.35 });
-    const rim = createToyMaterial(scene, "toy-sign-rim", PALETTE.signRim, { roughness: 0.5, clearCoat: 0.3 });
-
-    // The description is a flat textured plane lying on the ground.
-    const description = scene.getMeshByName("ffdescription");
-    if (description) {
-        description.computeWorldMatrix(true);
-        const world = description.getWorldMatrix();
-        const axisX = BABYLON.Vector3.TransformNormal(new BABYLON.Vector3(1, 0, 0), world);
-        const axisY = BABYLON.Vector3.TransformNormal(new BABYLON.Vector3(0, 1, 0), world);
-        const center = description.getAbsolutePosition();
-        // Rotating a box by `yaw` turns its local X into (cos yaw, 0, -sin yaw).
-        const yaw = Math.atan2(-axisX.z, axisX.x);
-        createSignPlate(scene, "sign-plate-ffdescription", center.x, center.z, yaw, axisX.length() + 5, axisY.length() + 5, plate, rim);
-    }
+    // The description lying on the ground is replaced by the info stand in fruitFactorySigns.ts.
+    scene.getMeshByName("ffdescription")?.setEnabled(false);
 }
 
-function createSignPlate(scene: BABYLON.Scene, name: string, x: number, z: number, yaw: number, width: number, depth: number, plate: BABYLON.Material, rim: BABYLON.Material): void {
-    const plateHeight = 0.5;
-    const plateTop = GROUND_Y + 0.24;
-    const top = createRoundedBox(name, width, plateHeight, depth, 0.25, scene, 3);
-    top.material = plate;
-    top.position.set(x, plateTop - (plateHeight / 2), z);
-    top.rotation.y = yaw;
-
-    const border = createRoundedBox(`${name}-rim`, width + 1.6, plateHeight, depth + 1.6, 0.25, scene, 3);
-    border.material = rim;
-    border.position.set(x, plateTop - 0.08 - (plateHeight / 2), z);
-    border.rotation.y = yaw;
-
-    [top, border].forEach((mesh) => {
-        mesh.isPickable = false;
-    });
-}

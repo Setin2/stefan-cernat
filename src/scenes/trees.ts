@@ -42,7 +42,7 @@ export const TREE_POSITIONS = [
     new BABYLON.Vector3(57.1332, 5.1848, 77.0256),
     // A few more towards the edges of the play area, away from the paths.
     new BABYLON.Vector3(-72, 5.1848, 98),
-    new BABYLON.Vector3(-118, 5.1848, 62),
+    new BABYLON.Vector3(-136, 5.1848, 40),
     new BABYLON.Vector3(100, 5.1848, 72),
     new BABYLON.Vector3(162, 5.1848, -58),
 ];

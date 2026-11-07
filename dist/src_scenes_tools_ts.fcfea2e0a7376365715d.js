@@ -1410,6 +1410,408 @@ function restyleTrophy(scene) {
 
 /***/ },
 
+/***/ "./src/scenes/fruitFactorySigns.ts"
+/*!*****************************************!*\
+  !*** ./src/scenes/fruitFactorySigns.ts ***!
+  \*****************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   createFruitFactorySigns: () => (/* binding */ createFruitFactorySigns)
+/* harmony export */ });
+/* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core */ "./node_modules/@babylonjs/core/index.js");
+/* harmony import */ var _staticBodies__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./staticBodies */ "./src/scenes/staticBodies.ts");
+/* harmony import */ var _toyStyle__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./toyStyle */ "./src/scenes/toyStyle.ts");
+
+
+
+/**
+ * The Fruit Factory's signs:
+ *
+ * - the 3D "FRUIT FACTORY" title is mounted on a toy shop sign behind the desk: a navy board with a
+ *   sand rim on two posts, glowing marquee bulbs round the edge and toy fruit sitting on top;
+ * - the description that used to lie on the ground is now a tilted info stand facing the camera,
+ *   with the game's name, the description and a "Free on Google Play" pill.
+ */
+var GROUND_Y = -0.5;
+/** Turns local -Z towards the camera, which looks along (0.8, -0.6) in x/z. */
+var FACE_CAMERA_YAW = Math.atan2(0.8, -0.6);
+var FONT = "Nunito, \"Arial Rounded MT Bold\", \"Trebuchet MS\", sans-serif";
+var PALETTE = {
+    board: "#344B63",
+    rim: "#E8DCC6",
+    post: "#8B6A50",
+    bulb: "#FFE7A8",
+    cream: "#F4EBDD",
+    navy: "#344B63",
+    pink: "#C9667F",
+    muted: "#6B7B8C",
+    apple: "#D9534F",
+    orange: "#F0913A",
+    pear: "#C9CF62",
+    leaf: "#6E9F7E",
+    stem: "#6B4F3A",
+};
+/** Where the info stand stands: beside the desk, not in front of it from the camera. */
+var INFO_STAND_POSITION = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector2(-100, 35);
+function createFruitFactorySigns(scene) {
+    try {
+        createTitleSign(scene);
+    }
+    catch (error) {
+        console.error("Fruit Factory title sign failed", error);
+    }
+    try {
+        createInfoStand(scene);
+    }
+    catch (error) {
+        console.error("Fruit Factory info stand failed", error);
+    }
+}
+// ==================================================================== Title sign
+function createTitleSign(scene) {
+    var _a;
+    var title = scene.getTransformNodeByName("Text");
+    var letters = (_a = title === null || title === void 0 ? void 0 : title.getChildMeshes()) !== null && _a !== void 0 ? _a : [];
+    if (!letters.length) {
+        return;
+    }
+    var min = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(Infinity, Infinity, Infinity);
+    var max = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(-Infinity, -Infinity, -Infinity);
+    for (var _i = 0, letters_1 = letters; _i < letters_1.length; _i++) {
+        var mesh = letters_1[_i];
+        mesh.computeWorldMatrix(true);
+        var box = mesh.getBoundingInfo().boundingBox;
+        min = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.Minimize(min, box.minimumWorld);
+        max = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.Maximize(max, box.maximumWorld);
+    }
+    // The letters run along X and face +Z (towards the camera); the board goes just behind them.
+    var width = (max.x - min.x) + 4;
+    var height = (max.y - min.y) + 3.4;
+    var centerX = (min.x + max.x) / 2;
+    var centerY = (min.y + max.y) / 2;
+    var boardFront = min.z - 0.15;
+    var depth = 0.8;
+    var boardZ = boardFront - (depth / 2);
+    var materials = {
+        board: (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "ff-title-board", PALETTE.board, { roughness: 0.45, clearCoat: 0.4 }),
+        rim: (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "ff-title-rim", PALETTE.rim, { roughness: 0.45, clearCoat: 0.4 }),
+        post: (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "ff-title-post", PALETTE.post, { roughness: 0.55, clearCoat: 0.3 }),
+    };
+    var board = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("ff-title-board", width, height, depth, 0.6, scene);
+    board.material = materials.board;
+    board.position.set(centerX, centerY, boardZ);
+    var rim = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("ff-title-board-rim", width + 1.2, height + 1.2, depth * 0.7, 0.8, scene);
+    rim.material = materials.rim;
+    rim.position.set(centerX, centerY, boardZ - 0.2);
+    // Posts from the ground up to the board, at its ends.
+    var postTop = centerY;
+    for (var _b = 0, _c = [-1, 1]; _b < _c.length; _b++) {
+        var side = _c[_b];
+        var x = centerX + (side * ((width / 2) - 2.2));
+        var post = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("ff-title-post-".concat(side), 1.1, postTop - GROUND_Y, 1.1, 0.35, scene);
+        post.material = materials.post;
+        post.position.set(x, GROUND_Y + ((postTop - GROUND_Y) / 2), boardZ - 0.9);
+        (0,_staticBodies__WEBPACK_IMPORTED_MODULE_1__.addStaticBox)(scene, post.position, 1.3, postTop - GROUND_Y, 1.3);
+    }
+    // Marquee bulbs round the edge of the board's front.
+    var bulbMaterial = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.StandardMaterial("ff-title-bulb", scene);
+    bulbMaterial.diffuseColor = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.FromHexString(PALETTE.bulb);
+    bulbMaterial.emissiveColor = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.FromHexString(PALETTE.bulb).scale(0.85);
+    bulbMaterial.specularColor = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3(0.3, 0.3, 0.3);
+    var bulb = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateSphere("ff-title-bulb", { diameter: 0.55, segments: 8 }, scene);
+    bulb.material = bulbMaterial;
+    bulb.isVisible = false;
+    var inset = 0.7;
+    var left = centerX - (width / 2) + inset;
+    var right = centerX + (width / 2) - inset;
+    var bottom = centerY - (height / 2) + inset;
+    var top = centerY + (height / 2) - inset;
+    var perimeter = [];
+    var spacing = 1.6;
+    var along = function (x0, y0, x1, y1) {
+        var steps = Math.max(1, Math.round(Math.hypot(x1 - x0, y1 - y0) / spacing));
+        for (var i = 0; i < steps; i++) {
+            perimeter.push([x0 + (((x1 - x0) * i) / steps), y0 + (((y1 - y0) * i) / steps)]);
+        }
+    };
+    along(left, bottom, right, bottom);
+    along(right, bottom, right, top);
+    along(right, top, left, top);
+    along(left, top, left, bottom);
+    perimeter.forEach(function (_a, i) {
+        var x = _a[0], y = _a[1];
+        var instance = bulb.createInstance("ff-title-bulb-".concat(i));
+        instance.position.set(x, y, boardFront + 0.12);
+        instance.isPickable = false;
+    });
+    // Toy fruit sitting on top of the board.
+    var fruitY = centerY + (height / 2) + 0.6;
+    createApple(scene, "ff-title-apple", new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(centerX - (width * 0.32), fruitY + 1.1, boardZ), 1.2);
+    createOrange(scene, "ff-title-orange", new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(centerX - (width * 0.12), fruitY + 1, boardZ), 1.1);
+    createCherries(scene, "ff-title-cherries", new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(centerX + (width * 0.12), fruitY + 0.6, boardZ));
+    createPear(scene, "ff-title-pear", new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(centerX + (width * 0.32), fruitY + 1, boardZ), 1);
+    for (var _d = 0, _e = [board, rim]; _d < _e.length; _d++) {
+        var mesh = _e[_d];
+        mesh.isPickable = false;
+    }
+}
+function fruitMaterial(scene, name, hex) {
+    var _a;
+    return (_a = scene.getMaterialByName(name)) !== null && _a !== void 0 ? _a : (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, name, hex, { roughness: 0.35, clearCoat: 0.7 });
+}
+function addStemAndLeaf(scene, name, top, size, leafAngle) {
+    var stem = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder("".concat(name, "-stem"), { diameterTop: 0.12 * size, diameterBottom: 0.2 * size, height: 0.8 * size, tessellation: 8 }, scene);
+    stem.material = fruitMaterial(scene, "ff-fruit-stem", PALETTE.stem);
+    stem.position.set(top.x, top.y + (0.3 * size), top.z);
+    stem.rotation.z = 0.25;
+    var leaf = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateSphere("".concat(name, "-leaf"), { diameter: 1, segments: 8 }, scene);
+    leaf.material = fruitMaterial(scene, "ff-fruit-leaf", PALETTE.leaf);
+    leaf.scaling.set(0.7 * size, 0.12 * size, 0.35 * size);
+    leaf.rotation.set(0, leafAngle, 0.5);
+    leaf.position.set(top.x + (0.35 * size), top.y + (0.45 * size), top.z);
+}
+function createApple(scene, name, center, size) {
+    var apple = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateSphere(name, { diameter: 2 * size, segments: 20 }, scene);
+    apple.material = fruitMaterial(scene, "ff-fruit-apple", PALETTE.apple);
+    apple.scaling.y = 0.9;
+    apple.position.copyFrom(center);
+    addStemAndLeaf(scene, name, center.add(new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, 0.85 * size, 0)), size, 0.4);
+}
+function createOrange(scene, name, center, size) {
+    var orange = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateSphere(name, { diameter: 2 * size, segments: 20 }, scene);
+    orange.material = fruitMaterial(scene, "ff-fruit-orange", PALETTE.orange);
+    orange.position.copyFrom(center);
+    var leaf = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateSphere("".concat(name, "-leaf"), { diameter: 1, segments: 8 }, scene);
+    leaf.material = fruitMaterial(scene, "ff-fruit-leaf", PALETTE.leaf);
+    leaf.scaling.set(0.6 * size, 0.12 * size, 0.3 * size);
+    leaf.rotation.z = -0.3;
+    leaf.position.set(center.x + (0.25 * size), center.y + (1.02 * size), center.z);
+}
+function createCherries(scene, name, base) {
+    var material = fruitMaterial(scene, "ff-fruit-apple", PALETTE.apple);
+    var stemMaterial = fruitMaterial(scene, "ff-fruit-leaf", PALETTE.leaf);
+    var joint = base.add(new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, 2.2, 0));
+    for (var _i = 0, _a = [-1, 1]; _i < _a.length; _i++) {
+        var side = _a[_i];
+        var cherry = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateSphere("".concat(name, "-").concat(side), { diameter: 1.2, segments: 14 }, scene);
+        cherry.material = material;
+        var position = base.add(new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(side * 0.65, 0, 0));
+        cherry.position.copyFrom(position);
+        // Stem from the cherry's top to the shared joint.
+        var from = position.add(new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, 0.5, 0));
+        var stem = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateTube("".concat(name, "-stem-").concat(side), {
+            path: [from, _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.Lerp(from, joint, 0.5).add(new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(side * 0.25, 0.1, 0)), joint],
+            radius: 0.07,
+            tessellation: 6,
+        }, scene);
+        stem.material = stemMaterial;
+    }
+    var leaf = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateSphere("".concat(name, "-leaf"), { diameter: 1, segments: 8 }, scene);
+    leaf.material = stemMaterial;
+    leaf.scaling.set(0.8, 0.12, 0.4);
+    leaf.rotation.z = 0.4;
+    leaf.position.set(joint.x + 0.4, joint.y + 0.1, joint.z);
+}
+function createPear(scene, name, center, size) {
+    var material = fruitMaterial(scene, "ff-fruit-pear", PALETTE.pear);
+    var body = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateSphere(name, { diameter: 2 * size, segments: 18 }, scene);
+    body.material = material;
+    body.position.copyFrom(center);
+    var neck = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateSphere("".concat(name, "-neck"), { diameter: 1.3 * size, segments: 16 }, scene);
+    neck.material = material;
+    neck.position.set(center.x, center.y + (1.05 * size), center.z);
+    addStemAndLeaf(scene, name, center.add(new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, 1.55 * size, 0)), size * 0.9, -0.5);
+}
+// ==================================================================== Info stand
+function createInfoStand(scene) {
+    var panelWidth = 22;
+    var panelHeight = 13;
+    var tilt = (40 * Math.PI) / 180;
+    var bottomY = 1.6;
+    var root = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.TransformNode("ff-info-stand", scene);
+    root.position.set(INFO_STAND_POSITION.x, GROUND_Y, INFO_STAND_POSITION.y);
+    root.rotation.y = FACE_CAMERA_YAW;
+    // The panel leans back, so it faces up towards the camera (which looks down at ~30°).
+    var panel = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.TransformNode("ff-info-panel", scene);
+    panel.parent = root;
+    panel.position.set(0, bottomY + ((panelHeight / 2) * Math.cos(tilt)), (panelHeight / 2) * Math.sin(tilt));
+    panel.rotation.x = tilt;
+    var frame = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("ff-info-frame", panelWidth + 1.4, panelHeight + 1.4, 0.7, 0.6, scene);
+    frame.material = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "ff-info-frame", PALETTE.navy, { roughness: 0.45, clearCoat: 0.4 });
+    frame.parent = panel;
+    frame.position.z = 0.35;
+    var face = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreatePlane("ff-info-face", { width: panelWidth, height: panelHeight }, scene);
+    face.material = createInfoMaterial(scene, panelWidth, panelHeight);
+    face.parent = panel;
+    face.position.z = -0.03;
+    // Two legs behind the panel and a little foot at the front edge of each.
+    var legMaterial = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "ff-info-leg", PALETTE.post, { roughness: 0.55, clearCoat: 0.3 });
+    var legZ = (panelHeight / 2) * Math.sin(tilt) + 0.8;
+    var legHeight = panel.position.y;
+    for (var _i = 0, _a = [-1, 1]; _i < _a.length; _i++) {
+        var side = _a[_i];
+        var leg = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("ff-info-leg-".concat(side), 0.9, legHeight, 0.9, 0.3, scene);
+        leg.material = legMaterial;
+        leg.parent = root;
+        leg.position.set(side * (panelWidth / 2 - 2.5), legHeight / 2, legZ);
+        var foot = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("ff-info-foot-".concat(side), 1.4, 0.6, legZ + 1.5, 0.25, scene);
+        foot.material = legMaterial;
+        foot.parent = root;
+        foot.position.set(side * (panelWidth / 2 - 2.5), 0.3, legZ / 2);
+    }
+    for (var _b = 0, _c = root.getChildMeshes(); _b < _c.length; _b++) {
+        var mesh = _c[_b];
+        mesh.isPickable = false;
+    }
+    // Solid, so the tank bumps into it.
+    root.computeWorldMatrix(true);
+    var center = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.TransformCoordinates(new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, 4, legZ / 2), root.getWorldMatrix());
+    (0,_staticBodies__WEBPACK_IMPORTED_MODULE_1__.addStaticBox)(scene, center, panelWidth + 1.4, 8, legZ + 3, { rotation: _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Quaternion.RotationYawPitchRoll(FACE_CAMERA_YAW, 0, 0) });
+}
+/** The panel's face: title, description, a "Free on Google Play" pill and a few drawn fruits. */
+function createInfoMaterial(scene, panelWidth, panelHeight) {
+    var width = 1024;
+    var height = Math.round((width * panelHeight) / panelWidth);
+    var texture = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.DynamicTexture("ff-info-texture", { width: width, height: height }, scene, true);
+    var context = texture.getContext();
+    var draw = function () {
+        context.fillStyle = PALETTE.cream;
+        context.fillRect(0, 0, width, height);
+        var pad = 64;
+        context.textAlign = "left";
+        context.textBaseline = "alphabetic";
+        context.fillStyle = PALETTE.pink;
+        context.font = "900 34px ".concat(FONT);
+        context.fillText("MY PROJECTS", pad, 96);
+        context.fillStyle = PALETTE.navy;
+        context.font = "900 74px ".concat(FONT);
+        context.fillText("Idle Fruit Factory", pad, 190);
+        context.fillStyle = PALETTE.muted;
+        context.font = "800 40px ".concat(FONT);
+        var lines = wrapText(context, "My first Android mobile game. Download it for free on the Google Play Store.", 580);
+        lines.forEach(function (line, i) { return context.fillText(line, pad, 262 + (i * 52)); });
+        // Pill badge.
+        var pillY = 262 + (lines.length * 52) + 18;
+        var pillHeight = 76;
+        context.font = "900 36px ".concat(FONT);
+        var pillText = "Free on Google Play";
+        var pillWidth = context.measureText(pillText).width + 120;
+        roundRect(context, pad, pillY, pillWidth, pillHeight, pillHeight / 2);
+        context.fillStyle = PALETTE.navy;
+        context.fill();
+        context.fillStyle = PALETTE.cream;
+        // Little "play" triangle.
+        context.beginPath();
+        context.moveTo(pad + 34, pillY + 22);
+        context.lineTo(pad + 60, pillY + (pillHeight / 2));
+        context.lineTo(pad + 34, pillY + pillHeight - 22);
+        context.closePath();
+        context.fill();
+        context.fillText(pillText, pad + 80, pillY + 50);
+        // Fruit doodles on the right.
+        drawApple(context, 890, 200, 72);
+        drawOrange(context, 820, 410, 60);
+        drawCherries(context, 935, 420);
+        texture.update();
+    };
+    draw();
+    // Redraw with the rounded web font once it has loaded.
+    if ("fonts" in document) {
+        void document.fonts.load("900 40px Nunito").then(draw).catch(function () { return undefined; });
+    }
+    var material = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.StandardMaterial("ff-info-material", scene);
+    material.diffuseTexture = texture;
+    material.specularColor = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3(0.08, 0.08, 0.08);
+    material.emissiveColor = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3(0.22, 0.22, 0.22);
+    return material;
+}
+function wrapText(context, text, maxWidth) {
+    var lines = [];
+    var line = "";
+    for (var _i = 0, _a = text.split(" "); _i < _a.length; _i++) {
+        var word = _a[_i];
+        var candidate = line ? "".concat(line, " ").concat(word) : word;
+        if (context.measureText(candidate).width > maxWidth && line) {
+            lines.push(line);
+            line = word;
+        }
+        else {
+            line = candidate;
+        }
+    }
+    if (line) {
+        lines.push(line);
+    }
+    return lines;
+}
+function roundRect(context, x, y, w, h, r) {
+    context.beginPath();
+    context.moveTo(x + r, y);
+    context.arcTo(x + w, y, x + w, y + h, r);
+    context.arcTo(x + w, y + h, x, y + h, r);
+    context.arcTo(x, y + h, x, y, r);
+    context.arcTo(x, y, x + w, y, r);
+    context.closePath();
+}
+function drawLeaf(context, x, y, size, angle) {
+    context.save();
+    context.translate(x, y);
+    context.rotate(angle);
+    context.fillStyle = PALETTE.leaf;
+    context.beginPath();
+    context.ellipse(size / 2, 0, size / 2, size / 4.5, 0, 0, Math.PI * 2);
+    context.fill();
+    context.restore();
+}
+function drawApple(context, x, y, r) {
+    context.fillStyle = PALETTE.stem;
+    context.fillRect(x - 5, y - r - 26, 10, 34);
+    drawLeaf(context, x + 6, y - r - 12, 56, -0.5);
+    context.fillStyle = PALETTE.apple;
+    context.beginPath();
+    context.ellipse(x, y, r, r * 0.92, 0, 0, Math.PI * 2);
+    context.fill();
+    context.fillStyle = "rgba(255,255,255,0.35)";
+    context.beginPath();
+    context.ellipse(x - (r * 0.38), y - (r * 0.35), r * 0.22, r * 0.14, -0.6, 0, Math.PI * 2);
+    context.fill();
+}
+function drawOrange(context, x, y, r) {
+    context.fillStyle = PALETTE.orange;
+    context.beginPath();
+    context.arc(x, y, r, 0, Math.PI * 2);
+    context.fill();
+    drawLeaf(context, x + 4, y - r + 4, 46, -0.3);
+    context.fillStyle = "rgba(255,255,255,0.3)";
+    context.beginPath();
+    context.ellipse(x - (r * 0.35), y - (r * 0.35), r * 0.2, r * 0.13, -0.6, 0, Math.PI * 2);
+    context.fill();
+}
+function drawCherries(context, x, y) {
+    context.strokeStyle = PALETTE.leaf;
+    context.lineWidth = 7;
+    context.lineCap = "round";
+    for (var _i = 0, _a = [-1, 1]; _i < _a.length; _i++) {
+        var side = _a[_i];
+        context.beginPath();
+        context.moveTo(x + (side * 30), y);
+        context.quadraticCurveTo(x + (side * 14), y - 60, x + 6, y - 96);
+        context.stroke();
+    }
+    drawLeaf(context, x + 6, y - 96, 44, -0.2);
+    context.fillStyle = PALETTE.apple;
+    for (var _b = 0, _c = [-1, 1]; _b < _c.length; _b++) {
+        var side = _c[_b];
+        context.beginPath();
+        context.arc(x + (side * 30), y + 18, 30, 0, Math.PI * 2);
+        context.fill();
+    }
+}
+
+
+/***/ },
+
 /***/ "./src/scenes/ground.ts"
 /*!******************************!*\
   !*** ./src/scenes/ground.ts ***!
@@ -1751,7 +2153,9 @@ function createFlowerMesh(scene, name, petalHex) {
 /* harmony export */ });
 /* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core */ "./node_modules/@babylonjs/core/index.js");
 /* harmony import */ var _roads__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./roads */ "./src/scenes/roads.ts");
-/* harmony import */ var _toyStyle__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./toyStyle */ "./src/scenes/toyStyle.ts");
+/* harmony import */ var _staticBodies__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./staticBodies */ "./src/scenes/staticBodies.ts");
+/* harmony import */ var _toyStyle__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./toyStyle */ "./src/scenes/toyStyle.ts");
+
 
 
 
@@ -1765,8 +2169,8 @@ var GROUND_Y = -0.5;
 var PALETTE = {
     podiumBody: "#E8DCC6",
     first: "#C9A35B",
-    second: "#AEB8C2",
     third: "#B07A52",
+    second: "#AEB8C2",
     numbers: "#344B63",
     logoBlue: "#456F99",
     logoSakura: "#E8869F",
@@ -1774,8 +2178,6 @@ var PALETTE = {
     mortar: "#8F8372",
     edgePebbles: ["#9C9282", "#B3A893"],
     cobbleTint: "#C4C2BC",
-    signPlate: "#344B63",
-    signRim: "#E8DCC6",
 };
 function restyleLandmarks(scene) {
     try {
@@ -1801,6 +2203,7 @@ function restyleLandmarks(scene) {
 /**
  * The podium mesh is three boxes side by side (2nd, 1st, 3rd place). These are their extents in
  * the podium's local space, taken from its geometry; local +Z is up and local +Y is the front.
+ * The third step no longer has a logo or target (X/Twitter was removed).
  */
 var PODIUM_STEPS = [
     { place: 2, minX: -2.7, maxX: -1, topZ: 0.3 },
@@ -1808,6 +2211,7 @@ var PODIUM_STEPS = [
     { place: 3, minX: 1, maxX: 2.64, topZ: -0.25 },
 ];
 function restylePodium(scene) {
+    var _a, _b, _c;
     var podium = scene.getMeshByName("podium");
     if (!podium) {
         return;
@@ -1815,11 +2219,11 @@ function restylePodium(scene) {
     podium.computeWorldMatrix(true);
     var world = podium.getWorldMatrix();
     var front = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.TransformNormal(new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, 1, 0), world).normalize();
-    var bodyMaterial = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "toy-podium-body", PALETTE.podiumBody, { roughness: 0.5, clearCoat: 0.35 });
+    var bodyMaterial = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createToyMaterial)(scene, "toy-podium-body", PALETTE.podiumBody, { roughness: 0.5, clearCoat: 0.35 });
     var capMaterials = {
-        1: (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "toy-podium-first", PALETTE.first, { roughness: 0.3, metallic: 0.6, clearCoat: 0.4 }),
-        2: (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "toy-podium-second", PALETTE.second, { roughness: 0.3, metallic: 0.6, clearCoat: 0.4 }),
-        3: (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "toy-podium-third", PALETTE.third, { roughness: 0.35, metallic: 0.5, clearCoat: 0.4 }),
+        1: (0,_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createToyMaterial)(scene, "toy-podium-first", PALETTE.first, { roughness: 0.3, metallic: 0.6, clearCoat: 0.4 }),
+        2: (0,_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createToyMaterial)(scene, "toy-podium-second", PALETTE.second, { roughness: 0.3, metallic: 0.6, clearCoat: 0.4 }),
+        3: (0,_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createToyMaterial)(scene, "toy-podium-third", PALETTE.third, { roughness: 0.35, metallic: 0.5, clearCoat: 0.4 }),
     };
     var capThickness = 1.4;
     var capOverhang = 0.3;
@@ -1836,11 +2240,11 @@ function restylePodium(scene) {
         var center = min.add(max).scaleInPlace(0.5);
         // Body, slightly inset so neighbouring steps read as separate blocks.
         var bodyHeight = size.y - capThickness + 0.2;
-        var body = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("podium-step-".concat(step.place), size.x - 0.3, bodyHeight, size.z - 0.3, 0.9, scene);
+        var body = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createRoundedBox)("podium-step-".concat(step.place), size.x - 0.3, bodyHeight, size.z - 0.3, 0.9, scene);
         body.material = bodyMaterial;
         body.position.set(center.x, min.y + (bodyHeight / 2), center.z);
         // Medal-coloured cap; its top is exactly the old step top, where the logos stand.
-        var cap = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("podium-cap-".concat(step.place), size.x + (capOverhang * 2) - 0.3, capThickness, size.z + (capOverhang * 2) - 0.3, 0.5, scene);
+        var cap = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createRoundedBox)("podium-cap-".concat(step.place), size.x + (capOverhang * 2) - 0.3, capThickness, size.z + (capOverhang * 2) - 0.3, 0.5, scene);
         cap.material = capMaterials[step.place];
         cap.position.set(center.x, max.y - (capThickness / 2), center.z);
         // Place number on the front face.
@@ -1854,17 +2258,26 @@ function restylePodium(scene) {
         [body, cap, number].forEach(function (mesh) {
             mesh.isPickable = false;
         });
+        // Solid step (replacing the old three-step physics body below).
+        (0,_staticBodies__WEBPACK_IMPORTED_MODULE_2__.addStaticBox)(scene, center, size.x, size.y, size.z);
     }
-    // Hide the old blocks but keep the physics body and the logos parented to it.
+    // Hide the old blocks (the logos stay parented to it). Its physics body is replaced by the
+    // per-step boxes above, which follow the steps' shapes more closely. The scene loader doesn't
+    // set mesh.physicsImpostor, so look the body up through the physics engine.
     podium.isVisible = false;
-    for (var _a = 0, _b = podium.getChildMeshes(); _a < _b.length; _a++) {
-        var child = _b[_a];
+    (_c = ((_a = podium.physicsImpostor) !== null && _a !== void 0 ? _a : (_b = scene.getPhysicsEngine()) === null || _b === void 0 ? void 0 : _b.getImpostorForPhysicsObject(podium))) === null || _c === void 0 ? void 0 : _c.dispose();
+    podium.physicsImpostor = null;
+    for (var _d = 0, _e = podium.getChildMeshes(); _d < _e.length; _d++) {
+        var child = _e[_d];
         var name_1 = child.name.toLowerCase();
-        if (name_1.includes("linkedin") || name_1.includes("twitter")) {
-            child.material = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "toy-logo-".concat(name_1), PALETTE.logoBlue, { roughness: 0.4, clearCoat: 0.6 });
+        if (name_1.includes("twitter")) {
+            child.setEnabled(false);
+        }
+        else if (name_1.includes("linkedin")) {
+            child.material = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createToyMaterial)(scene, "toy-logo-".concat(name_1), PALETTE.logoBlue, { roughness: 0.4, clearCoat: 0.6 });
         }
         else if (name_1.includes("stlmesh")) {
-            child.material = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "toy-logo-sakura", PALETTE.logoSakura, { roughness: 0.45, clearCoat: 0.5 });
+            child.material = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createToyMaterial)(scene, "toy-logo-sakura", PALETTE.logoSakura, { roughness: 0.45, clearCoat: 0.5 });
         }
     }
 }
@@ -1898,10 +2311,10 @@ function restyleRoads(scene) {
         var road = _a[_i];
         road.setEnabled(false);
     }
-    var random = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRandom)(42);
+    var random = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createRandom)(42);
     var pebbles = PALETTE.edgePebbles.map(function (hex, i) {
-        var pebble = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createLumpyBall)("road-edge-pebble-".concat(i), scene, random, 1.6, 2);
-        pebble.material = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "toy-road-edge-".concat(i), hex, { roughness: 0.7, clearCoat: 0.15 });
+        var pebble = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createLumpyBall)("road-edge-pebble-".concat(i), scene, random, 1.6, 2);
+        pebble.material = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createToyMaterial)(scene, "toy-road-edge-".concat(i), hex, { roughness: 0.7, clearCoat: 0.15 });
         return pebble;
     });
     (0,_roads__WEBPACK_IMPORTED_MODULE_1__.createRoadNetwork)(scene, createCobbleMaterial(scene), pebbles);
@@ -1919,7 +2332,7 @@ function createCobbleMaterial(scene) {
     var mortar = 7;
     var cornerRadius = 22;
     var bevel = 20;
-    var random = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRandom)(9);
+    var random = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createRandom)(9);
     var stoneColors = PALETTE.slabs.map(function (hex) { return _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.FromHexString(hex); });
     var mortarColor = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.FromHexString(PALETTE.mortar);
     var cellTone = [];
@@ -1987,7 +2400,7 @@ function createCobbleMaterial(scene) {
         texture.anisotropicFilteringLevel = 8;
     });
     // Muted, slightly cool tint so the roads sit with the blue ground instead of glowing cream.
-    var material = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "toy-road-cobbles", PALETTE.cobbleTint, { roughness: 0.78, clearCoat: 0.08 });
+    var material = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createToyMaterial)(scene, "toy-road-cobbles", PALETTE.cobbleTint, { roughness: 0.78, clearCoat: 0.08 });
     material.albedoTexture = colorTexture;
     material.bumpTexture = normalTexture;
     return material;
@@ -2006,35 +2419,9 @@ function clampByte(value) {
  * plate, and the 3D letters get a glossy cream plastic finish.
  */
 function restyleSigns(scene) {
-    var plate = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "toy-sign-plate", PALETTE.signPlate, { roughness: 0.5, clearCoat: 0.35 });
-    var rim = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "toy-sign-rim", PALETTE.signRim, { roughness: 0.5, clearCoat: 0.3 });
-    // The description is a flat textured plane lying on the ground.
-    var description = scene.getMeshByName("ffdescription");
-    if (description) {
-        description.computeWorldMatrix(true);
-        var world = description.getWorldMatrix();
-        var axisX = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.TransformNormal(new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(1, 0, 0), world);
-        var axisY = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.TransformNormal(new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, 1, 0), world);
-        var center = description.getAbsolutePosition();
-        // Rotating a box by `yaw` turns its local X into (cos yaw, 0, -sin yaw).
-        var yaw = Math.atan2(-axisX.z, axisX.x);
-        createSignPlate(scene, "sign-plate-ffdescription", center.x, center.z, yaw, axisX.length() + 5, axisY.length() + 5, plate, rim);
-    }
-}
-function createSignPlate(scene, name, x, z, yaw, width, depth, plate, rim) {
-    var plateHeight = 0.5;
-    var plateTop = GROUND_Y + 0.24;
-    var top = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)(name, width, plateHeight, depth, 0.25, scene, 3);
-    top.material = plate;
-    top.position.set(x, plateTop - (plateHeight / 2), z);
-    top.rotation.y = yaw;
-    var border = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("".concat(name, "-rim"), width + 1.6, plateHeight, depth + 1.6, 0.25, scene, 3);
-    border.material = rim;
-    border.position.set(x, plateTop - 0.08 - (plateHeight / 2), z);
-    border.rotation.y = yaw;
-    [top, border].forEach(function (mesh) {
-        mesh.isPickable = false;
-    });
+    var _a;
+    // The description lying on the ground is replaced by the info stand in fruitFactorySigns.ts.
+    (_a = scene.getMeshByName("ffdescription")) === null || _a === void 0 ? void 0 : _a.setEnabled(false);
 }
 
 
@@ -2151,9 +2538,10 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _waypointSigns__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ./waypointSigns */ "./src/scenes/waypointSigns.ts");
 /* harmony import */ var _tankTrail__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ./tankTrail */ "./src/scenes/tankTrail.ts");
 /* harmony import */ var _clouds__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ./clouds */ "./src/scenes/clouds.ts");
-/* harmony import */ var _playground__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ./playground */ "./src/scenes/playground.ts");
-/* harmony import */ var _uiStyle__WEBPACK_IMPORTED_MODULE_16__ = __webpack_require__(/*! ./uiStyle */ "./src/scenes/uiStyle.ts");
-/* harmony import */ var _shadows__WEBPACK_IMPORTED_MODULE_17__ = __webpack_require__(/*! ./shadows */ "./src/scenes/shadows.ts");
+/* harmony import */ var _fruitFactorySigns__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ./fruitFactorySigns */ "./src/scenes/fruitFactorySigns.ts");
+/* harmony import */ var _playground__WEBPACK_IMPORTED_MODULE_16__ = __webpack_require__(/*! ./playground */ "./src/scenes/playground.ts");
+/* harmony import */ var _uiStyle__WEBPACK_IMPORTED_MODULE_17__ = __webpack_require__(/*! ./uiStyle */ "./src/scenes/uiStyle.ts");
+/* harmony import */ var _shadows__WEBPACK_IMPORTED_MODULE_18__ = __webpack_require__(/*! ./shadows */ "./src/scenes/shadows.ts");
 var __extends = (undefined && undefined.__extends) || (function () {
     var extendStatics = function (d, b) {
         extendStatics = Object.setPrototypeOf ||
@@ -2205,6 +2593,7 @@ var __generator = (undefined && undefined.__generator) || function (thisArg, bod
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+
 
 
 
@@ -2296,6 +2685,7 @@ var Play = /** @class */ (function (_super) {
         (0,_trees__WEBPACK_IMPORTED_MODULE_3__.instantiateTrees)({ scene: this.scene });
         (0,_landmarks__WEBPACK_IMPORTED_MODULE_7__.restyleLandmarks)(this.scene);
         (0,_fruitFactory__WEBPACK_IMPORTED_MODULE_9__.restyleFruitFactory)(this.scene);
+        (0,_fruitFactorySigns__WEBPACK_IMPORTED_MODULE_15__.createFruitFactorySigns)(this.scene);
         (0,_mascots__WEBPACK_IMPORTED_MODULE_10__.restyleMascots)(this.scene);
         try {
             (0,_aiTrophies__WEBPACK_IMPORTED_MODULE_11__.createAiTrophies)(this.scene);
@@ -2305,7 +2695,7 @@ var Play = /** @class */ (function (_super) {
         }
         (0,_waypointSigns__WEBPACK_IMPORTED_MODULE_12__.createWaypointSigns)(this.scene);
         try {
-            (0,_playground__WEBPACK_IMPORTED_MODULE_15__.createPlayground)(this.scene);
+            (0,_playground__WEBPACK_IMPORTED_MODULE_16__.createPlayground)(this.scene);
         }
         catch (error) {
             console.error("Playground failed", error);
@@ -2369,7 +2759,7 @@ var Play = /** @class */ (function (_super) {
      */
     Play.prototype.initializeShadows = function () {
         var _this = this;
-        (0,_shadows__WEBPACK_IMPORTED_MODULE_17__.initializeShadows)(this.scene, {
+        (0,_shadows__WEBPACK_IMPORTED_MODULE_18__.initializeShadows)(this.scene, {
             camera: this.camera,
             focus: function () { return _this.tank.position; },
         });
@@ -2464,7 +2854,7 @@ var Play = /** @class */ (function (_super) {
                 return "continue";
             }
             // Loose objects also land on and bump into the ramps (the tank rides them instead).
-            (0,_playground__WEBPACK_IMPORTED_MODULE_15__.collideWithRamps)(impostor);
+            (0,_playground__WEBPACK_IMPORTED_MODULE_16__.collideWithRamps)(impostor);
             var beforeStep = impostor.beforeStep;
             var afterStep = impostor.afterStep;
             // The two always run as a pair (a body can fall asleep during the step).
@@ -2528,13 +2918,6 @@ var Play = /** @class */ (function (_super) {
         var screenMaterial = fruitFactoryScreen === null || fruitFactoryScreen === void 0 ? void 0 : fruitFactoryScreen.material;
         if (screenMaterial && "albedoTexture" in screenMaterial) {
             screenMaterial.albedoTexture = new _babylonjs_core_Materials_Textures_texture__WEBPACK_IMPORTED_MODULE_1__.Texture("assets/models/projects/monitor (Base Color).png", this.scene);
-        }
-        var fruitFactoryDescriptionText = this.scene.getMeshByName("ffdescription");
-        var descriptionMaterial = fruitFactoryDescriptionText === null || fruitFactoryDescriptionText === void 0 ? void 0 : fruitFactoryDescriptionText.material;
-        if (descriptionMaterial && "diffuseTexture" in descriptionMaterial && "opacityTexture" in descriptionMaterial) {
-            var descriptionTexture = new _babylonjs_core_Materials_Textures_texture__WEBPACK_IMPORTED_MODULE_1__.Texture("assets/textures/fruit factory description.png", this.scene);
-            descriptionMaterial.diffuseTexture = descriptionTexture;
-            descriptionMaterial.opacityTexture = descriptionTexture;
         }
     };
     Play.prototype.optimizeScene = function () {
@@ -2614,7 +2997,7 @@ var Play = /** @class */ (function (_super) {
  * right corner, in the same toy style as the rest of the UI.
  */
 function createControlOverlay(gui, ui, options) {
-    var panel = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_16__.createCard)(gui, "controls-panel", { radius: 20 });
+    var panel = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_17__.createCard)(gui, "controls-panel", { radius: 20 });
     panel.width = options.isTouchDevice ? "92%" : "370px";
     panel.height = "1px";
     panel.adaptHeightToChildren = true;
@@ -2628,17 +3011,17 @@ function createControlOverlay(gui, ui, options) {
     stack.paddingTop = "16px";
     stack.paddingBottom = "18px";
     panel.addControl(stack);
-    var eyebrow = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_16__.createText)(gui, "controls-eyebrow", "HOW TO PLAY", { size: 12, weight: "900", color: _uiStyle__WEBPACK_IMPORTED_MODULE_16__.UI.pinkDeep });
+    var eyebrow = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_17__.createText)(gui, "controls-eyebrow", "HOW TO PLAY", { size: 12, weight: "900", color: _uiStyle__WEBPACK_IMPORTED_MODULE_17__.UI.pinkDeep });
     eyebrow.height = "18px";
     eyebrow.paddingLeft = "20px";
     stack.addControl(eyebrow);
-    var title = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_16__.createText)(gui, "controls-title", options.isTouchDevice ? "Best on a desktop" : "Drive, aim and explore", { size: 24, weight: "900", color: _uiStyle__WEBPACK_IMPORTED_MODULE_16__.UI.navy });
+    var title = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_17__.createText)(gui, "controls-title", options.isTouchDevice ? "Best on a desktop" : "Drive, aim and explore", { size: 24, weight: "900", color: _uiStyle__WEBPACK_IMPORTED_MODULE_17__.UI.navy });
     title.height = "36px";
     title.paddingLeft = "20px";
     stack.addControl(title);
-    var description = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_16__.createText)(gui, "controls-description", options.isTouchDevice
+    var description = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_17__.createText)(gui, "controls-description", options.isTouchDevice
         ? "The portfolio is built around keyboard driving. You can look around here, but driving and shooting need a keyboard."
-        : "Drive the tank between the projects and shoot the glowing targets to open links.", { size: 14, weight: "700", color: _uiStyle__WEBPACK_IMPORTED_MODULE_16__.UI.muted });
+        : "Drive the tank between the projects and shoot the glowing targets to open links.", { size: 14, weight: "700", color: _uiStyle__WEBPACK_IMPORTED_MODULE_17__.UI.muted });
     description.textWrapping = true;
     description.resizeToFit = true;
     description.paddingLeft = "20px";
@@ -2654,37 +3037,37 @@ function createControlOverlay(gui, ui, options) {
         { keys: ["Esc"], text: "Close the help" },
     ];
     rows.forEach(function (row, index) {
-        var line = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_16__.createRow)(gui, "controls-line-".concat(index), 36);
+        var line = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_17__.createRow)(gui, "controls-line-".concat(index), 36);
         line.paddingLeft = "20px";
         line.horizontalAlignment = gui.Control.HORIZONTAL_ALIGNMENT_LEFT;
-        var keys = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_16__.createRow)(gui, "controls-keys-".concat(index), 36);
+        var keys = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_17__.createRow)(gui, "controls-keys-".concat(index), 36);
         keys.width = "130px";
         row.keys.forEach(function (key, k) {
-            var cap = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_16__.createKeycap)(gui, "controls-key-".concat(index, "-").concat(k), key);
+            var cap = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_17__.createKeycap)(gui, "controls-key-".concat(index, "-").concat(k), key);
             cap.paddingRight = "4px";
             cap.width = "".concat(parseInt(String(cap.width), 10) + 4, "px");
             keys.addControl(cap);
         });
         line.addControl(keys);
-        var text = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_16__.createText)(gui, "controls-text-".concat(index), row.text, { size: 15, weight: "800", color: _uiStyle__WEBPACK_IMPORTED_MODULE_16__.UI.text });
+        var text = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_17__.createText)(gui, "controls-text-".concat(index), row.text, { size: 15, weight: "800", color: _uiStyle__WEBPACK_IMPORTED_MODULE_17__.UI.text });
         text.width = "200px";
         line.addControl(text);
         stack.addControl(line);
     });
-    var actions = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_16__.createRow)(gui, "controls-actions", 56);
+    var actions = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_17__.createRow)(gui, "controls-actions", 56);
     actions.paddingTop = "14px";
     actions.paddingLeft = "20px";
     actions.horizontalAlignment = gui.Control.HORIZONTAL_ALIGNMENT_LEFT;
     stack.addControl(actions);
-    var closeButton = createButton(gui, "controls-close", "Got it!", _uiStyle__WEBPACK_IMPORTED_MODULE_16__.UI.pink, _uiStyle__WEBPACK_IMPORTED_MODULE_16__.UI.navyDeep, 110);
+    var closeButton = createButton(gui, "controls-close", "Got it!", _uiStyle__WEBPACK_IMPORTED_MODULE_17__.UI.pink, _uiStyle__WEBPACK_IMPORTED_MODULE_17__.UI.navyDeep, 110);
     closeButton.onPointerClickObservable.add(function () { return options.onClose(); });
     actions.addControl(closeButton);
-    actions.addControl((0,_uiStyle__WEBPACK_IMPORTED_MODULE_16__.createSpacer)(gui, "controls-actions-gap", 10));
-    var muteButton = createButton(gui, "controls-mute", "Sound on/off", _uiStyle__WEBPACK_IMPORTED_MODULE_16__.UI.cream, _uiStyle__WEBPACK_IMPORTED_MODULE_16__.UI.navy, 130);
+    actions.addControl((0,_uiStyle__WEBPACK_IMPORTED_MODULE_17__.createSpacer)(gui, "controls-actions-gap", 10));
+    var muteButton = createButton(gui, "controls-mute", "Sound on/off", _uiStyle__WEBPACK_IMPORTED_MODULE_17__.UI.cream, _uiStyle__WEBPACK_IMPORTED_MODULE_17__.UI.navy, 130);
     muteButton.onPointerClickObservable.add(function () { return options.onToggleMute(); });
     actions.addControl(muteButton);
     // Shortcut badge, top right (below the FPS counter): [H] Help  [M] Mute
-    var badge = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_16__.createCard)(gui, "controls-hint-badge", { radius: 18, thickness: 2 });
+    var badge = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_17__.createCard)(gui, "controls-hint-badge", { radius: 18, thickness: 2 });
     badge.width = "1px";
     badge.adaptWidthToChildren = true;
     badge.height = "42px";
@@ -2695,15 +3078,15 @@ function createControlOverlay(gui, ui, options) {
     badge.shadowOffsetY = 3;
     badge.isPointerBlocker = true;
     badge.hoverCursor = "pointer";
-    var badgeRow = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_16__.createRow)(gui, "controls-hint-row", 42);
+    var badgeRow = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_17__.createRow)(gui, "controls-hint-row", 42);
     badgeRow.paddingLeft = "8px";
     badgeRow.paddingRight = "8px";
     badge.addControl(badgeRow);
-    var helpText = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_16__.createText)(gui, "controls-hint-help", "", { size: 13, weight: "800", color: _uiStyle__WEBPACK_IMPORTED_MODULE_16__.UI.navy });
-    var muteText = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_16__.createText)(gui, "controls-hint-mute", "", { size: 13, weight: "800", color: _uiStyle__WEBPACK_IMPORTED_MODULE_16__.UI.navy });
+    var helpText = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_17__.createText)(gui, "controls-hint-help", "", { size: 13, weight: "800", color: _uiStyle__WEBPACK_IMPORTED_MODULE_17__.UI.navy });
+    var muteText = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_17__.createText)(gui, "controls-hint-mute", "", { size: 13, weight: "800", color: _uiStyle__WEBPACK_IMPORTED_MODULE_17__.UI.navy });
     for (var _i = 0, _a = [["H", helpText], ["M", muteText]]; _i < _a.length; _i++) {
         var _b = _a[_i], key = _b[0], text = _b[1];
-        badgeRow.addControl((0,_uiStyle__WEBPACK_IMPORTED_MODULE_16__.createKeycap)(gui, "controls-hint-key-".concat(key), key));
+        badgeRow.addControl((0,_uiStyle__WEBPACK_IMPORTED_MODULE_17__.createKeycap)(gui, "controls-hint-key-".concat(key), key));
         text.resizeToFit = true;
         text.paddingLeft = "7px";
         text.paddingRight = "9px";
@@ -2712,7 +3095,7 @@ function createControlOverlay(gui, ui, options) {
     badge.onPointerClickObservable.add(function () { return options.onToggle(); });
     ui.addControl(panel);
     ui.addControl(badge);
-    (0,_uiStyle__WEBPACK_IMPORTED_MODULE_16__.refreshWhenFontLoaded)(ui);
+    (0,_uiStyle__WEBPACK_IMPORTED_MODULE_17__.refreshWhenFontLoaded)(ui);
     var hint = {
         update: function (helpVisible, muted) {
             helpText.text = helpVisible ? "Hide help" : "Help";
@@ -2728,12 +3111,12 @@ function createButton(gui, name, label, background, color, width) {
     button.height = "40px";
     button.thickness = 3;
     button.cornerRadius = 20;
-    button.color = _uiStyle__WEBPACK_IMPORTED_MODULE_16__.UI.navy;
+    button.color = _uiStyle__WEBPACK_IMPORTED_MODULE_17__.UI.navy;
     button.background = background;
-    button.shadowColor = _uiStyle__WEBPACK_IMPORTED_MODULE_16__.UI.shadow;
+    button.shadowColor = _uiStyle__WEBPACK_IMPORTED_MODULE_17__.UI.shadow;
     button.shadowOffsetY = 3;
     button.shadowBlur = 0;
-    button.fontFamily = _uiStyle__WEBPACK_IMPORTED_MODULE_16__.UI.font;
+    button.fontFamily = _uiStyle__WEBPACK_IMPORTED_MODULE_17__.UI.font;
     button.fontWeight = "900";
     button.fontSize = 14;
     if (button.textBlock) {
@@ -4017,13 +4400,6 @@ function initializeShooting(_this, forward) {
                             scaling: new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(1.75, 1.75, 1.75),
                             url: "https://www.linkedin.com/in/stefan-cernat/",
                         },
-                        {
-                            name: "twitter",
-                            label: "X / Twitter",
-                            position: new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(69.8356, 2.1121, 17.2901),
-                            scaling: new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(1.5, 1.5, 1.5),
-                            url: "https://x.com/Setin2",
-                        },
                     ];
                     github = _this.scene.getMeshByName("target_github");
                     if (!(github instanceof _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Mesh)) {
@@ -4070,7 +4446,7 @@ function initializeShooting(_this, forward) {
                         target.scaling.copyFrom(scaling);
                         targets.push({ mesh: target, hitRadiusSquared: getHitRadiusSquared(target), url: url, label: label });
                     });
-                    targetMarks = { GitHub: "GH", LinkedIn: "in", "X / Twitter": "X" };
+                    targetMarks = { GitHub: "GH", LinkedIn: "in" };
                     toyTargets = new Map();
                     highlightColor = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.FromHexString("#f7b955");
                     targets.forEach(function (target) {
@@ -6859,7 +7235,7 @@ var TREE_POSITIONS = [
     new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(57.1332, 5.1848, 77.0256),
     // A few more towards the edges of the play area, away from the paths.
     new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(-72, 5.1848, 98),
-    new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(-118, 5.1848, 62),
+    new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(-136, 5.1848, 40),
     new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(100, 5.1848, 72),
     new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(162, 5.1848, -58),
 ];
@@ -7438,4 +7814,4 @@ function addBullseye(scene, id, parent, y, materials) {
 /***/ }
 
 }]);
-//# sourceMappingURL=src_scenes_tools_ts.b56e2091391a962710be.js.map
+//# sourceMappingURL=src_scenes_tools_ts.fcfea2e0a7376365715d.js.map

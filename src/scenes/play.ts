@@ -15,6 +15,7 @@ import { createAiTrophies } from "./aiTrophies";
 import { createWaypointSigns } from "./waypointSigns";
 import { createTankTrail } from "./tankTrail";
 import { createClouds } from "./clouds";
+import { createFruitFactorySigns } from "./fruitFactorySigns";
 import { collideWithRamps, createPlayground } from "./playground";
 import { UI, createCard, createKeycap, createRow, createSpacer, createText, refreshWhenFontLoaded, type GuiModule } from "./uiStyle";
 import { initializeShadows } from "./shadows";
@@ -101,6 +102,7 @@ export default class Play extends Node {
         instantiateTrees({ scene: this.scene });
         restyleLandmarks(this.scene);
         restyleFruitFactory(this.scene);
+        createFruitFactorySigns(this.scene);
         restyleMascots(this.scene);
         try {
             createAiTrophies(this.scene);
@@ -331,14 +333,6 @@ export default class Play extends Node {
         const screenMaterial = fruitFactoryScreen?.material;
         if (screenMaterial && "albedoTexture" in screenMaterial) {
             screenMaterial.albedoTexture = new Texture("assets/models/projects/monitor (Base Color).png", this.scene);
-        }
-
-        const fruitFactoryDescriptionText = this.scene.getMeshByName("ffdescription");
-        const descriptionMaterial = fruitFactoryDescriptionText?.material;
-        if (descriptionMaterial && "diffuseTexture" in descriptionMaterial && "opacityTexture" in descriptionMaterial) {
-            const descriptionTexture = new Texture("assets/textures/fruit factory description.png", this.scene);
-            descriptionMaterial.diffuseTexture = descriptionTexture;
-            descriptionMaterial.opacityTexture = descriptionTexture;
         }
     }
 
