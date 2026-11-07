@@ -603,6 +603,205 @@ function instantiateBricks(_this, x, y, z, numRows, numColumnsPerRow, rotationY)
 
 /***/ },
 
+/***/ "./src/scenes/clouds.ts"
+/*!******************************!*\
+  !*** ./src/scenes/clouds.ts ***!
+  \******************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   createClouds: () => (/* binding */ createClouds)
+/* harmony export */ });
+/* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core */ "./node_modules/@babylonjs/core/index.js");
+/* harmony import */ var _shadows__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./shadows */ "./src/scenes/shadows.ts");
+/* harmony import */ var _toyStyle__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./toyStyle */ "./src/scenes/toyStyle.ts");
+
+
+
+/**
+ * Chunky toy clouds drifting low over the world, each with a soft shadow patch sliding over the
+ * ground beneath it.
+ *
+ * The camera looks down at the tank from above, so the clouds float fairly low (24-34 units up,
+ * still well above the trees) to be seen at all. A cloud that drifts in between the camera and the
+ * tank fades out (its shadow stays), so it never hides what you're driving, and so do clouds close
+ * to the camera. Clouds that drift too far from the tank wrap around to the other side, so there
+ * are always some about wherever you go.
+ */
+var CLOUD_COUNT = 14;
+/** Clouds live in a square this many units either side of the tank. */
+var AREA_HALF = 260;
+var MIN_HEIGHT = 24;
+var MAX_HEIGHT = 34;
+var WIND = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(3.2, 0, 1.1);
+var GROUND_Y = -0.5;
+/** Shadow patches sit just above the road slabs and tread prints. */
+var SHADOW_Y = GROUND_Y + 0.19;
+/** Extra clearance (on top of the cloud's own size) kept around the camera's view of the tank. */
+var VIEW_CLEARANCE = 8;
+/** Clouds closer than this to the camera (plus their size) fade out, so none fill the screen. */
+var CAMERA_CLEARANCE = 80;
+function createClouds(scene, tank, camera) {
+    var random = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRandom)(77);
+    var material = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "toy-cloud", "#FFFFFF", { roughness: 0.85, clearCoat: 0.15 });
+    // Keep them bright white even on their shaded side, like painted plastic clouds.
+    material.emissiveColor = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.FromHexString("#DCE6F2").toLinearSpace().scale(0.35);
+    // Fading a cloud made of overlapping puffs needs a depth pre-pass, or the inner puffs show through.
+    material.needDepthPrePass = true;
+    var shadowMaterial = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.StandardMaterial("cloud-shadow-material", scene);
+    shadowMaterial.diffuseColor = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.Black();
+    shadowMaterial.specularColor = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.Black();
+    shadowMaterial.emissiveColor = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.FromHexString("#123248");
+    shadowMaterial.disableLighting = true;
+    shadowMaterial.opacityTexture = createSoftDiscTexture(scene);
+    shadowMaterial.alpha = 0.3;
+    shadowMaterial.zOffset = -3;
+    var clouds = [];
+    for (var i = 0; i < CLOUD_COUNT; i++) {
+        var _a = buildCloud(scene, "cloud-".concat(i), random, material), mesh = _a.mesh, radius = _a.radius;
+        mesh.position.set(tank.position.x + ((random() * 2) - 1) * AREA_HALF, MIN_HEIGHT + (random() * (MAX_HEIGHT - MIN_HEIGHT)), tank.position.z + ((random() * 2) - 1) * AREA_HALF);
+        mesh.rotation.y = random() * Math.PI * 2;
+        var shadow = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateDisc("cloud-shadow-".concat(i), { radius: radius * 1.05, tessellation: 32 }, scene);
+        shadow.rotation.x = Math.PI / 2;
+        shadow.scaling.y = 0.7;
+        shadow.material = shadowMaterial;
+        shadow.isPickable = false;
+        shadow.metadata = { keepUnfrozen: true };
+        clouds.push({ mesh: mesh, shadow: shadow, radius: radius, fade: 1 });
+    }
+    var step = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3();
+    var groundOffset = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3();
+    var observer = scene.onBeforeRenderObservable.add(function () {
+        var deltaSeconds = Math.min(scene.getEngine().getDeltaTime() / 1000, 0.1);
+        WIND.scaleToRef(deltaSeconds, step);
+        for (var _i = 0, clouds_1 = clouds; _i < clouds_1.length; _i++) {
+            var cloud = clouds_1[_i];
+            var position = cloud.mesh.position;
+            position.addInPlace(step);
+            // Wrap around the tank so clouds keep coming wherever it drives.
+            var wrapped = false;
+            for (var _a = 0, _b = ["x", "z"]; _a < _b.length; _a++) {
+                var axis = _b[_a];
+                var offset = position[axis] - tank.position[axis];
+                if (offset > AREA_HALF) {
+                    position[axis] -= AREA_HALF * 2;
+                    wrapped = true;
+                }
+                else if (offset < -AREA_HALF) {
+                    position[axis] += AREA_HALF * 2;
+                    wrapped = true;
+                }
+            }
+            if (wrapped) {
+                // Pop in faded out; it fades back in below.
+                cloud.fade = 0;
+            }
+            // Fade out while between the camera and the tank.
+            var clearance = cloud.radius + VIEW_CLEARANCE;
+            var nearCamera = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.DistanceSquared(camera.position, position) < Math.pow((cloud.radius + CAMERA_CLEARANCE), 2);
+            var blocking = nearCamera || segmentDistanceSquared(camera.position, tank.position, position) < clearance * clearance;
+            var target = blocking ? 0 : 1;
+            cloud.fade += (target - cloud.fade) * Math.min(1, deltaSeconds * 3);
+            cloud.mesh.visibility = cloud.fade;
+            cloud.mesh.isVisible = cloud.fade > 0.02;
+            // The shadow lies on the ground where the sunlight through the cloud's centre lands.
+            _shadows__WEBPACK_IMPORTED_MODULE_1__.SUN_DIRECTION.scaleToRef((position.y - SHADOW_Y) / -_shadows__WEBPACK_IMPORTED_MODULE_1__.SUN_DIRECTION.y, groundOffset);
+            cloud.shadow.position.set(position.x + groundOffset.x, SHADOW_Y, position.z + groundOffset.z);
+            cloud.shadow.rotation.y = cloud.mesh.rotation.y;
+            cloud.shadow.visibility = wrapped ? 0 : Math.min(1, cloud.shadow.visibility + (deltaSeconds * 0.5));
+        }
+    });
+    scene.onDisposeObservable.addOnce(function () { return scene.onBeforeRenderObservable.remove(observer); });
+}
+/**
+ * One cloud: a flat-bottomed cluster of soft lumpy puffs, biggest in the middle, merged into a
+ * single mesh so it can fade as a whole.
+ */
+function buildCloud(scene, name, random, material) {
+    var _a;
+    var length = 16 + (random() * 14);
+    var puffCount = 5 + Math.floor(random() * 3);
+    var puffs = [];
+    for (var i = 0; i < puffCount; i++) {
+        var t = puffCount === 1 ? 0.5 : i / (puffCount - 1);
+        // Bigger towards the middle, a little jitter in depth and height.
+        var size = (length * 0.22) * (0.7 + (Math.sin(t * Math.PI) * 0.6)) * (0.85 + (random() * 0.3));
+        var puff = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createLumpyBall)("".concat(name, "-puff-").concat(i), scene, random, 1.2, 3);
+        puff.scaling.set(size, size * 0.82, size * 0.9);
+        puff.position.set((t - 0.5) * length, size * 0.35 * Math.sin(t * Math.PI), (random() - 0.5) * size * 0.8);
+        puffs.push(puff);
+    }
+    // A couple of puffs on top for a fluffier silhouette.
+    for (var i = 0; i < 2; i++) {
+        var size = length * (0.17 + (random() * 0.06));
+        var puff = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createLumpyBall)("".concat(name, "-top-").concat(i), scene, random, 1.2, 3);
+        puff.scaling.set(size, size * 0.85, size * 0.9);
+        puff.position.set((random() - 0.5) * length * 0.45, length * 0.2, (random() - 0.5) * size * 0.6);
+        puffs.push(puff);
+    }
+    var mesh = (_a = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Mesh.MergeMeshes(puffs, true, true)) !== null && _a !== void 0 ? _a : puffs[0];
+    mesh.name = name;
+    // Flatten the bottom: squash everything below the base line up onto it.
+    var positions = mesh.getVerticesData(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.VertexBuffer.PositionKind);
+    var normals = mesh.getVerticesData(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.VertexBuffer.NormalKind);
+    if (positions && normals) {
+        var baseY = -length * 0.06;
+        for (var i = 0; i < positions.length; i += 3) {
+            if (positions[i + 1] < baseY) {
+                positions[i + 1] = baseY + ((positions[i + 1] - baseY) * 0.25);
+                normals[i] *= 0.4;
+                normals[i + 1] = Math.min(normals[i + 1], -0.6);
+                normals[i + 2] *= 0.4;
+                var n = Math.hypot(normals[i], normals[i + 1], normals[i + 2]) || 1;
+                normals[i] /= n;
+                normals[i + 1] /= n;
+                normals[i + 2] /= n;
+            }
+        }
+        mesh.updateVerticesData(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.VertexBuffer.PositionKind, positions);
+        mesh.updateVerticesData(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.VertexBuffer.NormalKind, normals);
+        mesh.refreshBoundingInfo();
+    }
+    mesh.material = material;
+    mesh.isPickable = false;
+    mesh.metadata = { keepUnfrozen: true };
+    return { mesh: mesh, radius: length * 0.6 };
+}
+/** White disc fading to transparent at the edge, for the soft cloud shadows. */
+function createSoftDiscTexture(scene) {
+    var size = 128;
+    var texture = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.DynamicTexture("cloud-shadow-texture", { width: size, height: size }, scene, true);
+    var context = texture.getContext();
+    var gradient = context.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+    gradient.addColorStop(0, "rgba(255,255,255,1)");
+    gradient.addColorStop(0.55, "rgba(255,255,255,0.85)");
+    gradient.addColorStop(1, "rgba(255,255,255,0)");
+    context.clearRect(0, 0, size, size);
+    context.fillStyle = gradient;
+    context.fillRect(0, 0, size, size);
+    texture.update();
+    texture.hasAlpha = true;
+    texture.getAlphaFromRGB = false;
+    return texture;
+}
+function segmentDistanceSquared(start, end, point) {
+    var sx = end.x - start.x;
+    var sy = end.y - start.y;
+    var sz = end.z - start.z;
+    var lengthSquared = (sx * sx) + (sy * sy) + (sz * sz);
+    var t = 0;
+    if (lengthSquared > 0) {
+        t = Math.max(0, Math.min(1, (((point.x - start.x) * sx) + ((point.y - start.y) * sy) + ((point.z - start.z) * sz)) / lengthSquared));
+    }
+    var dx = start.x + (sx * t) - point.x;
+    var dy = start.y + (sy * t) - point.y;
+    var dz = start.z + (sz * t) - point.z;
+    return (dx * dx) + (dy * dy) + (dz * dz);
+}
+
+
+/***/ },
+
 /***/ "./src/scenes/fruitFactory.ts"
 /*!************************************!*\
   !*** ./src/scenes/fruitFactory.ts ***!
@@ -2078,7 +2277,10 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _mascots__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./mascots */ "./src/scenes/mascots.ts");
 /* harmony import */ var _aiTrophies__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./aiTrophies */ "./src/scenes/aiTrophies.ts");
 /* harmony import */ var _waypointSigns__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ./waypointSigns */ "./src/scenes/waypointSigns.ts");
-/* harmony import */ var _shadows__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ./shadows */ "./src/scenes/shadows.ts");
+/* harmony import */ var _tankTrail__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ./tankTrail */ "./src/scenes/tankTrail.ts");
+/* harmony import */ var _clouds__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ./clouds */ "./src/scenes/clouds.ts");
+/* harmony import */ var _uiStyle__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ./uiStyle */ "./src/scenes/uiStyle.ts");
+/* harmony import */ var _shadows__WEBPACK_IMPORTED_MODULE_16__ = __webpack_require__(/*! ./shadows */ "./src/scenes/shadows.ts");
 var __extends = (undefined && undefined.__extends) || (function () {
     var extendStatics = function (d, b) {
         extendStatics = Object.setPrototypeOf ||
@@ -2130,6 +2332,9 @@ var __generator = (undefined && undefined.__generator) || function (thisArg, bod
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+
+
+
 
 
 
@@ -2212,6 +2417,7 @@ var Play = /** @class */ (function (_super) {
         var rotationSpeed = 0.07;
         var forward = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, 0, 1);
         this.initializeTankModel();
+        (0,_tankTrail__WEBPACK_IMPORTED_MODULE_13__.createTankTrail)(this.scene, this.tank);
         (0,_trees__WEBPACK_IMPORTED_MODULE_3__.instantiateTrees)({ scene: this.scene });
         (0,_landmarks__WEBPACK_IMPORTED_MODULE_7__.restyleLandmarks)(this.scene);
         (0,_fruitFactory__WEBPACK_IMPORTED_MODULE_9__.restyleFruitFactory)(this.scene);
@@ -2229,6 +2435,12 @@ var Play = /** @class */ (function (_super) {
         (0,_bricks__WEBPACK_IMPORTED_MODULE_4__.instantiateBricks)({ scene: this.scene, tank: this.tank, brickSound: this.brickSound }, 47.1152, 8, 131.0731, 4, [6, 6, 6, 4], 4.6903);
         // After the bricks: walls measure the ground height with a ray, and decorations avoid them.
         (0,_ground__WEBPACK_IMPORTED_MODULE_8__.decorateGround)(this.scene, _trees__WEBPACK_IMPORTED_MODULE_3__.TREE_POSITIONS);
+        try {
+            (0,_clouds__WEBPACK_IMPORTED_MODULE_14__.createClouds)(this.scene, this.tank, this.camera);
+        }
+        catch (error) {
+            console.error("Clouds failed", error);
+        }
         try {
             this.initializeShadows();
         }
@@ -2273,7 +2485,7 @@ var Play = /** @class */ (function (_super) {
      */
     Play.prototype.initializeShadows = function () {
         var _this = this;
-        (0,_shadows__WEBPACK_IMPORTED_MODULE_13__.initializeShadows)(this.scene, {
+        (0,_shadows__WEBPACK_IMPORTED_MODULE_16__.initializeShadows)(this.scene, {
             camera: this.camera,
             focus: function () { return _this.tank.position; },
         });
@@ -2454,133 +2666,151 @@ var Play = /** @class */ (function (_super) {
         if (!this.controlOverlayHint) {
             return;
         }
-        var soundAction = this.isAudioMuted ? "Unmute" : "Mute";
-        var helpAction = ((_a = this.controlOverlayPanel) === null || _a === void 0 ? void 0 : _a.isVisible) ? "Hide help" : "Show help";
-        this.controlOverlayHint.text = "H ".concat(helpAction, "   M ").concat(soundAction);
+        this.controlOverlayHint.update(!!((_a = this.controlOverlayPanel) === null || _a === void 0 ? void 0 : _a.isVisible), this.isAudioMuted);
     };
     return Play;
 }(_babylonjs_core_node__WEBPACK_IMPORTED_MODULE_2__.Node));
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (Play);
+/**
+ * The "how to play" card (bottom right, shown on first load) and the shortcut badge in the top
+ * right corner, in the same toy style as the rest of the UI.
+ */
 function createControlOverlay(gui, ui, options) {
-    var panel = new gui.Rectangle("controls-panel");
-    panel.width = options.isTouchDevice ? "92%" : "380px";
+    var panel = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_15__.createCard)(gui, "controls-panel", { radius: 20 });
+    panel.width = options.isTouchDevice ? "92%" : "370px";
     panel.height = "1px";
     panel.adaptHeightToChildren = true;
-    panel.thickness = 1;
-    panel.cornerRadius = 18;
-    panel.color = "rgba(255,255,255,0.14)";
-    panel.background = "rgba(7, 9, 14, 0.78)";
     panel.horizontalAlignment = gui.Control.HORIZONTAL_ALIGNMENT_RIGHT;
     panel.verticalAlignment = gui.Control.VERTICAL_ALIGNMENT_BOTTOM;
-    panel.paddingRight = options.isTouchDevice ? "16px" : "22px";
-    panel.paddingBottom = "20px";
+    panel.left = options.isTouchDevice ? "-4%" : "-22px";
+    panel.top = "-24px";
     panel.isPointerBlocker = true;
     var stack = new gui.StackPanel("controls-panel-stack");
     stack.isVertical = true;
-    stack.width = 1;
-    stack.paddingTop = "18px";
+    stack.paddingTop = "16px";
     stack.paddingBottom = "18px";
     panel.addControl(stack);
-    var eyebrow = new gui.TextBlock("controls-eyebrow");
-    eyebrow.text = "Controls";
-    eyebrow.color = "#f7b955";
-    eyebrow.fontSize = 12;
-    eyebrow.fontFamily = "Inter, Segoe UI, sans-serif";
+    var eyebrow = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_15__.createText)(gui, "controls-eyebrow", "HOW TO PLAY", { size: 12, weight: "900", color: _uiStyle__WEBPACK_IMPORTED_MODULE_15__.UI.pinkDeep });
     eyebrow.height = "18px";
-    eyebrow.textHorizontalAlignment = gui.Control.HORIZONTAL_ALIGNMENT_LEFT;
-    eyebrow.paddingLeft = "18px";
-    eyebrow.paddingRight = "18px";
+    eyebrow.paddingLeft = "20px";
     stack.addControl(eyebrow);
-    var title = new gui.TextBlock("controls-title");
-    title.text = options.isTouchDevice ? "Desktop gives the full experience" : "Drive, aim, and explore";
-    title.color = "#f5f7ff";
-    title.fontSize = 24;
-    title.height = "34px";
-    title.textHorizontalAlignment = gui.Control.HORIZONTAL_ALIGNMENT_LEFT;
-    title.paddingTop = "4px";
-    title.paddingLeft = "18px";
-    title.paddingRight = "18px";
+    var title = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_15__.createText)(gui, "controls-title", options.isTouchDevice ? "Best on a desktop" : "Drive, aim and explore", { size: 24, weight: "900", color: _uiStyle__WEBPACK_IMPORTED_MODULE_15__.UI.navy });
+    title.height = "36px";
+    title.paddingLeft = "20px";
     stack.addControl(title);
-    var description = new gui.TextBlock("controls-description");
-    description.text = options.isTouchDevice
-        ? "This portfolio is built around keyboard driving. You can still look around, but movement and shooting are best on desktop."
-        : "Use the tank to move between projects and shoot glowing targets to open links.";
-    description.color = "rgba(255,255,255,0.76)";
-    description.fontSize = 14;
+    var description = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_15__.createText)(gui, "controls-description", options.isTouchDevice
+        ? "The portfolio is built around keyboard driving. You can look around here, but driving and shooting need a keyboard."
+        : "Drive the tank between the projects and shoot the glowing targets to open links.", { size: 14, weight: "700", color: _uiStyle__WEBPACK_IMPORTED_MODULE_15__.UI.muted });
     description.textWrapping = true;
     description.resizeToFit = true;
-    description.textHorizontalAlignment = gui.Control.HORIZONTAL_ALIGNMENT_LEFT;
-    description.paddingTop = "10px";
-    description.paddingLeft = "18px";
-    description.paddingRight = "18px";
-    description.paddingBottom = "8px";
+    description.paddingLeft = "20px";
+    description.paddingRight = "20px";
+    description.paddingBottom = "10px";
     stack.addControl(description);
-    [
-        "W A S D  Move tank",
-        "E  Shoot glowing targets",
-        "H  Reopen or hide this help",
-        "M  Mute or unmute sound",
-        "Esc  Close the help panel",
-    ].forEach(function (line, index) {
-        var item = new gui.TextBlock("controls-line-".concat(index));
-        item.text = line;
-        item.color = "#f4f7ff";
-        item.fontSize = 15;
-        item.height = "26px";
-        item.textHorizontalAlignment = gui.Control.HORIZONTAL_ALIGNMENT_LEFT;
-        item.paddingLeft = "18px";
-        item.paddingRight = "18px";
-        stack.addControl(item);
+    // One row per control: keycaps, then what they do.
+    var rows = [
+        { keys: ["W", "A", "S", "D"], text: "Drive the tank" },
+        { keys: ["E"], text: "Shoot glowing targets" },
+        { keys: ["H"], text: "Show or hide this help" },
+        { keys: ["M"], text: "Sound on or off" },
+        { keys: ["Esc"], text: "Close the help" },
+    ];
+    rows.forEach(function (row, index) {
+        var line = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_15__.createRow)(gui, "controls-line-".concat(index), 36);
+        line.paddingLeft = "20px";
+        line.horizontalAlignment = gui.Control.HORIZONTAL_ALIGNMENT_LEFT;
+        var keys = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_15__.createRow)(gui, "controls-keys-".concat(index), 36);
+        keys.width = "130px";
+        row.keys.forEach(function (key, k) {
+            var cap = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_15__.createKeycap)(gui, "controls-key-".concat(index, "-").concat(k), key);
+            cap.paddingRight = "4px";
+            cap.width = "".concat(parseInt(String(cap.width), 10) + 4, "px");
+            keys.addControl(cap);
+        });
+        line.addControl(keys);
+        var text = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_15__.createText)(gui, "controls-text-".concat(index), row.text, { size: 15, weight: "800", color: _uiStyle__WEBPACK_IMPORTED_MODULE_15__.UI.text });
+        text.width = "200px";
+        line.addControl(text);
+        stack.addControl(line);
     });
-    var actionRow = new gui.StackPanel("controls-actions");
-    actionRow.isVertical = false;
-    actionRow.height = "42px";
-    actionRow.paddingTop = "14px";
-    actionRow.paddingLeft = "18px";
-    actionRow.paddingRight = "18px";
-    stack.addControl(actionRow);
-    var muteButton = gui.Button.CreateSimpleButton("controls-mute", "Toggle sound");
-    muteButton.width = "132px";
-    muteButton.height = "38px";
-    muteButton.thickness = 0;
-    muteButton.cornerRadius = 18;
-    muteButton.color = "#0b0d12";
-    muteButton.background = "#f7b955";
-    muteButton.fontSize = 14;
-    muteButton.onPointerClickObservable.add(function () { return options.onToggleMute(); });
-    actionRow.addControl(muteButton);
-    var closeButton = gui.Button.CreateSimpleButton("controls-close", "Close");
-    closeButton.width = "92px";
-    closeButton.height = "38px";
-    closeButton.thickness = 1;
-    closeButton.cornerRadius = 18;
-    closeButton.color = "#f5f7ff";
-    closeButton.background = "rgba(255,255,255,0.08)";
-    closeButton.fontSize = 14;
-    closeButton.paddingLeft = "10px";
+    var actions = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_15__.createRow)(gui, "controls-actions", 56);
+    actions.paddingTop = "14px";
+    actions.paddingLeft = "20px";
+    actions.horizontalAlignment = gui.Control.HORIZONTAL_ALIGNMENT_LEFT;
+    stack.addControl(actions);
+    var closeButton = createButton(gui, "controls-close", "Got it!", _uiStyle__WEBPACK_IMPORTED_MODULE_15__.UI.pink, _uiStyle__WEBPACK_IMPORTED_MODULE_15__.UI.navyDeep, 110);
     closeButton.onPointerClickObservable.add(function () { return options.onClose(); });
-    actionRow.addControl(closeButton);
-    var hintBadge = new gui.Rectangle("controls-hint-badge");
-    hintBadge.width = options.isTouchDevice ? "210px" : "198px";
-    hintBadge.height = "36px";
-    hintBadge.thickness = 1;
-    hintBadge.cornerRadius = 18;
-    hintBadge.color = "rgba(255,255,255,0.16)";
-    hintBadge.background = "rgba(8, 10, 16, 0.58)";
-    hintBadge.horizontalAlignment = gui.Control.HORIZONTAL_ALIGNMENT_RIGHT;
-    hintBadge.verticalAlignment = gui.Control.VERTICAL_ALIGNMENT_TOP;
-    hintBadge.paddingTop = "52px";
-    hintBadge.paddingRight = "12px";
-    hintBadge.isPointerBlocker = true;
-    var hintText = new gui.TextBlock("controls-hint-text");
-    hintText.color = "#f4f7ff";
-    hintText.fontSize = 13;
-    hintText.fontFamily = "Inter, Segoe UI, sans-serif";
-    hintBadge.addControl(hintText);
-    hintBadge.onPointerClickObservable.add(function () { return options.onToggle(); });
+    actions.addControl(closeButton);
+    actions.addControl((0,_uiStyle__WEBPACK_IMPORTED_MODULE_15__.createSpacer)(gui, "controls-actions-gap", 10));
+    var muteButton = createButton(gui, "controls-mute", "Sound on/off", _uiStyle__WEBPACK_IMPORTED_MODULE_15__.UI.cream, _uiStyle__WEBPACK_IMPORTED_MODULE_15__.UI.navy, 130);
+    muteButton.onPointerClickObservable.add(function () { return options.onToggleMute(); });
+    actions.addControl(muteButton);
+    // Shortcut badge, top right (below the FPS counter): [H] Help  [M] Mute
+    var badge = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_15__.createCard)(gui, "controls-hint-badge", { radius: 18, thickness: 2 });
+    badge.width = "1px";
+    badge.adaptWidthToChildren = true;
+    badge.height = "42px";
+    badge.horizontalAlignment = gui.Control.HORIZONTAL_ALIGNMENT_RIGHT;
+    badge.verticalAlignment = gui.Control.VERTICAL_ALIGNMENT_TOP;
+    badge.top = "54px";
+    badge.left = "-14px";
+    badge.shadowOffsetY = 3;
+    badge.isPointerBlocker = true;
+    badge.hoverCursor = "pointer";
+    var badgeRow = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_15__.createRow)(gui, "controls-hint-row", 42);
+    badgeRow.paddingLeft = "8px";
+    badgeRow.paddingRight = "8px";
+    badge.addControl(badgeRow);
+    var helpText = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_15__.createText)(gui, "controls-hint-help", "", { size: 13, weight: "800", color: _uiStyle__WEBPACK_IMPORTED_MODULE_15__.UI.navy });
+    var muteText = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_15__.createText)(gui, "controls-hint-mute", "", { size: 13, weight: "800", color: _uiStyle__WEBPACK_IMPORTED_MODULE_15__.UI.navy });
+    for (var _i = 0, _a = [["H", helpText], ["M", muteText]]; _i < _a.length; _i++) {
+        var _b = _a[_i], key = _b[0], text = _b[1];
+        badgeRow.addControl((0,_uiStyle__WEBPACK_IMPORTED_MODULE_15__.createKeycap)(gui, "controls-hint-key-".concat(key), key));
+        text.resizeToFit = true;
+        text.paddingLeft = "7px";
+        text.paddingRight = "9px";
+        badgeRow.addControl(text);
+    }
+    badge.onPointerClickObservable.add(function () { return options.onToggle(); });
     ui.addControl(panel);
-    ui.addControl(hintBadge);
-    return { panel: panel, hint: hintText };
+    ui.addControl(badge);
+    (0,_uiStyle__WEBPACK_IMPORTED_MODULE_15__.refreshWhenFontLoaded)(ui);
+    var hint = {
+        update: function (helpVisible, muted) {
+            helpText.text = helpVisible ? "Hide help" : "Help";
+            muteText.text = muted ? "Unmute" : "Mute";
+        },
+    };
+    return { panel: panel, hint: hint };
+}
+/** Chunky rounded button with a hard shadow. */
+function createButton(gui, name, label, background, color, width) {
+    var button = gui.Button.CreateSimpleButton(name, label);
+    button.width = "".concat(width, "px");
+    button.height = "40px";
+    button.thickness = 3;
+    button.cornerRadius = 20;
+    button.color = _uiStyle__WEBPACK_IMPORTED_MODULE_15__.UI.navy;
+    button.background = background;
+    button.shadowColor = _uiStyle__WEBPACK_IMPORTED_MODULE_15__.UI.shadow;
+    button.shadowOffsetY = 3;
+    button.shadowBlur = 0;
+    button.fontFamily = _uiStyle__WEBPACK_IMPORTED_MODULE_15__.UI.font;
+    button.fontWeight = "900";
+    button.fontSize = 14;
+    if (button.textBlock) {
+        button.textBlock.color = color;
+    }
+    button.hoverCursor = "pointer";
+    button.pointerEnterAnimation = function () {
+        button.scaleX = 1.04;
+        button.scaleY = 1.04;
+    };
+    button.pointerOutAnimation = function () {
+        button.scaleX = 1;
+        button.scaleY = 1;
+    };
+    return button;
 }
 
 
@@ -2615,6 +2845,7 @@ var scriptsMap = {
 (__unused_webpack_module, __webpack_exports__, __webpack_require__) {
 
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   SUN_DIRECTION: () => (/* binding */ SUN_DIRECTION),
 /* harmony export */   initializeShadows: () => (/* binding */ initializeShadows)
 /* harmony export */ });
 /* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core */ "./node_modules/@babylonjs/core/index.js");
@@ -2642,7 +2873,7 @@ var SHADOW_AHEAD = 60;
 /** How far back along the sun direction the shadow camera sits. */
 var SUN_DISTANCE = 200;
 /** Meshes that never cast: effects, overlays and flat decals. */
-var NO_CAST = ["ball", "splatter", "ffdescription", "monitor", "ground", "road-slab", "ground-petal", "collider"];
+var NO_CAST = ["ball", "splatter", "ffdescription", "monitor", "ground", "road-slab", "ground-petal", "collider", "cloud"];
 /** Meshes thinner than this (world units) lie flat on the ground and only receive. */
 var MIN_CASTER_HEIGHT = 0.3;
 function initializeShadows(scene, options) {
@@ -2766,6 +2997,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ });
 /* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core */ "./node_modules/@babylonjs/core/index.js");
 /* harmony import */ var _toyTarget__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./toyTarget */ "./src/scenes/toyTarget.ts");
+/* harmony import */ var _uiStyle__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./uiStyle */ "./src/scenes/uiStyle.ts");
 var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -2802,6 +3034,7 @@ var __generator = (undefined && undefined.__generator) || function (thisArg, bod
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+
 
 
 /**
@@ -2860,24 +3093,12 @@ function initializeTankMovement(_this, rotationSpeed) {
     _this.scene.actionManager = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.ActionManager(_this.scene);
     _this.scene.actionManager.registerAction(new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.ExecuteCodeAction(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.ActionManager.OnKeyDownTrigger, handleKeyEvent));
     _this.scene.actionManager.registerAction(new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.ExecuteCodeAction(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.ActionManager.OnKeyUpTrigger, handleKeyEvent));
-    // Create and manage splatter objects
-    var splatterObjects = createSplatterObjects(_this);
-    var currentSplatterIndex = 0;
-    var tick = 0;
-    // Update splatter positioning and rotation
-    var updateSplatter = function () {
-        if (!splatterObjects.length) {
-            return;
-        }
-        if (++tick === 35) {
-            splatterObjects[currentSplatterIndex].position.copyFrom(_this.tank.position);
-        }
-        else if (tick === 40) {
-            var splatter = splatterObjects[currentSplatterIndex];
-            splatter.position.y = 0;
-            splatter.rotate(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Axis.Y, Math.random() * 350 + 10, _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Space.WORLD);
-            currentSplatterIndex = (currentSplatterIndex + 1) % splatterObjects.length;
-            tick = 0;
+    // Engine sound: replayed every 40 physics frames while driving. (The tread prints and dust are
+    // in tankTrail.ts.)
+    var engineSoundTick = 0;
+    var updateEngineSound = function () {
+        if (++engineSoundTick >= 40) {
+            engineSoundTick = 0;
             _this.tankSound.play();
         }
     };
@@ -2918,7 +3139,7 @@ function initializeTankMovement(_this, rotationSpeed) {
         var turnInput = (inputMap["d"] ? 1 : 0) - (inputMap["a"] ? 1 : 0);
         var currentForwardSpeed = applyMovement(_this.tank, moveInput, deltaSeconds);
         if (moveInput !== 0 && Math.abs(currentForwardSpeed) > 0.5) {
-            updateSplatter();
+            updateEngineSound();
         }
         var desiredTurnSpeed = turnInput * maxTurnSpeed;
         currentTurnSpeed = moveToward(currentTurnSpeed, desiredTurnSpeed, turnAcceleration * deltaSeconds);
@@ -2983,26 +3204,11 @@ function initializeTankMovement(_this, rotationSpeed) {
     }
 }
 /**
- * Create and return splatter objects.
- */
-function createSplatterObjects(_this) {
-    var baseSplatter = _this.scene.getMeshByName("splatter1");
-    if (!baseSplatter) {
-        console.error("Base splatter object not found in the scene");
-        return [];
-    }
-    if (!(baseSplatter instanceof _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Mesh)) {
-        console.error("Base splatter object must be a mesh");
-        return [];
-    }
-    return [baseSplatter, baseSplatter.createInstance("splatter2"), baseSplatter.createInstance("splatter3")];
-}
-/**
  * Gives the player the ability to shoot with the tank.
  */
 function initializeShooting(_this, forward) {
     return __awaiter(this, void 0, void 0, function () {
-        var activeShots, shotOffset, shotHeightOffset, shotRadius, shotLifetimeMs, shotCooldownMs, targetHintRangeSquared, targetAimRangeSquared, aimLockThreshold, recoilRecoverSpeed, shotDirection, shotSpawnPosition, targetPosition, tankForward, toTarget, recoilOffset, recoilStep, targetConfigs, github, githubMaterial, gui, highlightLayer, targetUi, objectiveHint, reticle, hitFeedback, impactBurst, getHitRadiusSquared, targetLabels, targets, targetMarks, toyTargets, highlightColor, applyVelocity, ball, canShoot, shotCooldownUntil, hitFeedbackUntil, impactBurstUntil, currentStatusUntil, currentObjectiveText, hitTarget, impactTarget, discoveredTargets, totalTargetCount, recoilRestoreObserver, shotObserver, handleShoot;
+        var activeShots, shotOffset, shotHeightOffset, shotRadius, shotLifetimeMs, shotCooldownMs, targetHintRangeSquared, targetAimRangeSquared, aimLockThreshold, recoilRecoverSpeed, shotDirection, shotSpawnPosition, targetPosition, tankForward, toTarget, recoilOffset, recoilStep, targetConfigs, github, githubMaterial, gui, highlightLayer, targetUi, objectiveHint, reticle, hitFeedback, impactBurst, getHitRadiusSquared, targetLabels, targets, targetMarks, toyTargets, highlightColor, applyVelocity, ball, canShoot, shotCooldownUntil, hitFeedbackUntil, impactBurstUntil, currentStatusUntil, currentObjectiveText, currentMood, hitTarget, impactTarget, discoveredTargets, totalTargetCount, recoilRestoreObserver, shotObserver, handleShoot;
         var _a, _b, _c, _d;
         return __generator(this, function (_e) {
             switch (_e.label) {
@@ -3125,6 +3331,7 @@ function initializeShooting(_this, forward) {
                     impactBurstUntil = 0;
                     currentStatusUntil = 0;
                     currentObjectiveText = objectiveHint.text;
+                    currentMood = "explore";
                     hitTarget = null;
                     impactTarget = null;
                     discoveredTargets = new Set();
@@ -3138,6 +3345,7 @@ function initializeShooting(_this, forward) {
                         var deltaSeconds = _this.scene.getEngine().getDeltaTime() / 1000;
                         var nearbyTargetLabel = "";
                         var nearestTargetDistanceSquared = Number.POSITIVE_INFINITY;
+                        var nearestTargetMesh = null;
                         var aimedTargetLabel = "";
                         var aimedTargetDistanceSquared = Number.POSITIVE_INFINITY;
                         var bestAimDot = aimLockThreshold;
@@ -3152,15 +3360,17 @@ function initializeShooting(_this, forward) {
                             var distanceSquared = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.DistanceSquared(_this.tank.absolutePosition, targetPosition);
                             var label = targetLabels.get(target.mesh);
                             if (label) {
-                                label.isVisible = distanceSquared <= targetHintRangeSquared;
+                                label.isVisible = false;
                             }
                             if (distanceSquared < nearestTargetDistanceSquared) {
                                 nearestTargetDistanceSquared = distanceSquared;
                                 nearbyTargetLabel = target.label;
+                                nearestTargetMesh = target.mesh;
                             }
                             if (distanceSquared <= targetHintRangeSquared && !discoveredTargets.has(target.mesh.name)) {
                                 discoveredTargets.add(target.mesh.name);
-                                currentObjectiveText = "New link discovered: ".concat(target.label, ". ").concat(discoveredTargets.size, " of ").concat(totalTargetCount, " found.");
+                                currentObjectiveText = "You found ".concat(target.label, "! ").concat(discoveredTargets.size, " of ").concat(totalTargetCount, " links found.");
+                                currentMood = "found";
                                 objectiveHint.text = currentObjectiveText;
                                 currentStatusUntil = now + 2400;
                             }
@@ -3176,6 +3386,13 @@ function initializeShooting(_this, forward) {
                                 aimedTargetDistanceSquared = distanceSquared;
                             }
                         }
+                        // Only the nearest target gets its name bubble: they stand close together on the podium.
+                        if (nearestTargetMesh && nearestTargetDistanceSquared <= targetHintRangeSquared) {
+                            var label = targetLabels.get(nearestTargetMesh);
+                            if (label) {
+                                label.isVisible = true;
+                            }
+                        }
                         if (hitTarget && now >= hitFeedbackUntil) {
                             hitFeedback.container.isVisible = false;
                             hitTarget = null;
@@ -3188,25 +3405,36 @@ function initializeShooting(_this, forward) {
                         reticle.cooldown.alpha = cooldownProgress > 0 ? 0.95 : 0;
                         reticle.cooldown.width = "".concat(Math.max(16, cooldownProgress * 56), "px");
                         reticle.cooldown.height = "".concat(Math.max(16, cooldownProgress * 56), "px");
-                        reticle.cooldown.color = hasRecentHit(now, hitFeedbackUntil) ? "rgba(141,247,176,0.4)" : "rgba(247,185,85,0.28)";
+                        reticle.cooldown.color = hasRecentHit(now, hitFeedbackUntil) ? _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.mint : _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.gold;
                         var hasAimLock = aimedTargetLabel !== "";
-                        reticle.frame.color = hasAimLock ? "#f7b955" : "rgba(255,255,255,0.52)";
-                        reticle.frame.thickness = hasAimLock ? 2 : 1;
-                        reticle.dot.background = hasAimLock ? "#f7b955" : "rgba(255,255,255,0.85)";
+                        reticle.frame.color = hasAimLock ? _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.pink : _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.cream;
+                        reticle.frame.thickness = hasAimLock ? 4 : 3;
+                        reticle.dot.background = hasAimLock ? _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.pink : _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.cream;
+                        reticle.label.color = hasAimLock ? _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.pinkDeep : _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.navy;
                         reticle.label.text = hasAimLock
                             ? "LOCKED: ".concat(aimedTargetLabel)
                             : nearestTargetDistanceSquared <= targetHintRangeSquared
                                 ? "NEARBY: ".concat(nearbyTargetLabel)
                                 : "".concat(discoveredTargets.size, "/").concat(totalTargetCount, " LINKS FOUND");
+                        // The sight only shows up when there is something to aim at (progress is in the corner card).
+                        var showSight = hasAimLock || nearestTargetDistanceSquared <= targetHintRangeSquared || hasRecentHit(now, hitFeedbackUntil);
+                        reticle.frame.isVisible = showSight;
+                        reticle.pill.isVisible = showSight;
+                        var isNearby = nearestTargetDistanceSquared <= targetHintRangeSquared;
                         var nextObjectiveText = hasAimLock
-                            ? "Target locked: ".concat(aimedTargetLabel, " (").concat(formatDistance(Math.sqrt(aimedTargetDistanceSquared)), "). Press E to fire.")
-                            : nearestTargetDistanceSquared <= targetHintRangeSquared
-                                ? "Target in range: ".concat(nearbyTargetLabel, " (").concat(formatDistance(Math.sqrt(nearestTargetDistanceSquared)), "). Turn toward it to lock on.")
-                                : "Explore the island to discover glowing targets, projects, and social links. ".concat(discoveredTargets.size, " of ").concat(totalTargetCount, " links found.");
-                        if (now >= currentStatusUntil && nextObjectiveText !== currentObjectiveText) {
-                            objectiveHint.text = nextObjectiveText;
-                            currentObjectiveText = nextObjectiveText;
+                            ? "".concat(aimedTargetLabel, " is locked on, ").concat(formatDistance(Math.sqrt(aimedTargetDistanceSquared)), ". Press E to fire!")
+                            : isNearby
+                                ? "".concat(nearbyTargetLabel, " is ").concat(formatDistance(Math.sqrt(nearestTargetDistanceSquared)), ". Turn toward it to lock on.")
+                                : "Drive around the island to find the glowing targets, your projects and links.";
+                        var nextMood = hasAimLock ? "locked" : isNearby ? "nearby" : "explore";
+                        if (now >= currentStatusUntil) {
+                            currentMood = nextMood;
+                            if (nextObjectiveText !== currentObjectiveText) {
+                                objectiveHint.text = nextObjectiveText;
+                                currentObjectiveText = nextObjectiveText;
+                            }
                         }
+                        objectiveHint.setStatus(currentMood, discoveredTargets.size, totalTargetCount);
                         if (!activeShots.length) {
                             return;
                         }
@@ -3222,7 +3450,8 @@ function initializeShooting(_this, forward) {
                                     didHit = true;
                                     (_a = toyTargets.get(target.mesh)) === null || _a === void 0 ? void 0 : _a.hit();
                                     window.open(target.url, "_blank", "noopener,noreferrer");
-                                    currentObjectiveText = "Direct hit. Opening ".concat(target.label, " in a new tab.");
+                                    currentObjectiveText = "Direct hit! Opening ".concat(target.label, " in a new tab.");
+                                    currentMood = "hit";
                                     objectiveHint.text = currentObjectiveText;
                                     currentStatusUntil = now + 2200;
                                     hitTarget = target.mesh;
@@ -3233,8 +3462,8 @@ function initializeShooting(_this, forward) {
                                     impactBurst.container.linkWithMesh(target.mesh);
                                     impactBurst.container.isVisible = true;
                                     impactBurstUntil = now + 420;
-                                    reticle.frame.color = "#8df7b0";
-                                    reticle.dot.background = "#8df7b0";
+                                    reticle.frame.color = _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.mint;
+                                    reticle.dot.background = _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.mint;
                                     reticle.label.text = "DIRECT HIT: ".concat(target.label);
                                     clearTimeout(activeShot.disposeTimeout);
                                     activeShot.dispose();
@@ -3309,90 +3538,169 @@ function initializeShooting(_this, forward) {
         });
     });
 }
+var OBJECTIVE_MOODS = {
+    explore: { label: "EXPLORE", color: _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.navy },
+    nearby: { label: "TARGET NEARBY", color: _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.gold },
+    locked: { label: "LOCKED ON", color: _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.pink },
+    found: { label: "NEW LINK FOUND", color: _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.mint },
+    hit: { label: "DIRECT HIT", color: _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.mint },
+};
+/**
+ * The card in the top-left corner: a coloured eyebrow saying what is going on, progress pips for
+ * the links found so far, and the current hint.
+ */
 function createObjectiveHint(gui, ui) {
-    var container = new gui.Rectangle("objective-hint");
-    container.width = "420px";
-    container.height = "1px";
-    container.adaptHeightToChildren = true;
-    container.thickness = 1;
-    container.cornerRadius = 18;
-    container.color = "rgba(255,255,255,0.18)";
-    container.background = "rgba(8, 10, 16, 0.68)";
-    container.horizontalAlignment = gui.Control.HORIZONTAL_ALIGNMENT_LEFT;
-    container.verticalAlignment = gui.Control.VERTICAL_ALIGNMENT_TOP;
-    container.paddingTop = "18px";
-    container.paddingLeft = "18px";
-    container.zIndex = 2;
-    var text = new gui.TextBlock("objective-hint-text");
-    text.text = "Explore the island to discover glowing targets, projects, and social links.";
-    text.color = "#f4f7ff";
-    text.fontSize = 15;
-    text.fontFamily = "Inter, Segoe UI, sans-serif";
+    var card = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_2__.createCard)(gui, "objective-hint");
+    card.width = "360px";
+    card.height = "1px";
+    card.adaptHeightToChildren = true;
+    card.horizontalAlignment = gui.Control.HORIZONTAL_ALIGNMENT_LEFT;
+    card.verticalAlignment = gui.Control.VERTICAL_ALIGNMENT_TOP;
+    card.left = "18px";
+    card.top = "18px";
+    card.zIndex = 2;
+    card.isPointerBlocker = false;
+    var stack = new gui.StackPanel("objective-hint-stack");
+    stack.isVertical = true;
+    stack.paddingTop = "12px";
+    stack.paddingBottom = "14px";
+    card.addControl(stack);
+    var header = new gui.Grid("objective-hint-header");
+    header.height = "26px";
+    header.paddingLeft = "16px";
+    header.paddingRight = "16px";
+    header.addColumnDefinition(1);
+    header.addColumnDefinition(90, true);
+    stack.addControl(header);
+    var badge = new gui.Rectangle("objective-hint-badge");
+    badge.height = "24px";
+    badge.width = "1px";
+    badge.adaptWidthToChildren = true;
+    badge.thickness = 0;
+    badge.cornerRadius = 12;
+    badge.horizontalAlignment = gui.Control.HORIZONTAL_ALIGNMENT_LEFT;
+    var badgeText = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_2__.createText)(gui, "objective-hint-badge-text", "", { size: 12, weight: "900", color: _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.cream, align: "center" });
+    badgeText.resizeToFit = true;
+    badgeText.paddingLeft = "10px";
+    badgeText.paddingRight = "10px";
+    badge.addControl(badgeText);
+    header.addControl(badge, 0, 0);
+    var pips = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_2__.createRow)(gui, "objective-hint-pips", 24);
+    pips.horizontalAlignment = gui.Control.HORIZONTAL_ALIGNMENT_RIGHT;
+    header.addControl(pips, 0, 1);
+    var pipControls = [];
+    var text = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_2__.createText)(gui, "objective-hint-text", "", { size: 15, weight: "700" });
     text.textWrapping = true;
     text.resizeToFit = true;
+    text.lineSpacing = "2px";
     text.paddingLeft = "16px";
     text.paddingRight = "16px";
-    text.paddingTop = "12px";
-    text.paddingBottom = "12px";
-    container.addControl(text);
-    ui.addControl(container);
-    return text;
+    text.paddingTop = "8px";
+    stack.addControl(text);
+    ui.addControl(card);
+    (0,_uiStyle__WEBPACK_IMPORTED_MODULE_2__.refreshWhenFontLoaded)(ui);
+    var lastStatus = "";
+    var hint = {
+        get text() {
+            return text.text;
+        },
+        set text(value) {
+            text.text = value;
+        },
+        setStatus: function (mood, found, total) {
+            var key = "".concat(mood, ":").concat(found, ":").concat(total);
+            if (key === lastStatus) {
+                return;
+            }
+            lastStatus = key;
+            badgeText.text = OBJECTIVE_MOODS[mood].label;
+            badge.background = OBJECTIVE_MOODS[mood].color;
+            // One pip per link: filled pink once found.
+            while (pipControls.length < total) {
+                // Little toy blocks: sand while missing, pink once found.
+                var slot = new gui.Rectangle("objective-hint-pip-slot-".concat(pipControls.length));
+                slot.width = "24px";
+                slot.height = "24px";
+                slot.thickness = 0;
+                var pip = new gui.Rectangle("objective-hint-pip-".concat(pipControls.length));
+                pip.width = "18px";
+                pip.height = "18px";
+                pip.thickness = 2;
+                pip.cornerRadius = 5;
+                pip.color = _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.navy;
+                slot.addControl(pip);
+                pips.addControl(slot);
+                pipControls.push(pip);
+            }
+            pipControls.forEach(function (pip, i) {
+                pip.background = i < found ? _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.pink : _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.sand;
+            });
+        },
+    };
+    return hint;
 }
 function createReticle(gui, ui) {
+    // Round sight: a cream ring with a navy outline (drawn as the shadow) and a dot in the middle.
     var frame = new gui.Rectangle("reticle-frame");
-    frame.width = "28px";
-    frame.height = "28px";
-    frame.thickness = 1;
-    frame.cornerRadius = 8;
-    frame.color = "rgba(255,255,255,0.52)";
-    frame.background = "rgba(10, 12, 18, 0.12)";
+    frame.width = "34px";
+    frame.height = "34px";
+    frame.thickness = 3;
+    frame.cornerRadius = 17;
+    frame.color = _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.cream;
+    frame.background = "transparent";
+    frame.shadowColor = _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.navyDeep;
+    frame.shadowBlur = 0;
+    frame.shadowOffsetY = 2;
     frame.horizontalAlignment = gui.Control.HORIZONTAL_ALIGNMENT_CENTER;
     frame.verticalAlignment = gui.Control.VERTICAL_ALIGNMENT_CENTER;
     frame.isPointerBlocker = false;
     var dot = new gui.Rectangle("reticle-dot");
-    dot.width = "4px";
-    dot.height = "4px";
+    dot.width = "8px";
+    dot.height = "8px";
     dot.thickness = 0;
-    dot.cornerRadius = 999;
-    dot.background = "rgba(255,255,255,0.85)";
+    dot.cornerRadius = 4;
+    dot.background = _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.cream;
     frame.addControl(dot);
+    // Grows while the gun reloads.
     var cooldown = new gui.Ellipse("reticle-cooldown");
     cooldown.width = "16px";
     cooldown.height = "16px";
-    cooldown.thickness = 2;
-    cooldown.color = "rgba(247,185,85,0.28)";
+    cooldown.thickness = 3;
+    cooldown.color = _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.gold;
     cooldown.alpha = 0;
     cooldown.isPointerBlocker = false;
     ui.addControl(cooldown);
-    var label = new gui.TextBlock("reticle-label");
-    label.text = "0/0 LINKS FOUND";
-    label.color = "rgba(255,255,255,0.72)";
-    label.fontSize = 12;
-    label.fontFamily = "Inter, Segoe UI, sans-serif";
-    label.top = "28px";
-    label.horizontalAlignment = gui.Control.HORIZONTAL_ALIGNMENT_CENTER;
-    label.verticalAlignment = gui.Control.VERTICAL_ALIGNMENT_CENTER;
+    // Status pill under the sight.
+    var pill = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_2__.createCard)(gui, "reticle-pill", { radius: 12, thickness: 2 });
+    pill.height = "26px";
+    pill.width = "1px";
+    pill.adaptWidthToChildren = true;
+    pill.top = "40px";
+    pill.shadowOffsetY = 3;
+    pill.horizontalAlignment = gui.Control.HORIZONTAL_ALIGNMENT_CENTER;
+    pill.verticalAlignment = gui.Control.VERTICAL_ALIGNMENT_CENTER;
+    pill.isPointerBlocker = false;
+    var label = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_2__.createText)(gui, "reticle-label", "0/0 LINKS FOUND", { size: 12, weight: "900", color: _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.navy, align: "center" });
+    label.resizeToFit = true;
+    label.paddingLeft = "12px";
+    label.paddingRight = "12px";
     label.isPointerBlocker = false;
+    pill.addControl(label);
     ui.addControl(frame);
-    ui.addControl(label);
-    return { frame: frame, dot: dot, label: label, cooldown: cooldown };
+    ui.addControl(pill);
+    // Hidden until a target is in range (see the update loop), so it doesn't sit on the tank.
+    frame.isVisible = false;
+    pill.isVisible = false;
+    return { frame: frame, dot: dot, label: label, pill: pill, cooldown: cooldown };
 }
 function createHitFeedback(gui, ui) {
-    var container = new gui.Rectangle("hit-feedback");
-    container.width = "116px";
-    container.height = "34px";
-    container.thickness = 1;
-    container.cornerRadius = 16;
-    container.color = "rgba(141,247,176,0.55)";
-    container.background = "rgba(10, 28, 18, 0.78)";
-    container.linkOffsetY = -92;
+    var container = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_2__.createCard)(gui, "hit-feedback", { radius: 18, background: _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.mint, border: _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.navy });
+    container.width = "150px";
+    container.height = "40px";
+    container.linkOffsetY = -96;
     container.isPointerBlocker = false;
     container.isVisible = false;
-    var text = new gui.TextBlock("hit-feedback-text");
-    text.text = "Direct hit";
-    text.color = "#8df7b0";
-    text.fontSize = 13;
-    text.fontFamily = "Inter, Segoe UI, sans-serif";
+    var text = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_2__.createText)(gui, "hit-feedback-text", "DIRECT HIT!", { size: 16, weight: "900", color: _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.navyDeep, align: "center" });
     container.addControl(text);
     ui.addControl(container);
     return { container: container, text: text };
@@ -3403,15 +3711,15 @@ function createImpactBurst(gui, ui) {
     container.height = "1px";
     container.thickness = 0;
     container.background = "transparent";
-    container.linkOffsetY = -92;
+    container.linkOffsetY = -96;
     container.isPointerBlocker = false;
     container.isVisible = false;
     var ring = new gui.Ellipse("impact-burst-ring");
-    ring.width = "82px";
-    ring.height = "82px";
-    ring.thickness = 3;
-    ring.color = "rgba(141,247,176,0.75)";
-    ring.background = "rgba(141,247,176,0.1)";
+    ring.width = "90px";
+    ring.height = "90px";
+    ring.thickness = 5;
+    ring.color = _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.gold;
+    ring.background = "rgba(217, 161, 59, 0.12)";
     ring.alpha = 0.9;
     container.addControl(ring);
     ui.addControl(container);
@@ -3423,26 +3731,39 @@ function hasRecentHit(now, hitFeedbackUntil) {
 function formatDistance(distance) {
     return "".concat(Math.max(1, Math.round(distance)), "m away");
 }
+/**
+ * A little speech-bubble card above a target with its name, shown when the tank is close by.
+ */
 function createTargetLabel(gui, ui, mesh, label) {
     var container = new gui.Rectangle("label-".concat(mesh.name));
-    container.width = "128px";
-    container.height = "42px";
-    container.thickness = 1;
-    container.cornerRadius = 14;
-    container.color = "rgba(255,255,255,0.26)";
-    container.background = "rgba(7, 9, 14, 0.74)";
-    container.linkOffsetY = -80;
+    container.width = "170px";
+    container.height = "70px";
+    container.thickness = 0;
+    container.linkOffsetY = -86;
     container.isPointerBlocker = false;
     container.isVisible = false;
-    var text = new gui.TextBlock("label-text-".concat(mesh.name));
-    text.text = "".concat(label, "\nShoot to open");
-    text.color = "#fff3cf";
-    text.fontSize = 13;
-    text.fontFamily = "Inter, Segoe UI, sans-serif";
-    text.textWrapping = true;
-    container.addControl(text);
-    container.linkWithMesh(mesh);
+    // Pointer: a rotated square peeking out under the card.
+    var pointer = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_2__.createCard)(gui, "label-pointer-".concat(mesh.name), { radius: 3 });
+    pointer.width = "16px";
+    pointer.height = "16px";
+    pointer.rotation = Math.PI / 4;
+    pointer.top = "24px";
+    pointer.shadowOffsetY = 0;
+    container.addControl(pointer);
+    var card = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_2__.createCard)(gui, "label-card-".concat(mesh.name), { radius: 14 });
+    card.height = "54px";
+    card.top = "-6px";
+    card.shadowOffsetY = 0;
+    container.addControl(card);
+    var name = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_2__.createText)(gui, "label-name-".concat(mesh.name), label, { size: 16, weight: "900", color: _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.navy, align: "center" });
+    name.top = "-8px";
+    card.addControl(name);
+    var action = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_2__.createText)(gui, "label-action-".concat(mesh.name), "Shoot to open", { size: 12, weight: "800", color: _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.pinkDeep, align: "center" });
+    action.top = "11px";
+    card.addControl(action);
+    // The control must be on the texture before it can follow a mesh.
     ui.addControl(container);
+    container.linkWithMesh(mesh);
     return container;
 }
 /**
@@ -3462,6 +3783,270 @@ function segmentDistanceSquared(start, end, point) {
     var dy = start.y + (sy * t) - point.y;
     var dz = start.z + (sz * t) - point.z;
     return (dx * dx) + (dy * dy) + (dz * dz);
+}
+
+
+/***/ },
+
+/***/ "./src/scenes/tankTrail.ts"
+/*!*********************************!*\
+  !*** ./src/scenes/tankTrail.ts ***!
+  \*********************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   createTankTrail: () => (/* binding */ createTankTrail)
+/* harmony export */ });
+/* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core */ "./node_modules/@babylonjs/core/index.js");
+
+/**
+ * What the tank leaves behind while driving: pairs of tread prints pressed into the play mat that
+ * fade away after a while, and little puffs of dust kicked up behind both tracks.
+ *
+ * Replaces the imported "splatter" decals. Everything follows the physics holder ("tank_holder"),
+ * whatever tank model is shown on it.
+ */
+var GROUND_Y = -0.5;
+/** Prints sit just above the road slabs (whose tops are at GROUND_Y + 0.15) so they show there too. */
+var PRINT_Y = GROUND_Y + 0.17;
+// Track layout in world units (see toyTank.ts): tracks 4.6 either side of the centre line,
+// 2.6 wide, and the rear of the tracks 6.8 behind the centre.
+var TRACK_X = 4.6;
+var TRACK_WIDTH = 2.6;
+var TRACK_REAR_Z = -6.8;
+/** Distance driven between two prints, and the length of one print (slightly longer, so they join). */
+var PRINT_SPACING = 1.9;
+var PRINT_LENGTH = 2.1;
+var PRINT_LIFETIME = 9;
+var PRINT_FADE = 3.5;
+var MAX_PRINTS = 420;
+/** Below this speed (units per second) the tank leaves no prints or dust. */
+var MIN_SPEED = 2;
+var PALETTE = {
+    print: "#123248",
+    dust: "#E8DCC6",
+};
+function createTankTrail(scene, holder) {
+    var _a;
+    // The old decals are replaced by this trail.
+    for (var _i = 0, _b = ["splatter1", "splatter2", "splatter3"]; _i < _b.length; _i++) {
+        var name_1 = _b[_i];
+        (_a = scene.getMeshByName(name_1)) === null || _a === void 0 ? void 0 : _a.setEnabled(false);
+    }
+    var prints = null;
+    var dust = null;
+    try {
+        prints = createPrints(scene);
+    }
+    catch (error) {
+        console.error("Tank tread prints failed", error);
+    }
+    try {
+        dust = createDust(scene, holder);
+    }
+    catch (error) {
+        console.error("Tank dust failed", error);
+    }
+    if (!prints && !dust) {
+        return null;
+    }
+    var lastPosition = holder.position.clone();
+    var lastPrintPosition = holder.position.clone();
+    var forward = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3();
+    var time = 0;
+    var observer = scene.onAfterRenderObservable.add(function () {
+        var deltaSeconds = Math.min(scene.getEngine().getDeltaTime() / 1000, 0.1);
+        time += deltaSeconds;
+        var moved = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.Distance(holder.position, lastPosition);
+        var speed = deltaSeconds > 0 ? moved / deltaSeconds : 0;
+        lastPosition.copyFrom(holder.position);
+        var driving = speed > MIN_SPEED;
+        if (prints) {
+            if (!driving) {
+                // Restart the spacing from here, so the next print isn't stretched over a gap.
+                lastPrintPosition.copyFrom(holder.position);
+            }
+            else {
+                holder.computeWorldMatrix(true);
+                holder.getDirectionToRef(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Axis.Z, forward);
+                forward.y = 0;
+                forward.normalize();
+                var yaw = Math.atan2(forward.x, forward.z);
+                // Lay prints along the path in equal steps, even if a frame covered several.
+                var travelled = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.Distance(holder.position, lastPrintPosition);
+                while (travelled >= PRINT_SPACING) {
+                    var t = PRINT_SPACING / travelled;
+                    _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.LerpToRef(lastPrintPosition, holder.position, t, lastPrintPosition);
+                    prints.stamp(lastPrintPosition, yaw, time);
+                    travelled -= PRINT_SPACING;
+                }
+            }
+            prints.update(time);
+        }
+        if (dust) {
+            dust.emitRate = driving ? Math.min(36, speed * 0.9) : 0;
+        }
+    });
+    var dispose = function () {
+        scene.onAfterRenderObservable.remove(observer);
+        prints === null || prints === void 0 ? void 0 : prints.mesh.dispose();
+        dust === null || dust === void 0 ? void 0 : dust.dispose();
+    };
+    scene.onDisposeObservable.addOnce(dispose);
+    return { dispose: dispose };
+}
+/**
+ * All prints are thin instances of one flat quad with a tread texture; each one has its own
+ * colour (for fading) in a per-instance colour buffer, and is recycled oldest-first.
+ */
+function createPrints(scene) {
+    var mesh = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateGround("tank-trail-prints", { width: TRACK_WIDTH, height: PRINT_LENGTH }, scene);
+    mesh.isPickable = false;
+    mesh.alwaysSelectAsActiveMesh = true;
+    mesh.hasVertexAlpha = true;
+    mesh.metadata = { keepUnfrozen: true };
+    var material = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.StandardMaterial("tank-trail-prints-material", scene);
+    material.diffuseTexture = createTreadTexture(scene);
+    material.diffuseTexture.hasAlpha = true;
+    material.useAlphaFromDiffuseTexture = true;
+    material.specularColor = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.Black();
+    material.diffuseColor = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.FromHexString(PALETTE.print);
+    material.zOffset = -2;
+    material.backFaceCulling = false;
+    mesh.material = material;
+    var matrices = new Float32Array(MAX_PRINTS * 16);
+    var colors = new Float32Array(MAX_PRINTS * 4);
+    var born = new Float32Array(MAX_PRINTS).fill(-1000);
+    var hidden = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Matrix.Scaling(0, 0, 0);
+    for (var i = 0; i < MAX_PRINTS; i++) {
+        hidden.copyToArray(matrices, i * 16);
+    }
+    mesh.thinInstanceSetBuffer("matrix", matrices, 16, false);
+    mesh.thinInstanceSetBuffer("color", colors, 4, false);
+    var next = 0;
+    var rotation = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Quaternion();
+    var position = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3();
+    var scaling = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.One();
+    var matrix = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Matrix();
+    var matricesDirty = false;
+    return {
+        mesh: mesh,
+        /** One pair of prints, under both tracks, centred on `center` and turned to `yaw`. */
+        stamp: function (center, yaw, time) {
+            _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Quaternion.RotationYawPitchRollToRef(yaw, 0, 0, rotation);
+            var rightX = Math.cos(yaw);
+            var rightZ = -Math.sin(yaw);
+            for (var _i = 0, _a = [-1, 1]; _i < _a.length; _i++) {
+                var side = _a[_i];
+                position.set(center.x + (rightX * side * TRACK_X), PRINT_Y, center.z + (rightZ * side * TRACK_X));
+                _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Matrix.ComposeToRef(scaling, rotation, position, matrix);
+                matrix.copyToArray(matrices, next * 16);
+                born[next] = time;
+                next = (next + 1) % MAX_PRINTS;
+            }
+            matricesDirty = true;
+        },
+        /** Fades prints out at the end of their life and hides expired ones. */
+        update: function (time) {
+            for (var i = 0; i < MAX_PRINTS; i++) {
+                var age = time - born[i];
+                var alpha = age < 0 || age > PRINT_LIFETIME ? 0 : Math.min(1, (PRINT_LIFETIME - age) / PRINT_FADE) * 0.8;
+                colors[(i * 4)] = 1;
+                colors[(i * 4) + 1] = 1;
+                colors[(i * 4) + 2] = 1;
+                colors[(i * 4) + 3] = alpha;
+            }
+            mesh.thinInstanceBufferUpdated("color");
+            if (matricesDirty) {
+                mesh.thinInstanceBufferUpdated("matrix");
+                matricesDirty = false;
+            }
+        },
+    };
+}
+/** Tread pattern: chunky chevron cleats with soft edges, on a transparent background. */
+function createTreadTexture(scene) {
+    var width = 128;
+    var height = 128;
+    var texture = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.DynamicTexture("tank-trail-tread", { width: width, height: height }, scene, true);
+    var context = texture.getContext();
+    context.clearRect(0, 0, width, height);
+    // A faint pressed-in band the width of the track...
+    context.fillStyle = "rgba(255,255,255,0.45)";
+    context.fillRect(width * 0.06, 0, width * 0.88, height);
+    // ...with three chevron cleats along it (the texture's V runs along the direction of travel).
+    context.fillStyle = "rgba(255,255,255,1)";
+    for (var i = 0; i < 3; i++) {
+        var y = (i + 0.5) * (height / 3);
+        var thickness = height * 0.12;
+        context.beginPath();
+        context.moveTo(width * 0.1, y + (thickness * 0.9));
+        context.lineTo(width * 0.5, y - (thickness * 0.4));
+        context.lineTo(width * 0.9, y + (thickness * 0.9));
+        context.lineTo(width * 0.9, y + (thickness * 0.9) - thickness);
+        context.lineTo(width * 0.5, y - (thickness * 0.4) - thickness);
+        context.lineTo(width * 0.1, y + (thickness * 0.9) - thickness);
+        context.closePath();
+        context.fill();
+    }
+    texture.update();
+    texture.wrapU = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Texture.CLAMP_ADDRESSMODE;
+    texture.wrapV = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Texture.WRAP_ADDRESSMODE;
+    return texture;
+}
+/** Soft sand-coloured puffs from the back of both tracks. */
+function createDust(scene, holder) {
+    var dust = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.ParticleSystem("tank-trail-dust", 300, scene);
+    dust.particleTexture = createPuffTexture(scene);
+    dust.emitter = holder;
+    // Positions and directions are computed in world space from the holder's world matrix (the
+    // holder is a scaled 12-unit cube, so local offsets are divided by its scale).
+    var holderScale = holder.scaling.x || 1;
+    var local = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3();
+    dust.startPositionFunction = function (worldMatrix, positionToUpdate) {
+        var side = Math.random() < 0.5 ? -1 : 1;
+        local.set((side * TRACK_X + ((Math.random() - 0.5) * TRACK_WIDTH)) / holderScale, (GROUND_Y + 0.4 - holder.position.y) / holderScale, (TRACK_REAR_Z + (Math.random() * 0.8)) / holderScale);
+        _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.TransformCoordinatesToRef(local, worldMatrix, positionToUpdate);
+    };
+    var back = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3();
+    dust.startDirectionFunction = function (worldMatrix, directionToUpdate) {
+        _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.TransformNormalFromFloatsToRef(0, 0, -1, worldMatrix, back);
+        back.y = 0;
+        back.normalize();
+        directionToUpdate.set((back.x * 2.5) + ((Math.random() - 0.5) * 3), 2 + (Math.random() * 2.5), (back.z * 2.5) + ((Math.random() - 0.5) * 3));
+    };
+    var color = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.FromHexString(PALETTE.dust);
+    dust.addColorGradient(0, new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color4(color.r, color.g, color.b, 0));
+    dust.addColorGradient(0.15, new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color4(color.r, color.g, color.b, 0.38));
+    dust.addColorGradient(1, new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color4(color.r, color.g, color.b, 0));
+    dust.addSizeGradient(0, 1.6);
+    dust.addSizeGradient(1, 4.4);
+    dust.minLifeTime = 0.6;
+    dust.maxLifeTime = 1.1;
+    dust.minEmitPower = 1;
+    dust.maxEmitPower = 1.6;
+    dust.minAngularSpeed = -1.5;
+    dust.maxAngularSpeed = 1.5;
+    dust.gravity = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, -2, 0);
+    dust.blendMode = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.ParticleSystem.BLENDMODE_STANDARD;
+    dust.emitRate = 0;
+    dust.start();
+    return dust;
+}
+function createPuffTexture(scene) {
+    var size = 64;
+    var texture = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.DynamicTexture("tank-trail-puff", { width: size, height: size }, scene, false);
+    var context = texture.getContext();
+    var gradient = context.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+    gradient.addColorStop(0, "rgba(255,255,255,1)");
+    gradient.addColorStop(0.55, "rgba(255,255,255,0.8)");
+    gradient.addColorStop(1, "rgba(255,255,255,0)");
+    context.clearRect(0, 0, size, size);
+    context.fillStyle = gradient;
+    context.fillRect(0, 0, size, size);
+    texture.update();
+    texture.hasAlpha = true;
+    return texture;
 }
 
 
@@ -5667,6 +6252,106 @@ function createPetalTexture(scene) {
 
 /***/ },
 
+/***/ "./src/scenes/uiStyle.ts"
+/*!*******************************!*\
+  !*** ./src/scenes/uiStyle.ts ***!
+  \*******************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   UI: () => (/* binding */ UI),
+/* harmony export */   createCard: () => (/* binding */ createCard),
+/* harmony export */   createKeycap: () => (/* binding */ createKeycap),
+/* harmony export */   createRow: () => (/* binding */ createRow),
+/* harmony export */   createSpacer: () => (/* binding */ createSpacer),
+/* harmony export */   createText: () => (/* binding */ createText),
+/* harmony export */   refreshWhenFontLoaded: () => (/* binding */ refreshWhenFontLoaded)
+/* harmony export */ });
+var UI = {
+    cream: "#F4EBDD",
+    sand: "#E8DCC6",
+    navy: "#344B63",
+    navyDeep: "#22313F",
+    pink: "#E8869F",
+    pinkDeep: "#C9667F",
+    gold: "#D9A13B",
+    mint: "#7CC9A0",
+    text: "#2B3A4A",
+    muted: "#6B7B8C",
+    shadow: "rgba(26, 40, 56, 0.45)",
+    font: "Nunito, \"Arial Rounded MT Bold\", \"Trebuchet MS\", sans-serif",
+};
+/** Redraws the UI once the web font has loaded (text drawn before that uses the fallback font). */
+function refreshWhenFontLoaded(ui) {
+    if (!("fonts" in document)) {
+        return;
+    }
+    void Promise.all(["700", "800", "900"].map(function (weight) { return document.fonts.load("".concat(weight, " 16px Nunito")); }))
+        .then(function () { return ui.markAsDirty(); })
+        .catch(function () { return undefined; });
+}
+/** A cream card with a navy outline and a hard drop shadow. */
+function createCard(gui, name, options) {
+    var _a, _b, _c, _d;
+    if (options === void 0) { options = {}; }
+    var card = new gui.Rectangle(name);
+    card.background = (_a = options.background) !== null && _a !== void 0 ? _a : UI.cream;
+    card.color = (_b = options.border) !== null && _b !== void 0 ? _b : UI.navy;
+    card.thickness = (_c = options.thickness) !== null && _c !== void 0 ? _c : 3;
+    card.cornerRadius = (_d = options.radius) !== null && _d !== void 0 ? _d : 16;
+    card.shadowColor = UI.shadow;
+    card.shadowOffsetY = 4;
+    card.shadowOffsetX = 0;
+    card.shadowBlur = 0;
+    return card;
+}
+function createText(gui, name, text, options) {
+    var _a, _b, _c;
+    if (options === void 0) { options = {}; }
+    var block = new gui.TextBlock(name, text);
+    block.fontFamily = UI.font;
+    block.fontSize = (_a = options.size) !== null && _a !== void 0 ? _a : 15;
+    block.fontWeight = (_b = options.weight) !== null && _b !== void 0 ? _b : "700";
+    block.color = (_c = options.color) !== null && _c !== void 0 ? _c : UI.text;
+    block.textHorizontalAlignment = options.align === "center" ? gui.Control.HORIZONTAL_ALIGNMENT_CENTER : gui.Control.HORIZONTAL_ALIGNMENT_LEFT;
+    return block;
+}
+/** A keyboard key: navy rounded square with a cream letter and a darker "side" underneath. */
+function createKeycap(gui, name, key) {
+    var width = key.length > 1 ? 16 + (key.length * 9) : 28;
+    var cap = new gui.Rectangle(name);
+    cap.width = "".concat(width, "px");
+    cap.height = "28px";
+    cap.thickness = 0;
+    cap.cornerRadius = 7;
+    cap.background = UI.navy;
+    cap.shadowColor = UI.navyDeep;
+    cap.shadowOffsetY = 3;
+    cap.shadowBlur = 0;
+    var label = createText(gui, "".concat(name, "-label"), key, { size: 13, weight: "900", color: UI.cream, align: "center" });
+    label.top = "-1px";
+    cap.addControl(label);
+    return cap;
+}
+/** Horizontal row of controls with a fixed height. */
+function createRow(gui, name, height) {
+    var row = new gui.StackPanel(name);
+    row.isVertical = false;
+    row.height = "".concat(height, "px");
+    return row;
+}
+/** Fixed-width horizontal gap for rows. */
+function createSpacer(gui, name, width) {
+    var spacer = new gui.Rectangle(name);
+    spacer.width = "".concat(width, "px");
+    spacer.height = "1px";
+    spacer.thickness = 0;
+    return spacer;
+}
+
+
+/***/ },
+
 /***/ "./src/scenes/waypointSigns.ts"
 /*!*************************************!*\
   !*** ./src/scenes/waypointSigns.ts ***!
@@ -5925,4 +6610,4 @@ function addBullseye(scene, id, parent, y, materials) {
 /***/ }
 
 }]);
-//# sourceMappingURL=src_scenes_tools_ts.0cb59f559313ecd07daf.js.map
+//# sourceMappingURL=src_scenes_tools_ts.81940c1db6674ea1ac10.js.map

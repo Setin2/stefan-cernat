@@ -1,7 +1,7 @@
 import * as BABYLON from "@babylonjs/core";
 import { Texture } from "@babylonjs/core/Materials/Textures/texture";
 import { Node } from "@babylonjs/core/node";
-import type { AdvancedDynamicTexture, Rectangle, TextBlock } from "@babylonjs/gui";
+import type { AdvancedDynamicTexture, Rectangle } from "@babylonjs/gui";
 
 import { instantiateTrees, TREE_POSITIONS } from "./trees";
 import { instantiateBricks } from "./bricks";
@@ -13,6 +13,9 @@ import { restyleFruitFactory } from "./fruitFactory";
 import { restyleMascots } from "./mascots";
 import { createAiTrophies } from "./aiTrophies";
 import { createWaypointSigns } from "./waypointSigns";
+import { createTankTrail } from "./tankTrail";
+import { createClouds } from "./clouds";
+import { UI, createCard, createKeycap, createRow, createSpacer, createText, refreshWhenFontLoaded, type GuiModule } from "./uiStyle";
 import { initializeShadows } from "./shadows";
 
 export default class Play extends Node {
@@ -26,7 +29,7 @@ export default class Play extends Node {
     private divFps: HTMLElement | null = null;
     private controlOverlayTexture: AdvancedDynamicTexture | null = null;
     private controlOverlayPanel: Rectangle | null = null;
-    private controlOverlayHint: TextBlock | null = null;
+    private controlOverlayHint: ControlHint | null = null;
     private controlDismissTimer: ReturnType<typeof setTimeout> | null = null;
     private isAudioMuted = false;
     private readonly handleControlHotkeys = (event: KeyboardEvent) => {
@@ -92,6 +95,7 @@ export default class Play extends Node {
         const forward = new BABYLON.Vector3(0, 0, 1);
 
         this.initializeTankModel();
+        createTankTrail(this.scene, this.tank);
         instantiateTrees({ scene: this.scene });
         restyleLandmarks(this.scene);
         restyleFruitFactory(this.scene);
@@ -108,6 +112,11 @@ export default class Play extends Node {
         instantiateBricks({ scene: this.scene, tank: this.tank, brickSound: this.brickSound }, 47.1152, 8, 131.0731, 4, [6, 6, 6, 4], 4.6903);
         // After the bricks: walls measure the ground height with a ray, and decorations avoid them.
         decorateGround(this.scene, TREE_POSITIONS);
+        try {
+            createClouds(this.scene, this.tank, this.camera);
+        } catch (error) {
+            console.error("Clouds failed", error);
+        }
         try {
             this.initializeShadows();
         } catch (error) {
@@ -352,14 +361,17 @@ export default class Play extends Node {
             return;
         }
 
-        const soundAction = this.isAudioMuted ? "Unmute" : "Mute";
-        const helpAction = this.controlOverlayPanel?.isVisible ? "Hide help" : "Show help";
-        this.controlOverlayHint.text = `H ${helpAction}   M ${soundAction}`;
+        this.controlOverlayHint.update(!!this.controlOverlayPanel?.isVisible, this.isAudioMuted);
     }
 }
 
-type GuiModule = typeof import("@babylonjs/gui");
+/** The small badge in the top-right corner showing the H and M shortcuts. */
+type ControlHint = { update: (helpVisible: boolean, muted: boolean) => void };
 
+/**
+ * The "how to play" card (bottom right, shown on first load) and the shortcut badge in the top
+ * right corner, in the same toy style as the rest of the UI.
+ */
 function createControlOverlay(
     gui: GuiModule,
     ui: AdvancedDynamicTexture,
@@ -369,137 +381,151 @@ function createControlOverlay(
         onToggleMute: () => void;
         isTouchDevice: boolean;
     },
-): { panel: Rectangle; hint: TextBlock } {
-    const panel = new gui.Rectangle("controls-panel");
-    panel.width = options.isTouchDevice ? "92%" : "380px";
+): { panel: Rectangle; hint: ControlHint } {
+    const panel = createCard(gui, "controls-panel", { radius: 20 });
+    panel.width = options.isTouchDevice ? "92%" : "370px";
     panel.height = "1px";
     panel.adaptHeightToChildren = true;
-    panel.thickness = 1;
-    panel.cornerRadius = 18;
-    panel.color = "rgba(255,255,255,0.14)";
-    panel.background = "rgba(7, 9, 14, 0.78)";
     panel.horizontalAlignment = gui.Control.HORIZONTAL_ALIGNMENT_RIGHT;
     panel.verticalAlignment = gui.Control.VERTICAL_ALIGNMENT_BOTTOM;
-    panel.paddingRight = options.isTouchDevice ? "16px" : "22px";
-    panel.paddingBottom = "20px";
+    panel.left = options.isTouchDevice ? "-4%" : "-22px";
+    panel.top = "-24px";
     panel.isPointerBlocker = true;
 
     const stack = new gui.StackPanel("controls-panel-stack");
     stack.isVertical = true;
-    stack.width = 1;
-    stack.paddingTop = "18px";
+    stack.paddingTop = "16px";
     stack.paddingBottom = "18px";
     panel.addControl(stack);
 
-    const eyebrow = new gui.TextBlock("controls-eyebrow");
-    eyebrow.text = "Controls";
-    eyebrow.color = "#f7b955";
-    eyebrow.fontSize = 12;
-    eyebrow.fontFamily = "Inter, Segoe UI, sans-serif";
+    const eyebrow = createText(gui, "controls-eyebrow", "HOW TO PLAY", { size: 12, weight: "900", color: UI.pinkDeep });
     eyebrow.height = "18px";
-    eyebrow.textHorizontalAlignment = gui.Control.HORIZONTAL_ALIGNMENT_LEFT;
-    eyebrow.paddingLeft = "18px";
-    eyebrow.paddingRight = "18px";
+    eyebrow.paddingLeft = "20px";
     stack.addControl(eyebrow);
 
-    const title = new gui.TextBlock("controls-title");
-    title.text = options.isTouchDevice ? "Desktop gives the full experience" : "Drive, aim, and explore";
-    title.color = "#f5f7ff";
-    title.fontSize = 24;
-    title.height = "34px";
-    title.textHorizontalAlignment = gui.Control.HORIZONTAL_ALIGNMENT_LEFT;
-    title.paddingTop = "4px";
-    title.paddingLeft = "18px";
-    title.paddingRight = "18px";
+    const title = createText(gui, "controls-title", options.isTouchDevice ? "Best on a desktop" : "Drive, aim and explore", { size: 24, weight: "900", color: UI.navy });
+    title.height = "36px";
+    title.paddingLeft = "20px";
     stack.addControl(title);
 
-    const description = new gui.TextBlock("controls-description");
-    description.text = options.isTouchDevice
-        ? "This portfolio is built around keyboard driving. You can still look around, but movement and shooting are best on desktop."
-        : "Use the tank to move between projects and shoot glowing targets to open links.";
-    description.color = "rgba(255,255,255,0.76)";
-    description.fontSize = 14;
+    const description = createText(gui, "controls-description", options.isTouchDevice
+        ? "The portfolio is built around keyboard driving. You can look around here, but driving and shooting need a keyboard."
+        : "Drive the tank between the projects and shoot the glowing targets to open links.", { size: 14, weight: "700", color: UI.muted });
     description.textWrapping = true;
     description.resizeToFit = true;
-    description.textHorizontalAlignment = gui.Control.HORIZONTAL_ALIGNMENT_LEFT;
-    description.paddingTop = "10px";
-    description.paddingLeft = "18px";
-    description.paddingRight = "18px";
-    description.paddingBottom = "8px";
+    description.paddingLeft = "20px";
+    description.paddingRight = "20px";
+    description.paddingBottom = "10px";
     stack.addControl(description);
 
-    [
-        "W A S D  Move tank",
-        "E  Shoot glowing targets",
-        "H  Reopen or hide this help",
-        "M  Mute or unmute sound",
-        "Esc  Close the help panel",
-    ].forEach((line, index) => {
-        const item = new gui.TextBlock(`controls-line-${index}`);
-        item.text = line;
-        item.color = "#f4f7ff";
-        item.fontSize = 15;
-        item.height = "26px";
-        item.textHorizontalAlignment = gui.Control.HORIZONTAL_ALIGNMENT_LEFT;
-        item.paddingLeft = "18px";
-        item.paddingRight = "18px";
-        stack.addControl(item);
+    // One row per control: keycaps, then what they do.
+    const rows: { keys: string[]; text: string }[] = [
+        { keys: ["W", "A", "S", "D"], text: "Drive the tank" },
+        { keys: ["E"], text: "Shoot glowing targets" },
+        { keys: ["H"], text: "Show or hide this help" },
+        { keys: ["M"], text: "Sound on or off" },
+        { keys: ["Esc"], text: "Close the help" },
+    ];
+    rows.forEach((row, index) => {
+        const line = createRow(gui, `controls-line-${index}`, 36);
+        line.paddingLeft = "20px";
+        line.horizontalAlignment = gui.Control.HORIZONTAL_ALIGNMENT_LEFT;
+        const keys = createRow(gui, `controls-keys-${index}`, 36);
+        keys.width = "130px";
+        row.keys.forEach((key, k) => {
+            const cap = createKeycap(gui, `controls-key-${index}-${k}`, key);
+            cap.paddingRight = "4px";
+            cap.width = `${parseInt(String(cap.width), 10) + 4}px`;
+            keys.addControl(cap);
+        });
+        line.addControl(keys);
+        const text = createText(gui, `controls-text-${index}`, row.text, { size: 15, weight: "800", color: UI.text });
+        text.width = "200px";
+        line.addControl(text);
+        stack.addControl(line);
     });
 
-    const actionRow = new gui.StackPanel("controls-actions");
-    actionRow.isVertical = false;
-    actionRow.height = "42px";
-    actionRow.paddingTop = "14px";
-    actionRow.paddingLeft = "18px";
-    actionRow.paddingRight = "18px";
-    stack.addControl(actionRow);
+    const actions = createRow(gui, "controls-actions", 56);
+    actions.paddingTop = "14px";
+    actions.paddingLeft = "20px";
+    actions.horizontalAlignment = gui.Control.HORIZONTAL_ALIGNMENT_LEFT;
+    stack.addControl(actions);
 
-    const muteButton = gui.Button.CreateSimpleButton("controls-mute", "Toggle sound");
-    muteButton.width = "132px";
-    muteButton.height = "38px";
-    muteButton.thickness = 0;
-    muteButton.cornerRadius = 18;
-    muteButton.color = "#0b0d12";
-    muteButton.background = "#f7b955";
-    muteButton.fontSize = 14;
-    muteButton.onPointerClickObservable.add(() => options.onToggleMute());
-    actionRow.addControl(muteButton);
-
-    const closeButton = gui.Button.CreateSimpleButton("controls-close", "Close");
-    closeButton.width = "92px";
-    closeButton.height = "38px";
-    closeButton.thickness = 1;
-    closeButton.cornerRadius = 18;
-    closeButton.color = "#f5f7ff";
-    closeButton.background = "rgba(255,255,255,0.08)";
-    closeButton.fontSize = 14;
-    closeButton.paddingLeft = "10px";
+    const closeButton = createButton(gui, "controls-close", "Got it!", UI.pink, UI.navyDeep, 110);
     closeButton.onPointerClickObservable.add(() => options.onClose());
-    actionRow.addControl(closeButton);
+    actions.addControl(closeButton);
+    actions.addControl(createSpacer(gui, "controls-actions-gap", 10));
+    const muteButton = createButton(gui, "controls-mute", "Sound on/off", UI.cream, UI.navy, 130);
+    muteButton.onPointerClickObservable.add(() => options.onToggleMute());
+    actions.addControl(muteButton);
 
-    const hintBadge = new gui.Rectangle("controls-hint-badge");
-    hintBadge.width = options.isTouchDevice ? "210px" : "198px";
-    hintBadge.height = "36px";
-    hintBadge.thickness = 1;
-    hintBadge.cornerRadius = 18;
-    hintBadge.color = "rgba(255,255,255,0.16)";
-    hintBadge.background = "rgba(8, 10, 16, 0.58)";
-    hintBadge.horizontalAlignment = gui.Control.HORIZONTAL_ALIGNMENT_RIGHT;
-    hintBadge.verticalAlignment = gui.Control.VERTICAL_ALIGNMENT_TOP;
-    hintBadge.paddingTop = "52px";
-    hintBadge.paddingRight = "12px";
-    hintBadge.isPointerBlocker = true;
+    // Shortcut badge, top right (below the FPS counter): [H] Help  [M] Mute
+    const badge = createCard(gui, "controls-hint-badge", { radius: 18, thickness: 2 });
+    badge.width = "1px";
+    badge.adaptWidthToChildren = true;
+    badge.height = "42px";
+    badge.horizontalAlignment = gui.Control.HORIZONTAL_ALIGNMENT_RIGHT;
+    badge.verticalAlignment = gui.Control.VERTICAL_ALIGNMENT_TOP;
+    badge.top = "54px";
+    badge.left = "-14px";
+    badge.shadowOffsetY = 3;
+    badge.isPointerBlocker = true;
+    badge.hoverCursor = "pointer";
 
-    const hintText = new gui.TextBlock("controls-hint-text");
-    hintText.color = "#f4f7ff";
-    hintText.fontSize = 13;
-    hintText.fontFamily = "Inter, Segoe UI, sans-serif";
-    hintBadge.addControl(hintText);
-
-    hintBadge.onPointerClickObservable.add(() => options.onToggle());
+    const badgeRow = createRow(gui, "controls-hint-row", 42);
+    badgeRow.paddingLeft = "8px";
+    badgeRow.paddingRight = "8px";
+    badge.addControl(badgeRow);
+    const helpText = createText(gui, "controls-hint-help", "", { size: 13, weight: "800", color: UI.navy });
+    const muteText = createText(gui, "controls-hint-mute", "", { size: 13, weight: "800", color: UI.navy });
+    for (const [key, text] of [["H", helpText], ["M", muteText]] as const) {
+        badgeRow.addControl(createKeycap(gui, `controls-hint-key-${key}`, key));
+        text.resizeToFit = true;
+        text.paddingLeft = "7px";
+        text.paddingRight = "9px";
+        badgeRow.addControl(text);
+    }
+    badge.onPointerClickObservable.add(() => options.onToggle());
 
     ui.addControl(panel);
-    ui.addControl(hintBadge);
+    ui.addControl(badge);
+    refreshWhenFontLoaded(ui);
 
-    return { panel, hint: hintText };
+    const hint: ControlHint = {
+        update(helpVisible, muted) {
+            helpText.text = helpVisible ? "Hide help" : "Help";
+            muteText.text = muted ? "Unmute" : "Mute";
+        },
+    };
+    return { panel, hint };
+}
+
+/** Chunky rounded button with a hard shadow. */
+function createButton(gui: GuiModule, name: string, label: string, background: string, color: string, width: number) {
+    const button = gui.Button.CreateSimpleButton(name, label);
+    button.width = `${width}px`;
+    button.height = "40px";
+    button.thickness = 3;
+    button.cornerRadius = 20;
+    button.color = UI.navy;
+    button.background = background;
+    button.shadowColor = UI.shadow;
+    button.shadowOffsetY = 3;
+    button.shadowBlur = 0;
+    button.fontFamily = UI.font;
+    button.fontWeight = "900";
+    button.fontSize = 14;
+    if (button.textBlock) {
+        button.textBlock.color = color;
+    }
+    button.hoverCursor = "pointer";
+    button.pointerEnterAnimation = () => {
+        button.scaleX = 1.04;
+        button.scaleY = 1.04;
+    };
+    button.pointerOutAnimation = () => {
+        button.scaleX = 1;
+        button.scaleY = 1;
+    };
+    return button;
 }

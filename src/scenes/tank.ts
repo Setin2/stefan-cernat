@@ -2,8 +2,8 @@ import * as BABYLON from "@babylonjs/core";
 import type { AdvancedDynamicTexture, Ellipse, Rectangle, TextBlock } from "@babylonjs/gui";
 
 import { createToyTarget, type ToyTarget } from "./toyTarget";
+import { UI, createCard, createRow, createText, refreshWhenFontLoaded, type GuiModule } from "./uiStyle";
 
-type GuiModule = typeof import("@babylonjs/gui");
 
 type TankContext = {
     scene: BABYLON.Scene;
@@ -95,25 +95,12 @@ export function initializeTankMovement(_this: TankContext, rotationSpeed: number
     _this.scene.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnKeyDownTrigger, handleKeyEvent));
     _this.scene.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnKeyUpTrigger, handleKeyEvent));
 
-    // Create and manage splatter objects
-    const splatterObjects = createSplatterObjects(_this);
-    let currentSplatterIndex = 0;
-    let tick = 0;
-
-    // Update splatter positioning and rotation
-    const updateSplatter = () => {
-        if (!splatterObjects.length) {
-            return;
-        }
-
-        if (++tick === 35) {
-            splatterObjects[currentSplatterIndex].position.copyFrom(_this.tank.position);
-        } else if (tick === 40) {
-            const splatter = splatterObjects[currentSplatterIndex];
-            splatter.position.y = 0;
-            splatter.rotate(BABYLON.Axis.Y, Math.random() * 350 + 10, BABYLON.Space.WORLD);
-            currentSplatterIndex = (currentSplatterIndex + 1) % splatterObjects.length;
-            tick = 0;
+    // Engine sound: replayed every 40 physics frames while driving. (The tread prints and dust are
+    // in tankTrail.ts.)
+    let engineSoundTick = 0;
+    const updateEngineSound = () => {
+        if (++engineSoundTick >= 40) {
+            engineSoundTick = 0;
             _this.tankSound.play();
         }
     };
@@ -162,7 +149,7 @@ export function initializeTankMovement(_this: TankContext, rotationSpeed: number
         const currentForwardSpeed = applyMovement(_this.tank, moveInput, deltaSeconds);
 
         if (moveInput !== 0 && Math.abs(currentForwardSpeed) > 0.5) {
-            updateSplatter();
+            updateEngineSound();
         }
 
         const desiredTurnSpeed = turnInput * maxTurnSpeed;
@@ -244,23 +231,6 @@ export function initializeTankMovement(_this: TankContext, rotationSpeed: number
 
         return false;
     }
-}
-
-/**
- * Create and return splatter objects.
- */
-function createSplatterObjects(_this: TankContext): BABYLON.AbstractMesh[] {
-    const baseSplatter = _this.scene.getMeshByName("splatter1");
-    if (!baseSplatter) {
-        console.error("Base splatter object not found in the scene");
-        return [];
-    }
-    if (!(baseSplatter instanceof BABYLON.Mesh)) {
-        console.error("Base splatter object must be a mesh");
-        return [];
-    }
-
-    return [baseSplatter, baseSplatter.createInstance("splatter2"), baseSplatter.createInstance("splatter3")];
 }
 
 /**
@@ -391,6 +361,7 @@ export async function initializeShooting(_this: TankContext, forward: BABYLON.Ve
     let impactBurstUntil = 0;
     let currentStatusUntil = 0;
     let currentObjectiveText = objectiveHint.text;
+    let currentMood: ObjectiveMood = "explore";
     let hitTarget: BABYLON.Mesh | null = null;
     let impactTarget: BABYLON.Mesh | null = null;
     const discoveredTargets = new Set<string>();
@@ -406,6 +377,7 @@ export async function initializeShooting(_this: TankContext, forward: BABYLON.Ve
         const deltaSeconds = _this.scene.getEngine().getDeltaTime() / 1000;
         let nearbyTargetLabel = "";
         let nearestTargetDistanceSquared = Number.POSITIVE_INFINITY;
+        let nearestTargetMesh: BABYLON.Mesh | null = null;
         let aimedTargetLabel = "";
         let aimedTargetDistanceSquared = Number.POSITIVE_INFINITY;
         let bestAimDot = aimLockThreshold;
@@ -423,17 +395,19 @@ export async function initializeShooting(_this: TankContext, forward: BABYLON.Ve
             const label = targetLabels.get(target.mesh);
 
             if (label) {
-                label.isVisible = distanceSquared <= targetHintRangeSquared;
+                label.isVisible = false;
             }
 
             if (distanceSquared < nearestTargetDistanceSquared) {
                 nearestTargetDistanceSquared = distanceSquared;
                 nearbyTargetLabel = target.label;
+                nearestTargetMesh = target.mesh;
             }
 
             if (distanceSquared <= targetHintRangeSquared && !discoveredTargets.has(target.mesh.name)) {
                 discoveredTargets.add(target.mesh.name);
-                currentObjectiveText = `New link discovered: ${target.label}. ${discoveredTargets.size} of ${totalTargetCount} found.`;
+                currentObjectiveText = `You found ${target.label}! ${discoveredTargets.size} of ${totalTargetCount} links found.`;
+                currentMood = "found";
                 objectiveHint.text = currentObjectiveText;
                 currentStatusUntil = now + 2400;
             }
@@ -452,6 +426,14 @@ export async function initializeShooting(_this: TankContext, forward: BABYLON.Ve
             }
         }
 
+        // Only the nearest target gets its name bubble: they stand close together on the podium.
+        if (nearestTargetMesh && nearestTargetDistanceSquared <= targetHintRangeSquared) {
+            const label = targetLabels.get(nearestTargetMesh);
+            if (label) {
+                label.isVisible = true;
+            }
+        }
+
         if (hitTarget && now >= hitFeedbackUntil) {
             hitFeedback.container.isVisible = false;
             hitTarget = null;
@@ -466,28 +448,39 @@ export async function initializeShooting(_this: TankContext, forward: BABYLON.Ve
         reticle.cooldown.alpha = cooldownProgress > 0 ? 0.95 : 0;
         reticle.cooldown.width = `${Math.max(16, cooldownProgress * 56)}px`;
         reticle.cooldown.height = `${Math.max(16, cooldownProgress * 56)}px`;
-        reticle.cooldown.color = hasRecentHit(now, hitFeedbackUntil) ? "rgba(141,247,176,0.4)" : "rgba(247,185,85,0.28)";
+        reticle.cooldown.color = hasRecentHit(now, hitFeedbackUntil) ? UI.mint : UI.gold;
 
         const hasAimLock = aimedTargetLabel !== "";
-        reticle.frame.color = hasAimLock ? "#f7b955" : "rgba(255,255,255,0.52)";
-        reticle.frame.thickness = hasAimLock ? 2 : 1;
-        reticle.dot.background = hasAimLock ? "#f7b955" : "rgba(255,255,255,0.85)";
+        reticle.frame.color = hasAimLock ? UI.pink : UI.cream;
+        reticle.frame.thickness = hasAimLock ? 4 : 3;
+        reticle.dot.background = hasAimLock ? UI.pink : UI.cream;
+        reticle.label.color = hasAimLock ? UI.pinkDeep : UI.navy;
         reticle.label.text = hasAimLock
             ? `LOCKED: ${aimedTargetLabel}`
             : nearestTargetDistanceSquared <= targetHintRangeSquared
                 ? `NEARBY: ${nearbyTargetLabel}`
                 : `${discoveredTargets.size}/${totalTargetCount} LINKS FOUND`;
+        // The sight only shows up when there is something to aim at (progress is in the corner card).
+        const showSight = hasAimLock || nearestTargetDistanceSquared <= targetHintRangeSquared || hasRecentHit(now, hitFeedbackUntil);
+        reticle.frame.isVisible = showSight;
+        reticle.pill.isVisible = showSight;
 
+        const isNearby = nearestTargetDistanceSquared <= targetHintRangeSquared;
         const nextObjectiveText = hasAimLock
-            ? `Target locked: ${aimedTargetLabel} (${formatDistance(Math.sqrt(aimedTargetDistanceSquared))}). Press E to fire.`
-            : nearestTargetDistanceSquared <= targetHintRangeSquared
-                ? `Target in range: ${nearbyTargetLabel} (${formatDistance(Math.sqrt(nearestTargetDistanceSquared))}). Turn toward it to lock on.`
-                : `Explore the island to discover glowing targets, projects, and social links. ${discoveredTargets.size} of ${totalTargetCount} links found.`;
+            ? `${aimedTargetLabel} is locked on, ${formatDistance(Math.sqrt(aimedTargetDistanceSquared))}. Press E to fire!`
+            : isNearby
+                ? `${nearbyTargetLabel} is ${formatDistance(Math.sqrt(nearestTargetDistanceSquared))}. Turn toward it to lock on.`
+                : "Drive around the island to find the glowing targets, your projects and links.";
+        const nextMood: ObjectiveMood = hasAimLock ? "locked" : isNearby ? "nearby" : "explore";
 
-        if (now >= currentStatusUntil && nextObjectiveText !== currentObjectiveText) {
-            objectiveHint.text = nextObjectiveText;
-            currentObjectiveText = nextObjectiveText;
+        if (now >= currentStatusUntil) {
+            currentMood = nextMood;
+            if (nextObjectiveText !== currentObjectiveText) {
+                objectiveHint.text = nextObjectiveText;
+                currentObjectiveText = nextObjectiveText;
+            }
         }
+        objectiveHint.setStatus(currentMood, discoveredTargets.size, totalTargetCount);
 
         if (!activeShots.length) {
             return;
@@ -505,7 +498,8 @@ export async function initializeShooting(_this: TankContext, forward: BABYLON.Ve
                     didHit = true;
                     toyTargets.get(target.mesh)?.hit();
                     window.open(target.url, "_blank", "noopener,noreferrer");
-                    currentObjectiveText = `Direct hit. Opening ${target.label} in a new tab.`;
+                    currentObjectiveText = `Direct hit! Opening ${target.label} in a new tab.`;
+                    currentMood = "hit";
                     objectiveHint.text = currentObjectiveText;
                     currentStatusUntil = now + 2200;
                     hitTarget = target.mesh;
@@ -516,8 +510,8 @@ export async function initializeShooting(_this: TankContext, forward: BABYLON.Ve
                     impactBurst.container.linkWithMesh(target.mesh);
                     impactBurst.container.isVisible = true;
                     impactBurstUntil = now + 420;
-                    reticle.frame.color = "#8df7b0";
-                    reticle.dot.background = "#8df7b0";
+                    reticle.frame.color = UI.mint;
+                    reticle.dot.background = UI.mint;
                     reticle.label.text = `DIRECT HIT: ${target.label}`;
                     clearTimeout(activeShot.disposeTimeout);
                     activeShot.dispose();
@@ -606,107 +600,202 @@ export async function initializeShooting(_this: TankContext, forward: BABYLON.Ve
     });
 }
 
-function createObjectiveHint(gui: GuiModule, ui: AdvancedDynamicTexture): TextBlock {
-    const container = new gui.Rectangle("objective-hint");
-    container.width = "420px";
-    container.height = "1px";
-    container.adaptHeightToChildren = true;
-    container.thickness = 1;
-    container.cornerRadius = 18;
-    container.color = "rgba(255,255,255,0.18)";
-    container.background = "rgba(8, 10, 16, 0.68)";
-    container.horizontalAlignment = gui.Control.HORIZONTAL_ALIGNMENT_LEFT;
-    container.verticalAlignment = gui.Control.VERTICAL_ALIGNMENT_TOP;
-    container.paddingTop = "18px";
-    container.paddingLeft = "18px";
-    container.zIndex = 2;
+/** What the objective card is currently about; sets its eyebrow label and colour. */
+type ObjectiveMood = "explore" | "nearby" | "locked" | "found" | "hit";
 
-    const text = new gui.TextBlock("objective-hint-text");
-    text.text = "Explore the island to discover glowing targets, projects, and social links.";
-    text.color = "#f4f7ff";
-    text.fontSize = 15;
-    text.fontFamily = "Inter, Segoe UI, sans-serif";
+type ObjectiveHint = {
+    text: string;
+    setStatus: (mood: ObjectiveMood, found: number, total: number) => void;
+};
+
+const OBJECTIVE_MOODS: Record<ObjectiveMood, { label: string; color: string }> = {
+    explore: { label: "EXPLORE", color: UI.navy },
+    nearby: { label: "TARGET NEARBY", color: UI.gold },
+    locked: { label: "LOCKED ON", color: UI.pink },
+    found: { label: "NEW LINK FOUND", color: UI.mint },
+    hit: { label: "DIRECT HIT", color: UI.mint },
+};
+
+/**
+ * The card in the top-left corner: a coloured eyebrow saying what is going on, progress pips for
+ * the links found so far, and the current hint.
+ */
+function createObjectiveHint(gui: GuiModule, ui: AdvancedDynamicTexture): ObjectiveHint {
+    const card = createCard(gui, "objective-hint");
+    card.width = "360px";
+    card.height = "1px";
+    card.adaptHeightToChildren = true;
+    card.horizontalAlignment = gui.Control.HORIZONTAL_ALIGNMENT_LEFT;
+    card.verticalAlignment = gui.Control.VERTICAL_ALIGNMENT_TOP;
+    card.left = "18px";
+    card.top = "18px";
+    card.zIndex = 2;
+    card.isPointerBlocker = false;
+
+    const stack = new gui.StackPanel("objective-hint-stack");
+    stack.isVertical = true;
+    stack.paddingTop = "12px";
+    stack.paddingBottom = "14px";
+    card.addControl(stack);
+
+    const header = new gui.Grid("objective-hint-header");
+    header.height = "26px";
+    header.paddingLeft = "16px";
+    header.paddingRight = "16px";
+    header.addColumnDefinition(1);
+    header.addColumnDefinition(90, true);
+    stack.addControl(header);
+
+    const badge = new gui.Rectangle("objective-hint-badge");
+    badge.height = "24px";
+    badge.width = "1px";
+    badge.adaptWidthToChildren = true;
+    badge.thickness = 0;
+    badge.cornerRadius = 12;
+    badge.horizontalAlignment = gui.Control.HORIZONTAL_ALIGNMENT_LEFT;
+    const badgeText = createText(gui, "objective-hint-badge-text", "", { size: 12, weight: "900", color: UI.cream, align: "center" });
+    badgeText.resizeToFit = true;
+    badgeText.paddingLeft = "10px";
+    badgeText.paddingRight = "10px";
+    badge.addControl(badgeText);
+    header.addControl(badge, 0, 0);
+
+    const pips = createRow(gui, "objective-hint-pips", 24);
+    pips.horizontalAlignment = gui.Control.HORIZONTAL_ALIGNMENT_RIGHT;
+    header.addControl(pips, 0, 1);
+    const pipControls: Rectangle[] = [];
+
+    const text = createText(gui, "objective-hint-text", "", { size: 15, weight: "700" });
     text.textWrapping = true;
     text.resizeToFit = true;
+    text.lineSpacing = "2px";
     text.paddingLeft = "16px";
     text.paddingRight = "16px";
-    text.paddingTop = "12px";
-    text.paddingBottom = "12px";
+    text.paddingTop = "8px";
+    stack.addControl(text);
 
-    container.addControl(text);
-    ui.addControl(container);
+    ui.addControl(card);
+    refreshWhenFontLoaded(ui);
 
-    return text;
+    let lastStatus = "";
+    const hint: ObjectiveHint = {
+        get text() {
+            return text.text;
+        },
+        set text(value: string) {
+            text.text = value;
+        },
+        setStatus(mood, found, total) {
+            const key = `${mood}:${found}:${total}`;
+            if (key === lastStatus) {
+                return;
+            }
+            lastStatus = key;
+            badgeText.text = OBJECTIVE_MOODS[mood].label;
+            badge.background = OBJECTIVE_MOODS[mood].color;
+
+            // One pip per link: filled pink once found.
+            while (pipControls.length < total) {
+                // Little toy blocks: sand while missing, pink once found.
+                const slot = new gui.Rectangle(`objective-hint-pip-slot-${pipControls.length}`);
+                slot.width = "24px";
+                slot.height = "24px";
+                slot.thickness = 0;
+                const pip = new gui.Rectangle(`objective-hint-pip-${pipControls.length}`);
+                pip.width = "18px";
+                pip.height = "18px";
+                pip.thickness = 2;
+                pip.cornerRadius = 5;
+                pip.color = UI.navy;
+                slot.addControl(pip);
+                pips.addControl(slot);
+                pipControls.push(pip);
+            }
+            pipControls.forEach((pip, i) => {
+                pip.background = i < found ? UI.pink : UI.sand;
+            });
+        },
+    };
+    return hint;
 }
 
 function createReticle(
     gui: GuiModule,
     ui: AdvancedDynamicTexture,
-): { frame: Rectangle; dot: Rectangle; label: TextBlock; cooldown: Ellipse } {
+): { frame: Rectangle; dot: Rectangle; label: TextBlock; pill: Rectangle; cooldown: Ellipse } {
+    // Round sight: a cream ring with a navy outline (drawn as the shadow) and a dot in the middle.
     const frame = new gui.Rectangle("reticle-frame");
-    frame.width = "28px";
-    frame.height = "28px";
-    frame.thickness = 1;
-    frame.cornerRadius = 8;
-    frame.color = "rgba(255,255,255,0.52)";
-    frame.background = "rgba(10, 12, 18, 0.12)";
+    frame.width = "34px";
+    frame.height = "34px";
+    frame.thickness = 3;
+    frame.cornerRadius = 17;
+    frame.color = UI.cream;
+    frame.background = "transparent";
+    frame.shadowColor = UI.navyDeep;
+    frame.shadowBlur = 0;
+    frame.shadowOffsetY = 2;
     frame.horizontalAlignment = gui.Control.HORIZONTAL_ALIGNMENT_CENTER;
     frame.verticalAlignment = gui.Control.VERTICAL_ALIGNMENT_CENTER;
     frame.isPointerBlocker = false;
 
     const dot = new gui.Rectangle("reticle-dot");
-    dot.width = "4px";
-    dot.height = "4px";
+    dot.width = "8px";
+    dot.height = "8px";
     dot.thickness = 0;
-    dot.cornerRadius = 999;
-    dot.background = "rgba(255,255,255,0.85)";
+    dot.cornerRadius = 4;
+    dot.background = UI.cream;
     frame.addControl(dot);
 
+    // Grows while the gun reloads.
     const cooldown = new gui.Ellipse("reticle-cooldown");
     cooldown.width = "16px";
     cooldown.height = "16px";
-    cooldown.thickness = 2;
-    cooldown.color = "rgba(247,185,85,0.28)";
+    cooldown.thickness = 3;
+    cooldown.color = UI.gold;
     cooldown.alpha = 0;
     cooldown.isPointerBlocker = false;
     ui.addControl(cooldown);
 
-    const label = new gui.TextBlock("reticle-label");
-    label.text = "0/0 LINKS FOUND";
-    label.color = "rgba(255,255,255,0.72)";
-    label.fontSize = 12;
-    label.fontFamily = "Inter, Segoe UI, sans-serif";
-    label.top = "28px";
-    label.horizontalAlignment = gui.Control.HORIZONTAL_ALIGNMENT_CENTER;
-    label.verticalAlignment = gui.Control.VERTICAL_ALIGNMENT_CENTER;
+    // Status pill under the sight.
+    const pill = createCard(gui, "reticle-pill", { radius: 12, thickness: 2 });
+    pill.height = "26px";
+    pill.width = "1px";
+    pill.adaptWidthToChildren = true;
+    pill.top = "40px";
+    pill.shadowOffsetY = 3;
+    pill.horizontalAlignment = gui.Control.HORIZONTAL_ALIGNMENT_CENTER;
+    pill.verticalAlignment = gui.Control.VERTICAL_ALIGNMENT_CENTER;
+    pill.isPointerBlocker = false;
+
+    const label = createText(gui, "reticle-label", "0/0 LINKS FOUND", { size: 12, weight: "900", color: UI.navy, align: "center" });
+    label.resizeToFit = true;
+    label.paddingLeft = "12px";
+    label.paddingRight = "12px";
     label.isPointerBlocker = false;
+    pill.addControl(label);
 
     ui.addControl(frame);
-    ui.addControl(label);
+    ui.addControl(pill);
 
-    return { frame, dot, label, cooldown };
+    // Hidden until a target is in range (see the update loop), so it doesn't sit on the tank.
+    frame.isVisible = false;
+    pill.isVisible = false;
+
+    return { frame, dot, label, pill, cooldown };
 }
 
 function createHitFeedback(
     gui: GuiModule,
     ui: AdvancedDynamicTexture,
 ): { container: Rectangle; text: TextBlock } {
-    const container = new gui.Rectangle("hit-feedback");
-    container.width = "116px";
-    container.height = "34px";
-    container.thickness = 1;
-    container.cornerRadius = 16;
-    container.color = "rgba(141,247,176,0.55)";
-    container.background = "rgba(10, 28, 18, 0.78)";
-    container.linkOffsetY = -92;
+    const container = createCard(gui, "hit-feedback", { radius: 18, background: UI.mint, border: UI.navy });
+    container.width = "150px";
+    container.height = "40px";
+    container.linkOffsetY = -96;
     container.isPointerBlocker = false;
     container.isVisible = false;
 
-    const text = new gui.TextBlock("hit-feedback-text");
-    text.text = "Direct hit";
-    text.color = "#8df7b0";
-    text.fontSize = 13;
-    text.fontFamily = "Inter, Segoe UI, sans-serif";
+    const text = createText(gui, "hit-feedback-text", "DIRECT HIT!", { size: 16, weight: "900", color: UI.navyDeep, align: "center" });
     container.addControl(text);
 
     ui.addControl(container);
@@ -723,16 +812,16 @@ function createImpactBurst(
     container.height = "1px";
     container.thickness = 0;
     container.background = "transparent";
-    container.linkOffsetY = -92;
+    container.linkOffsetY = -96;
     container.isPointerBlocker = false;
     container.isVisible = false;
 
     const ring = new gui.Ellipse("impact-burst-ring");
-    ring.width = "82px";
-    ring.height = "82px";
-    ring.thickness = 3;
-    ring.color = "rgba(141,247,176,0.75)";
-    ring.background = "rgba(141,247,176,0.1)";
+    ring.width = "90px";
+    ring.height = "90px";
+    ring.thickness = 5;
+    ring.color = UI.gold;
+    ring.background = "rgba(217, 161, 59, 0.12)";
     ring.alpha = 0.9;
     container.addControl(ring);
 
@@ -749,6 +838,9 @@ function formatDistance(distance: number): string {
     return `${Math.max(1, Math.round(distance))}m away`;
 }
 
+/**
+ * A little speech-bubble card above a target with its name, shown when the tank is close by.
+ */
 function createTargetLabel(
     gui: GuiModule,
     ui: AdvancedDynamicTexture,
@@ -756,26 +848,38 @@ function createTargetLabel(
     label: string,
 ): Rectangle {
     const container = new gui.Rectangle(`label-${mesh.name}`);
-    container.width = "128px";
-    container.height = "42px";
-    container.thickness = 1;
-    container.cornerRadius = 14;
-    container.color = "rgba(255,255,255,0.26)";
-    container.background = "rgba(7, 9, 14, 0.74)";
-    container.linkOffsetY = -80;
+    container.width = "170px";
+    container.height = "70px";
+    container.thickness = 0;
+    container.linkOffsetY = -86;
     container.isPointerBlocker = false;
     container.isVisible = false;
 
-    const text = new gui.TextBlock(`label-text-${mesh.name}`);
-    text.text = `${label}\nShoot to open`;
-    text.color = "#fff3cf";
-    text.fontSize = 13;
-    text.fontFamily = "Inter, Segoe UI, sans-serif";
-    text.textWrapping = true;
+    // Pointer: a rotated square peeking out under the card.
+    const pointer = createCard(gui, `label-pointer-${mesh.name}`, { radius: 3 });
+    pointer.width = "16px";
+    pointer.height = "16px";
+    pointer.rotation = Math.PI / 4;
+    pointer.top = "24px";
+    pointer.shadowOffsetY = 0;
+    container.addControl(pointer);
 
-    container.addControl(text);
-    container.linkWithMesh(mesh);
+    const card = createCard(gui, `label-card-${mesh.name}`, { radius: 14 });
+    card.height = "54px";
+    card.top = "-6px";
+    card.shadowOffsetY = 0;
+    container.addControl(card);
+
+    const name = createText(gui, `label-name-${mesh.name}`, label, { size: 16, weight: "900", color: UI.navy, align: "center" });
+    name.top = "-8px";
+    card.addControl(name);
+    const action = createText(gui, `label-action-${mesh.name}`, "Shoot to open", { size: 12, weight: "800", color: UI.pinkDeep, align: "center" });
+    action.top = "11px";
+    card.addControl(action);
+
+    // The control must be on the texture before it can follow a mesh.
     ui.addControl(container);
+    container.linkWithMesh(mesh);
 
     return container;
 }

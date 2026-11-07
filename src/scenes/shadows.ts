@@ -12,7 +12,7 @@ import * as BABYLON from "@babylonjs/core";
  */
 
 /** Sun direction: from behind the camera's right, about 50 degrees above the horizon. */
-const SUN_DIRECTION = new BABYLON.Vector3(0.14, -1.3, -0.99).normalize();
+export const SUN_DIRECTION = new BABYLON.Vector3(0.14, -1.3, -0.99).normalize();
 const SUN_INTENSITY = 1.2;
 const FILL_DIRECTION = new BABYLON.Vector3(1, -1.2, 0.4).normalize();
 const FILL_INTENSITY = 0.3;
@@ -26,7 +26,7 @@ const SHADOW_AHEAD = 60;
 const SUN_DISTANCE = 200;
 
 /** Meshes that never cast: effects, overlays and flat decals. */
-const NO_CAST = ["ball", "splatter", "ffdescription", "monitor", "ground", "road-slab", "ground-petal", "collider"];
+const NO_CAST = ["ball", "splatter", "ffdescription", "monitor", "ground", "road-slab", "ground-petal", "collider", "cloud"];
 
 /** Meshes thinner than this (world units) lie flat on the ground and only receive. */
 const MIN_CASTER_HEIGHT = 0.3;
