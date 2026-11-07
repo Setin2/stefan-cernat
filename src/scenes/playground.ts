@@ -15,6 +15,8 @@ import { addStaticBox } from "./staticBodies";
  */
 
 const GROUND_Y = -0.5;
+/** Ramps and platforms sit this far above the ground, just above any road under them. */
+const SURFACE_LIFT = 0.05;
 /**
  * cannon.js collision groups. Everything is in group 1 and collides with group 1 (cannon's
  * default). Ramps and platforms are in their own group, which only loose objects (bricks, cones,
@@ -155,7 +157,8 @@ type RampMaterials = { top: BABYLON.Material; side: BABYLON.Material; rail: BABY
 function createRamp(scene: BABYLON.Scene, ramp: Ramp, materials: RampMaterials): void {
     const { length: l, width: w, height: h } = ramp;
     const root = new BABYLON.TransformNode(`ramp-${ramp.name}`, scene);
-    root.position.set(ramp.x, GROUND_Y, ramp.z);
+    // Raised a hair so roads running underneath don't poke through the low edge.
+    root.position.set(ramp.x, GROUND_Y + SURFACE_LIFT, ramp.z);
     root.rotation.y = ramp.yaw;
 
     // Top: a single quad from the low edge (z = -l/2, y = 0) to the high edge (z = l/2, y = h).
@@ -211,7 +214,7 @@ function createRamp(scene: BABYLON.Scene, ramp: Ramp, materials: RampMaterials):
 /** A flat-topped block with the same look as the ramps. */
 function createPlatform(scene: BABYLON.Scene, platform: Platform, materials: RampMaterials): void {
     const root = new BABYLON.TransformNode(`platform-${platform.name}`, scene);
-    root.position.set(platform.x, GROUND_Y, platform.z);
+    root.position.set(platform.x, GROUND_Y + SURFACE_LIFT, platform.z);
     root.rotation.y = platform.yaw;
 
     const block = createRoundedBox(`platform-${platform.name}-body`, platform.width, platform.height, platform.length, 0.15, scene);

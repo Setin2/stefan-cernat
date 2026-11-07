@@ -1,12 +1,13 @@
 import * as BABYLON from "@babylonjs/core";
 
-import { addThinInstances, buildMesh, createLumpyBall, createRandom, createRoundedBox, createToyMaterial, pushOrientedTriangle } from "./toyStyle";
+import { createRoadNetwork } from "./roads";
+import { createLumpyBall, createRandom, createRoundedBox, createToyMaterial } from "./toyStyle";
 
 /**
  * Restyles static landmarks from the editor scene to match the toy look: the social-media podium,
- * the flat road slabs and the signs lying on the ground. The original meshes keep their role (the podium keeps its physics body
- * and the logos parented to it), they are only hidden and replaced by toy-style geometry with the
- * same footprint and heights.
+ * the roads (replaced by the road network in roads.ts) and the signs lying on the ground. The
+ * original meshes keep their role (the podium keeps its physics body and the logos parented to
+ * it); they are only hidden and replaced by toy-style geometry.
  */
 
 const GROUND_Y = -0.5;
@@ -22,6 +23,7 @@ const PALETTE = {
     slabs: ["#D8CBB4", "#CFC1A8", "#E0D4BF", "#C9B79C"],
     mortar: "#8F8372",
     edgePebbles: ["#9C9282", "#B3A893"],
+    cobbleTint: "#C4C2BC",
     signPlate: "#344B63",
     signRim: "#E8DCC6",
 };
@@ -156,62 +158,21 @@ function createNumberMaterial(scene: BABYLON.Scene, place: number): BABYLON.Stan
 // ==================================================================== Roads
 
 /**
- * Each road mesh is a few flat, irregular slabs. Every slab's outline is read back from the mesh
- * (in world space) and rebuilt as a raised paving slab with bevelled edges.
+ * Replaces the imported road patches with the road network (see roads.ts), using the same
+ * cobblestone material and edge pebbles.
  */
 function restyleRoads(scene: BABYLON.Scene): void {
-    const roads = scene.meshes.filter((mesh) => /^road\d*$/i.test(mesh.name));
-    if (!roads.length) {
-        return;
+    for (const road of scene.meshes.filter((mesh) => /^road\d*$/i.test(mesh.name))) {
+        road.setEnabled(false);
     }
 
     const random = createRandom(42);
-    const cobbles = createCobbleMaterial(scene);
-    const edgeMeshes = PALETTE.edgePebbles.map((hex, i) => {
+    const pebbles = PALETTE.edgePebbles.map((hex, i) => {
         const pebble = createLumpyBall(`road-edge-pebble-${i}`, scene, random, 1.6, 2);
         pebble.material = createToyMaterial(scene, `toy-road-edge-${i}`, hex, { roughness: 0.7, clearCoat: 0.15 });
         return pebble;
     });
-    const edgeMatrices: BABYLON.Matrix[][] = edgeMeshes.map(() => []);
-
-    roads.forEach((road, roadIndex) => {
-        const outlines = getSlabOutlines(road);
-        if (!outlines.length) {
-            return;
-        }
-
-        outlines.forEach((outline, slabIndex) => {
-            // Only slightly raised: the tank drives over these without physics, so a tall slab
-            // would swallow its tracks.
-            const slab = createSlabMesh(`road-slab-${roadIndex}-${slabIndex}`, outline, GROUND_Y - 0.2, GROUND_Y + 0.15, 0.12, scene);
-            slab.material = cobbles;
-            slab.isPickable = false;
-
-            // A border of small pebbles around each slab.
-            const center = outline.reduce((sum, p) => sum.addInPlace(p), new BABYLON.Vector2(0, 0)).scaleInPlace(1 / outline.length);
-            for (let i = 0; i < outline.length; i++) {
-                const start = outline[i];
-                const end = outline[(i + 1) % outline.length];
-                const edgeLength = BABYLON.Vector2.Distance(start, end);
-                const steps = Math.max(1, Math.round(edgeLength / 1.25));
-                for (let k = 0; k < steps; k++) {
-                    const point = BABYLON.Vector2.Lerp(start, end, (k + 0.5) / steps);
-                    const outward = point.subtract(center).normalize();
-                    const size = 0.45 + (random() * 0.35);
-                    const matrix = BABYLON.Matrix.Compose(
-                        new BABYLON.Vector3(size, size * 0.55, size),
-                        BABYLON.Quaternion.RotationYawPitchRoll(random() * Math.PI * 2, 0, 0),
-                        new BABYLON.Vector3(point.x + (outward.x * 0.45), GROUND_Y + 0.05, point.y + (outward.y * 0.45)),
-                    );
-                    edgeMatrices[Math.floor(random() * edgeMeshes.length)].push(matrix);
-                }
-            }
-        });
-
-        road.setEnabled(false);
-    });
-
-    edgeMeshes.forEach((mesh, i) => addThinInstances(mesh, edgeMatrices[i]));
+    createRoadNetwork(scene, createCobbleMaterial(scene), pebbles);
 }
 
 /**
@@ -302,7 +263,8 @@ function createCobbleMaterial(scene: BABYLON.Scene): BABYLON.PBRMaterial {
         texture.anisotropicFilteringLevel = 8;
     });
 
-    const material = createToyMaterial(scene, "toy-road-cobbles", "#FFFFFF", { roughness: 0.72, clearCoat: 0.12 });
+    // Muted, slightly cool tint so the roads sit with the blue ground instead of glowing cream.
+    const material = createToyMaterial(scene, "toy-road-cobbles", PALETTE.cobbleTint, { roughness: 0.78, clearCoat: 0.08 });
     material.albedoTexture = colorTexture;
     material.bumpTexture = normalTexture;
     return material;
@@ -315,151 +277,6 @@ function smoothStep(edge0: number, edge1: number, value: number): number {
 
 function clampByte(value: number): number {
     return Math.max(0, Math.min(255, Math.round(value)));
-}
-
-/**
- * Splits a mesh into its connected pieces and returns each piece's outline on the ground (convex
- * hull of its vertices in world X/Z).
- */
-function getSlabOutlines(mesh: BABYLON.AbstractMesh): BABYLON.Vector2[][] {
-    const positions = mesh.getVerticesData(BABYLON.VertexBuffer.PositionKind);
-    const indices = mesh.getIndices();
-    if (!positions || !indices) {
-        return [];
-    }
-
-    mesh.computeWorldMatrix(true);
-    const world = mesh.getWorldMatrix();
-    const vertexCount = positions.length / 3;
-    const worldPoints: BABYLON.Vector2[] = [];
-    const point = new BABYLON.Vector3();
-    for (let i = 0; i < vertexCount; i++) {
-        BABYLON.Vector3.TransformCoordinatesFromFloatsToRef(positions[i * 3], positions[(i * 3) + 1], positions[(i * 3) + 2], world, point);
-        worldPoints.push(new BABYLON.Vector2(point.x, point.z));
-    }
-
-    // Union-find over triangles; vertices at the same spot (top/bottom, split normals) are joined too.
-    const parent = Array.from({ length: vertexCount }, (_, i) => i);
-    const find = (i: number): number => {
-        while (parent[i] !== i) {
-            parent[i] = parent[parent[i]];
-            i = parent[i];
-        }
-        return i;
-    };
-    const union = (a: number, b: number) => {
-        parent[find(a)] = find(b);
-    };
-    for (let t = 0; t < indices.length; t += 3) {
-        union(indices[t], indices[t + 1]);
-        union(indices[t + 1], indices[t + 2]);
-    }
-    const byPosition = new Map<string, number>();
-    worldPoints.forEach((p, i) => {
-        const key = `${p.x.toFixed(2)},${p.y.toFixed(2)}`;
-        const existing = byPosition.get(key);
-        if (existing === undefined) {
-            byPosition.set(key, i);
-        } else {
-            union(i, existing);
-        }
-    });
-
-    const groups = new Map<number, BABYLON.Vector2[]>();
-    worldPoints.forEach((p, i) => {
-        const root = find(i);
-        const group = groups.get(root) ?? [];
-        group.push(p);
-        groups.set(root, group);
-    });
-
-    return Array.from(groups.values())
-        .map(convexHull)
-        .filter((hull) => hull.length >= 3);
-}
-
-/** Andrew's monotone chain; returns the hull counter-clockwise in (x, z). */
-function convexHull(points: BABYLON.Vector2[]): BABYLON.Vector2[] {
-    const sorted = [...points].sort((a, b) => (a.x - b.x) || (a.y - b.y));
-    const cross = (o: BABYLON.Vector2, a: BABYLON.Vector2, b: BABYLON.Vector2) => ((a.x - o.x) * (b.y - o.y)) - ((a.y - o.y) * (b.x - o.x));
-    const lower: BABYLON.Vector2[] = [];
-    for (const p of sorted) {
-        while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 1e-6) {
-            lower.pop();
-        }
-        lower.push(p);
-    }
-    const upper: BABYLON.Vector2[] = [];
-    for (let i = sorted.length - 1; i >= 0; i--) {
-        const p = sorted[i];
-        while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 1e-6) {
-            upper.pop();
-        }
-        upper.push(p);
-    }
-    upper.pop();
-    lower.pop();
-    return lower.concat(upper);
-}
-
-/**
- * Extrudes a convex outline into a slab between `bottomY` and `topY`, with a bevel of size
- * `bevel` around the top edge.
- */
-function createSlabMesh(name: string, outline: BABYLON.Vector2[], bottomY: number, topY: number, bevel: number, scene: BABYLON.Scene): BABYLON.Mesh {
-    const center = outline.reduce((sum, p) => sum.addInPlace(p), new BABYLON.Vector2(0, 0)).scaleInPlace(1 / outline.length);
-    const inset = outline.map((p) => {
-        const offset = p.subtract(center);
-        const length = offset.length();
-        return length > bevel ? center.add(offset.scale((length - bevel) / length)) : center.clone();
-    });
-    const outward = outline.map((p) => {
-        const offset = p.subtract(center);
-        return offset.normalize();
-    });
-
-    const positions: number[] = [];
-    const normals: number[] = [];
-    const indices: number[] = [];
-    const uvs: number[] = [];
-    // Planar world-space UVs so the cobble pattern has the same scale on every slab.
-    const uvScale = 1 / 8;
-    const addVertex = (x: number, y: number, z: number, nx: number, ny: number, nz: number): number => {
-        positions.push(x, y, z);
-        uvs.push(x * uvScale, z * uvScale);
-        const length = Math.hypot(nx, ny, nz);
-        normals.push(nx / length, ny / length, nz / length);
-        return (positions.length / 3) - 1;
-    };
-
-    // Top face (fan around the center).
-    const topCenter = addVertex(center.x, topY, center.y, 0, 1, 0);
-    const topRing = inset.map((p) => addVertex(p.x, topY, p.y, 0, 1, 0));
-    for (let i = 0; i < topRing.length; i++) {
-        pushOrientedTriangle(indices, positions, normals, topCenter, topRing[i], topRing[(i + 1) % topRing.length]);
-    }
-
-    // Bevel and side walls, with soft normals so the edge catches the light.
-    const shoulderY = topY - bevel;
-    const count = outline.length;
-    for (let i = 0; i < count; i++) {
-        const next = (i + 1) % count;
-        const bevelTopA = addVertex(inset[i].x, topY, inset[i].y, outward[i].x * 0.6, 1, outward[i].y * 0.6);
-        const bevelTopB = addVertex(inset[next].x, topY, inset[next].y, outward[next].x * 0.6, 1, outward[next].y * 0.6);
-        const shoulderA = addVertex(outline[i].x, shoulderY, outline[i].y, outward[i].x, 0.6, outward[i].y);
-        const shoulderB = addVertex(outline[next].x, shoulderY, outline[next].y, outward[next].x, 0.6, outward[next].y);
-        pushOrientedTriangle(indices, positions, normals, bevelTopA, shoulderA, shoulderB);
-        pushOrientedTriangle(indices, positions, normals, bevelTopA, shoulderB, bevelTopB);
-
-        const wallTopA = addVertex(outline[i].x, shoulderY, outline[i].y, outward[i].x, 0.15, outward[i].y);
-        const wallTopB = addVertex(outline[next].x, shoulderY, outline[next].y, outward[next].x, 0.15, outward[next].y);
-        const wallBottomA = addVertex(outline[i].x, bottomY, outline[i].y, outward[i].x, 0, outward[i].y);
-        const wallBottomB = addVertex(outline[next].x, bottomY, outline[next].y, outward[next].x, 0, outward[next].y);
-        pushOrientedTriangle(indices, positions, normals, wallTopA, wallBottomA, wallBottomB);
-        pushOrientedTriangle(indices, positions, normals, wallTopA, wallBottomB, wallTopB);
-    }
-
-    return buildMesh(name, positions, normals, indices, scene, uvs);
 }
 
 // ==================================================================== Signs

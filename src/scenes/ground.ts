@@ -1,6 +1,7 @@
 import * as BABYLON from "@babylonjs/core";
 
 import { PLAYGROUND_LANES } from "./playground";
+import { getRoadClearAreas } from "./roads";
 import { addStaticSphere } from "./staticBodies";
 import { addThinInstances, createLumpyBall, createRandom, createTemplate, createToyMaterial } from "./toyStyle";
 
@@ -275,9 +276,11 @@ function scatterDecorations(scene: BABYLON.Scene, treePositions: BABYLON.Vector3
  */
 function collectBlockedAreas(scene: BABYLON.Scene): Area[] {
     const tank = scene.getMeshByName("tank_holder");
-    const ignored = /^(ground|tank_holder|splatter\d*|ball|deco-|ground-petal)/;
-    // The ramps' run-up lanes stay clear too.
-    const areas: Area[] = PLAYGROUND_LANES.map((lane) => ({ ...lane }));
+    // Roads are handled above with areas along their length (their bounding boxes would cover far
+    // too much).
+    const ignored = /^(ground|tank_holder|splatter\d*|ball|deco-|ground-petal|road-)/;
+    // The ramps' run-up lanes and the roads stay clear too.
+    const areas: Area[] = [...PLAYGROUND_LANES, ...getRoadClearAreas()].map((lane) => ({ ...lane }));
     for (const mesh of scene.meshes) {
         if (!mesh.isEnabled() || ignored.test(mesh.name) || (tank && mesh.isDescendantOf(tank))) {
             continue;

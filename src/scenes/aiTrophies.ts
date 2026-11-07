@@ -60,7 +60,7 @@ const SPOTS: Spot[] = [
     { logo: "chatgpt", label: "ChatGPT", x: 23, z: 114, yawOffset: 0.12, pushable: true, scale: STANDING_SCALE },
     { logo: "gemini", label: "Gemini", x: 31, z: 124, yawOffset: -0.1, pushable: true, scale: STANDING_SCALE },
     { logo: "mistral", label: "Mistral", x: 30, z: -4, yawOffset: 0.08, pushable: true, scale: STANDING_SCALE },
-    { logo: "deepseek", label: "DeepSeek", x: -48, z: 40, yawOffset: -0.12, pushable: true, scale: STANDING_SCALE },
+    { logo: "deepseek", label: "DeepSeek", x: -28, z: 36, yawOffset: -0.12, pushable: true, scale: STANDING_SCALE },
     { logo: "huggingface", label: "Hugging Face", x: 72, z: -100, yawOffset: 0.14, pushable: true, scale: STANDING_SCALE },
 ];
 

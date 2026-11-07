@@ -63,7 +63,7 @@ var SPOTS = [
     { logo: "chatgpt", label: "ChatGPT", x: 23, z: 114, yawOffset: 0.12, pushable: true, scale: STANDING_SCALE },
     { logo: "gemini", label: "Gemini", x: 31, z: 124, yawOffset: -0.1, pushable: true, scale: STANDING_SCALE },
     { logo: "mistral", label: "Mistral", x: 30, z: -4, yawOffset: 0.08, pushable: true, scale: STANDING_SCALE },
-    { logo: "deepseek", label: "DeepSeek", x: -48, z: 40, yawOffset: -0.12, pushable: true, scale: STANDING_SCALE },
+    { logo: "deepseek", label: "DeepSeek", x: -28, z: 36, yawOffset: -0.12, pushable: true, scale: STANDING_SCALE },
     { logo: "huggingface", label: "Hugging Face", x: 72, z: -100, yawOffset: 0.14, pushable: true, scale: STANDING_SCALE },
 ];
 function createAiTrophies(scene) {
@@ -1421,8 +1421,9 @@ function restyleTrophy(scene) {
 /* harmony export */ });
 /* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core */ "./node_modules/@babylonjs/core/index.js");
 /* harmony import */ var _playground__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./playground */ "./src/scenes/playground.ts");
-/* harmony import */ var _staticBodies__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./staticBodies */ "./src/scenes/staticBodies.ts");
-/* harmony import */ var _toyStyle__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./toyStyle */ "./src/scenes/toyStyle.ts");
+/* harmony import */ var _roads__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./roads */ "./src/scenes/roads.ts");
+/* harmony import */ var _staticBodies__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./staticBodies */ "./src/scenes/staticBodies.ts");
+/* harmony import */ var _toyStyle__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./toyStyle */ "./src/scenes/toyStyle.ts");
 var __assign = (undefined && undefined.__assign) || function () {
     __assign = Object.assign || function(t) {
         for (var s, i = 1, n = arguments.length; i < n; i++) {
@@ -1434,6 +1435,16 @@ var __assign = (undefined && undefined.__assign) || function () {
     };
     return __assign.apply(this, arguments);
 };
+var __spreadArray = (undefined && undefined.__spreadArray) || function (to, from, pack) {
+    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
+        if (ar || !(i in from)) {
+            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
+            ar[i] = from[i];
+        }
+    }
+    return to.concat(ar || Array.prototype.slice.call(from));
+};
+
 
 
 
@@ -1499,7 +1510,7 @@ function restyleGroundMaterial(scene) {
         }
     }
     // Foam speckle.
-    var random = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createRandom)(3);
+    var random = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_4__.createRandom)(3);
     for (var i = 0; i < 2600; i++) {
         var light = random() > 0.5;
         context.fillStyle = light ? "rgba(255,255,255,0.06)" : "rgba(0,30,60,0.07)";
@@ -1535,7 +1546,7 @@ function restyleGroundMaterial(scene) {
 }
 // ==================================================================== Decorations
 function scatterDecorations(scene, treePositions) {
-    var random = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createRandom)(2024);
+    var random = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_4__.createRandom)(2024);
     var blocked = collectBlockedAreas(scene);
     var isFree = function (x, z, margin) {
         if (Math.hypot(x, z) < SPAWN_CLEAR_RADIUS + margin) {
@@ -1557,7 +1568,7 @@ function scatterDecorations(scene, treePositions) {
         return null;
     };
     // ---- Bushes first (they are solid, so later decorations avoid them).
-    var bushTemplates = PALETTE.bushes.map(function (hex, i) { return (0,_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createTemplate)((0,_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createLumpyBall)("deco-bush-puff-".concat(i), scene, random), (0,_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createToyMaterial)(scene, "toy-bush-".concat(i), hex, { roughness: 0.6, clearCoat: 0.15 })); });
+    var bushTemplates = PALETTE.bushes.map(function (hex, i) { return (0,_toyStyle__WEBPACK_IMPORTED_MODULE_4__.createTemplate)((0,_toyStyle__WEBPACK_IMPORTED_MODULE_4__.createLumpyBall)("deco-bush-puff-".concat(i), scene, random), (0,_toyStyle__WEBPACK_IMPORTED_MODULE_4__.createToyMaterial)(scene, "toy-bush-".concat(i), hex, { roughness: 0.6, clearCoat: 0.15 })); });
     for (var i = 0; i < 20; i++) {
         var spot = randomSpot(9, 45);
         if (!spot) {
@@ -1579,31 +1590,31 @@ function scatterDecorations(scene, treePositions) {
             puff.isPickable = false;
         }
         // A simple solid sphere so the tank bumps into the bush instead of driving through it.
-        (0,_staticBodies__WEBPACK_IMPORTED_MODULE_2__.addStaticSphere)(scene, new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(spot.x, GROUND_Y + 2, spot.y), 3.5);
+        (0,_staticBodies__WEBPACK_IMPORTED_MODULE_3__.addStaticSphere)(scene, new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(spot.x, GROUND_Y + 2, spot.y), 3.5);
         blocked.push({ minX: spot.x - 4, maxX: spot.x + 4, minZ: spot.y - 4, maxZ: spot.y + 4 });
     }
     // ---- Boulders: big solid rocks to steer around.
-    var boulderMaterials = PALETTE.boulders.map(function (hex, i) { return (0,_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createToyMaterial)(scene, "toy-boulder-".concat(i), hex, { roughness: 0.7, clearCoat: 0.15 }); });
+    var boulderMaterials = PALETTE.boulders.map(function (hex, i) { return (0,_toyStyle__WEBPACK_IMPORTED_MODULE_4__.createToyMaterial)(scene, "toy-boulder-".concat(i), hex, { roughness: 0.7, clearCoat: 0.15 }); });
     for (var i = 0; i < 10; i++) {
         var spot = randomSpot(8, 50);
         if (!spot) {
             continue;
         }
         var size = 2.6 + (random() * 2.6);
-        var boulder = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createLumpyBall)("deco-boulder-".concat(i), scene, random, 2.2, 2);
+        var boulder = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_4__.createLumpyBall)("deco-boulder-".concat(i), scene, random, 2.2, 2);
         boulder.material = boulderMaterials[i % boulderMaterials.length];
         boulder.scaling.set(size * (1 + (random() * 0.4)), size * 0.75, size);
         boulder.rotation.y = random() * Math.PI * 2;
         boulder.position.set(spot.x, GROUND_Y + (size * 0.45), spot.y);
         boulder.isPickable = false;
-        (0,_staticBodies__WEBPACK_IMPORTED_MODULE_2__.addStaticSphere)(scene, boulder.position, size);
+        (0,_staticBodies__WEBPACK_IMPORTED_MODULE_3__.addStaticSphere)(scene, boulder.position, size);
         var margin = size + 1;
         blocked.push({ minX: spot.x - margin, maxX: spot.x + margin, minZ: spot.y - margin, maxZ: spot.y + margin });
     }
     // ---- Pebbles, alone and in small groups.
     var pebbleMeshes = PALETTE.pebbles.map(function (hex, i) {
-        var pebble = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createLumpyBall)("deco-pebble-".concat(i), scene, random, 1.8, 2);
-        pebble.material = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createToyMaterial)(scene, "toy-pebble-".concat(i), hex, { roughness: 0.65, clearCoat: 0.2 });
+        var pebble = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_4__.createLumpyBall)("deco-pebble-".concat(i), scene, random, 1.8, 2);
+        pebble.material = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_4__.createToyMaterial)(scene, "toy-pebble-".concat(i), hex, { roughness: 0.65, clearCoat: 0.2 });
         return pebble;
     });
     var pebbleMatrices = pebbleMeshes.map(function () { return []; });
@@ -1623,11 +1634,11 @@ function scatterDecorations(scene, treePositions) {
             pebbleMatrices[Math.floor(random() * pebbleMeshes.length)].push(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Matrix.Compose(new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(size, size * 0.6, size * (0.8 + (random() * 0.4))), _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Quaternion.RotationYawPitchRoll(random() * Math.PI * 2, 0, 0), new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(x, GROUND_Y + (size * 0.15), z)));
         }
     }
-    pebbleMeshes.forEach(function (mesh, i) { return (0,_toyStyle__WEBPACK_IMPORTED_MODULE_3__.addThinInstances)(mesh, pebbleMatrices[i]); });
+    pebbleMeshes.forEach(function (mesh, i) { return (0,_toyStyle__WEBPACK_IMPORTED_MODULE_4__.addThinInstances)(mesh, pebbleMatrices[i]); });
     // ---- Fallen petals around each tree.
     var petalMeshes = PALETTE.petals.map(function (hex, i) {
         var petal = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder("ground-petal-".concat(i), { diameter: 1, height: 0.06, tessellation: 10 }, scene);
-        petal.material = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createToyMaterial)(scene, "toy-ground-petal-".concat(i), hex, { roughness: 0.6 });
+        petal.material = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_4__.createToyMaterial)(scene, "toy-ground-petal-".concat(i), hex, { roughness: 0.6 });
         return petal;
     });
     var petalMatrices = petalMeshes.map(function () { return []; });
@@ -1643,7 +1654,7 @@ function scatterDecorations(scene, treePositions) {
             petalMatrices[Math.floor(random() * petalMeshes.length)].push(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Matrix.Compose(new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(size * 1.6, 1, size), _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Quaternion.RotationYawPitchRoll(random() * Math.PI * 2, (random() - 0.5) * 0.2, (random() - 0.5) * 0.2), new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(x, GROUND_Y + 0.03 + (random() * 0.02), z)));
         }
     }
-    petalMeshes.forEach(function (mesh, i) { return (0,_toyStyle__WEBPACK_IMPORTED_MODULE_3__.addThinInstances)(mesh, petalMatrices[i]); });
+    petalMeshes.forEach(function (mesh, i) { return (0,_toyStyle__WEBPACK_IMPORTED_MODULE_4__.addThinInstances)(mesh, petalMatrices[i]); });
     // ---- Toy flowers in little clusters.
     var flowerMeshes = PALETTE.flowers.map(function (hex, i) { return createFlowerMesh(scene, "deco-flower-".concat(i), hex); });
     var flowerMatrices = flowerMeshes.map(function () { return []; });
@@ -1664,7 +1675,7 @@ function scatterDecorations(scene, treePositions) {
             flowerMatrices[random() < 0.75 ? colorIndex : Math.floor(random() * flowerMeshes.length)].push(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Matrix.Compose(new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(size, size * (0.8 + (random() * 0.5)), size), _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Quaternion.RotationYawPitchRoll(random() * Math.PI * 2, (random() - 0.5) * 0.25, (random() - 0.5) * 0.25), new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(x, GROUND_Y, z)));
         }
     }
-    flowerMeshes.forEach(function (mesh, i) { return (0,_toyStyle__WEBPACK_IMPORTED_MODULE_3__.addThinInstances)(mesh, flowerMatrices[i]); });
+    flowerMeshes.forEach(function (mesh, i) { return (0,_toyStyle__WEBPACK_IMPORTED_MODULE_4__.addThinInstances)(mesh, flowerMatrices[i]); });
 }
 /**
  * Areas to keep clear: every visible object standing on the ground (buildings, props, trees,
@@ -1673,9 +1684,11 @@ function scatterDecorations(scene, treePositions) {
  */
 function collectBlockedAreas(scene) {
     var tank = scene.getMeshByName("tank_holder");
-    var ignored = /^(ground|tank_holder|splatter\d*|ball|deco-|ground-petal)/;
-    // The ramps' run-up lanes stay clear too.
-    var areas = _playground__WEBPACK_IMPORTED_MODULE_1__.PLAYGROUND_LANES.map(function (lane) { return (__assign({}, lane)); });
+    // Roads are handled above with areas along their length (their bounding boxes would cover far
+    // too much).
+    var ignored = /^(ground|tank_holder|splatter\d*|ball|deco-|ground-petal|road-)/;
+    // The ramps' run-up lanes and the roads stay clear too.
+    var areas = __spreadArray(__spreadArray([], _playground__WEBPACK_IMPORTED_MODULE_1__.PLAYGROUND_LANES, true), (0,_roads__WEBPACK_IMPORTED_MODULE_2__.getRoadClearAreas)(), true).map(function (lane) { return (__assign({}, lane)); });
     for (var _i = 0, _a = scene.meshes; _i < _a.length; _i++) {
         var mesh = _a[_i];
         if (!mesh.isEnabled() || ignored.test(mesh.name) || (tank && mesh.isDescendantOf(tank))) {
@@ -1697,9 +1710,9 @@ function collectBlockedAreas(scene) {
 }
 /** A small toy flower: stem, five rounded petals and a centre, merged into one mesh. */
 function createFlowerMesh(scene, name, petalHex) {
-    var stemMaterial = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createToyMaterial)(scene, "".concat(name, "-stem"), PALETTE.stem, { roughness: 0.6 });
-    var petalMaterial = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createToyMaterial)(scene, "".concat(name, "-petals"), petalHex, { roughness: 0.5, clearCoat: 0.3 });
-    var centerMaterial = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createToyMaterial)(scene, "".concat(name, "-center"), PALETTE.flowerCenter, { roughness: 0.45, clearCoat: 0.3 });
+    var stemMaterial = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_4__.createToyMaterial)(scene, "".concat(name, "-stem"), PALETTE.stem, { roughness: 0.6 });
+    var petalMaterial = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_4__.createToyMaterial)(scene, "".concat(name, "-petals"), petalHex, { roughness: 0.5, clearCoat: 0.3 });
+    var centerMaterial = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_4__.createToyMaterial)(scene, "".concat(name, "-center"), PALETTE.flowerCenter, { roughness: 0.45, clearCoat: 0.3 });
     var stem = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder("".concat(name, "-stem"), { diameter: 0.16, height: 1.4, tessellation: 6 }, scene);
     stem.position.y = 0.7;
     stem.material = stemMaterial;
@@ -1737,23 +1750,16 @@ function createFlowerMesh(scene, name, petalHex) {
 /* harmony export */   restyleLandmarks: () => (/* binding */ restyleLandmarks)
 /* harmony export */ });
 /* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core */ "./node_modules/@babylonjs/core/index.js");
-/* harmony import */ var _toyStyle__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./toyStyle */ "./src/scenes/toyStyle.ts");
-var __spreadArray = (undefined && undefined.__spreadArray) || function (to, from, pack) {
-    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
-        if (ar || !(i in from)) {
-            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
-            ar[i] = from[i];
-        }
-    }
-    return to.concat(ar || Array.prototype.slice.call(from));
-};
+/* harmony import */ var _roads__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./roads */ "./src/scenes/roads.ts");
+/* harmony import */ var _toyStyle__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./toyStyle */ "./src/scenes/toyStyle.ts");
+
 
 
 /**
  * Restyles static landmarks from the editor scene to match the toy look: the social-media podium,
- * the flat road slabs and the signs lying on the ground. The original meshes keep their role (the podium keeps its physics body
- * and the logos parented to it), they are only hidden and replaced by toy-style geometry with the
- * same footprint and heights.
+ * the roads (replaced by the road network in roads.ts) and the signs lying on the ground. The
+ * original meshes keep their role (the podium keeps its physics body and the logos parented to
+ * it); they are only hidden and replaced by toy-style geometry.
  */
 var GROUND_Y = -0.5;
 var PALETTE = {
@@ -1767,6 +1773,7 @@ var PALETTE = {
     slabs: ["#D8CBB4", "#CFC1A8", "#E0D4BF", "#C9B79C"],
     mortar: "#8F8372",
     edgePebbles: ["#9C9282", "#B3A893"],
+    cobbleTint: "#C4C2BC",
     signPlate: "#344B63",
     signRim: "#E8DCC6",
 };
@@ -1808,11 +1815,11 @@ function restylePodium(scene) {
     podium.computeWorldMatrix(true);
     var world = podium.getWorldMatrix();
     var front = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.TransformNormal(new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, 1, 0), world).normalize();
-    var bodyMaterial = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-podium-body", PALETTE.podiumBody, { roughness: 0.5, clearCoat: 0.35 });
+    var bodyMaterial = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "toy-podium-body", PALETTE.podiumBody, { roughness: 0.5, clearCoat: 0.35 });
     var capMaterials = {
-        1: (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-podium-first", PALETTE.first, { roughness: 0.3, metallic: 0.6, clearCoat: 0.4 }),
-        2: (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-podium-second", PALETTE.second, { roughness: 0.3, metallic: 0.6, clearCoat: 0.4 }),
-        3: (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-podium-third", PALETTE.third, { roughness: 0.35, metallic: 0.5, clearCoat: 0.4 }),
+        1: (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "toy-podium-first", PALETTE.first, { roughness: 0.3, metallic: 0.6, clearCoat: 0.4 }),
+        2: (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "toy-podium-second", PALETTE.second, { roughness: 0.3, metallic: 0.6, clearCoat: 0.4 }),
+        3: (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "toy-podium-third", PALETTE.third, { roughness: 0.35, metallic: 0.5, clearCoat: 0.4 }),
     };
     var capThickness = 1.4;
     var capOverhang = 0.3;
@@ -1829,11 +1836,11 @@ function restylePodium(scene) {
         var center = min.add(max).scaleInPlace(0.5);
         // Body, slightly inset so neighbouring steps read as separate blocks.
         var bodyHeight = size.y - capThickness + 0.2;
-        var body = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRoundedBox)("podium-step-".concat(step.place), size.x - 0.3, bodyHeight, size.z - 0.3, 0.9, scene);
+        var body = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("podium-step-".concat(step.place), size.x - 0.3, bodyHeight, size.z - 0.3, 0.9, scene);
         body.material = bodyMaterial;
         body.position.set(center.x, min.y + (bodyHeight / 2), center.z);
         // Medal-coloured cap; its top is exactly the old step top, where the logos stand.
-        var cap = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRoundedBox)("podium-cap-".concat(step.place), size.x + (capOverhang * 2) - 0.3, capThickness, size.z + (capOverhang * 2) - 0.3, 0.5, scene);
+        var cap = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("podium-cap-".concat(step.place), size.x + (capOverhang * 2) - 0.3, capThickness, size.z + (capOverhang * 2) - 0.3, 0.5, scene);
         cap.material = capMaterials[step.place];
         cap.position.set(center.x, max.y - (capThickness / 2), center.z);
         // Place number on the front face.
@@ -1854,10 +1861,10 @@ function restylePodium(scene) {
         var child = _b[_a];
         var name_1 = child.name.toLowerCase();
         if (name_1.includes("linkedin") || name_1.includes("twitter")) {
-            child.material = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-logo-".concat(name_1), PALETTE.logoBlue, { roughness: 0.4, clearCoat: 0.6 });
+            child.material = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "toy-logo-".concat(name_1), PALETTE.logoBlue, { roughness: 0.4, clearCoat: 0.6 });
         }
         else if (name_1.includes("stlmesh")) {
-            child.material = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-logo-sakura", PALETTE.logoSakura, { roughness: 0.45, clearCoat: 0.5 });
+            child.material = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "toy-logo-sakura", PALETTE.logoSakura, { roughness: 0.45, clearCoat: 0.5 });
         }
     }
 }
@@ -1883,52 +1890,21 @@ function createNumberMaterial(scene, place) {
 }
 // ==================================================================== Roads
 /**
- * Each road mesh is a few flat, irregular slabs. Every slab's outline is read back from the mesh
- * (in world space) and rebuilt as a raised paving slab with bevelled edges.
+ * Replaces the imported road patches with the road network (see roads.ts), using the same
+ * cobblestone material and edge pebbles.
  */
 function restyleRoads(scene) {
-    var roads = scene.meshes.filter(function (mesh) { return /^road\d*$/i.test(mesh.name); });
-    if (!roads.length) {
-        return;
+    for (var _i = 0, _a = scene.meshes.filter(function (mesh) { return /^road\d*$/i.test(mesh.name); }); _i < _a.length; _i++) {
+        var road = _a[_i];
+        road.setEnabled(false);
     }
-    var random = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRandom)(42);
-    var cobbles = createCobbleMaterial(scene);
-    var edgeMeshes = PALETTE.edgePebbles.map(function (hex, i) {
-        var pebble = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createLumpyBall)("road-edge-pebble-".concat(i), scene, random, 1.6, 2);
-        pebble.material = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-road-edge-".concat(i), hex, { roughness: 0.7, clearCoat: 0.15 });
+    var random = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRandom)(42);
+    var pebbles = PALETTE.edgePebbles.map(function (hex, i) {
+        var pebble = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createLumpyBall)("road-edge-pebble-".concat(i), scene, random, 1.6, 2);
+        pebble.material = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "toy-road-edge-".concat(i), hex, { roughness: 0.7, clearCoat: 0.15 });
         return pebble;
     });
-    var edgeMatrices = edgeMeshes.map(function () { return []; });
-    roads.forEach(function (road, roadIndex) {
-        var outlines = getSlabOutlines(road);
-        if (!outlines.length) {
-            return;
-        }
-        outlines.forEach(function (outline, slabIndex) {
-            // Only slightly raised: the tank drives over these without physics, so a tall slab
-            // would swallow its tracks.
-            var slab = createSlabMesh("road-slab-".concat(roadIndex, "-").concat(slabIndex), outline, GROUND_Y - 0.2, GROUND_Y + 0.15, 0.12, scene);
-            slab.material = cobbles;
-            slab.isPickable = false;
-            // A border of small pebbles around each slab.
-            var center = outline.reduce(function (sum, p) { return sum.addInPlace(p); }, new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector2(0, 0)).scaleInPlace(1 / outline.length);
-            for (var i = 0; i < outline.length; i++) {
-                var start = outline[i];
-                var end = outline[(i + 1) % outline.length];
-                var edgeLength = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector2.Distance(start, end);
-                var steps = Math.max(1, Math.round(edgeLength / 1.25));
-                for (var k = 0; k < steps; k++) {
-                    var point = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector2.Lerp(start, end, (k + 0.5) / steps);
-                    var outward = point.subtract(center).normalize();
-                    var size = 0.45 + (random() * 0.35);
-                    var matrix = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Matrix.Compose(new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(size, size * 0.55, size), _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Quaternion.RotationYawPitchRoll(random() * Math.PI * 2, 0, 0), new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(point.x + (outward.x * 0.45), GROUND_Y + 0.05, point.y + (outward.y * 0.45)));
-                    edgeMatrices[Math.floor(random() * edgeMeshes.length)].push(matrix);
-                }
-            }
-        });
-        road.setEnabled(false);
-    });
-    edgeMeshes.forEach(function (mesh, i) { return (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.addThinInstances)(mesh, edgeMatrices[i]); });
+    (0,_roads__WEBPACK_IMPORTED_MODULE_1__.createRoadNetwork)(scene, createCobbleMaterial(scene), pebbles);
 }
 /**
  * Cobblestone texture generated on a canvas: a colour map with stones in a few tones and darker
@@ -1943,7 +1919,7 @@ function createCobbleMaterial(scene) {
     var mortar = 7;
     var cornerRadius = 22;
     var bevel = 20;
-    var random = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRandom)(9);
+    var random = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRandom)(9);
     var stoneColors = PALETTE.slabs.map(function (hex) { return _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.FromHexString(hex); });
     var mortarColor = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.FromHexString(PALETTE.mortar);
     var cellTone = [];
@@ -2010,7 +1986,8 @@ function createCobbleMaterial(scene) {
         texture.wrapV = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Texture.WRAP_ADDRESSMODE;
         texture.anisotropicFilteringLevel = 8;
     });
-    var material = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-road-cobbles", "#FFFFFF", { roughness: 0.72, clearCoat: 0.12 });
+    // Muted, slightly cool tint so the roads sit with the blue ground instead of glowing cream.
+    var material = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "toy-road-cobbles", PALETTE.cobbleTint, { roughness: 0.78, clearCoat: 0.08 });
     material.albedoTexture = colorTexture;
     material.bumpTexture = normalTexture;
     return material;
@@ -2022,142 +1999,6 @@ function smoothStep(edge0, edge1, value) {
 function clampByte(value) {
     return Math.max(0, Math.min(255, Math.round(value)));
 }
-/**
- * Splits a mesh into its connected pieces and returns each piece's outline on the ground (convex
- * hull of its vertices in world X/Z).
- */
-function getSlabOutlines(mesh) {
-    var positions = mesh.getVerticesData(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.VertexBuffer.PositionKind);
-    var indices = mesh.getIndices();
-    if (!positions || !indices) {
-        return [];
-    }
-    mesh.computeWorldMatrix(true);
-    var world = mesh.getWorldMatrix();
-    var vertexCount = positions.length / 3;
-    var worldPoints = [];
-    var point = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3();
-    for (var i = 0; i < vertexCount; i++) {
-        _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.TransformCoordinatesFromFloatsToRef(positions[i * 3], positions[(i * 3) + 1], positions[(i * 3) + 2], world, point);
-        worldPoints.push(new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector2(point.x, point.z));
-    }
-    // Union-find over triangles; vertices at the same spot (top/bottom, split normals) are joined too.
-    var parent = Array.from({ length: vertexCount }, function (_, i) { return i; });
-    var find = function (i) {
-        while (parent[i] !== i) {
-            parent[i] = parent[parent[i]];
-            i = parent[i];
-        }
-        return i;
-    };
-    var union = function (a, b) {
-        parent[find(a)] = find(b);
-    };
-    for (var t = 0; t < indices.length; t += 3) {
-        union(indices[t], indices[t + 1]);
-        union(indices[t + 1], indices[t + 2]);
-    }
-    var byPosition = new Map();
-    worldPoints.forEach(function (p, i) {
-        var key = "".concat(p.x.toFixed(2), ",").concat(p.y.toFixed(2));
-        var existing = byPosition.get(key);
-        if (existing === undefined) {
-            byPosition.set(key, i);
-        }
-        else {
-            union(i, existing);
-        }
-    });
-    var groups = new Map();
-    worldPoints.forEach(function (p, i) {
-        var _a;
-        var root = find(i);
-        var group = (_a = groups.get(root)) !== null && _a !== void 0 ? _a : [];
-        group.push(p);
-        groups.set(root, group);
-    });
-    return Array.from(groups.values())
-        .map(convexHull)
-        .filter(function (hull) { return hull.length >= 3; });
-}
-/** Andrew's monotone chain; returns the hull counter-clockwise in (x, z). */
-function convexHull(points) {
-    var sorted = __spreadArray([], points, true).sort(function (a, b) { return (a.x - b.x) || (a.y - b.y); });
-    var cross = function (o, a, b) { return ((a.x - o.x) * (b.y - o.y)) - ((a.y - o.y) * (b.x - o.x)); };
-    var lower = [];
-    for (var _i = 0, sorted_1 = sorted; _i < sorted_1.length; _i++) {
-        var p = sorted_1[_i];
-        while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 1e-6) {
-            lower.pop();
-        }
-        lower.push(p);
-    }
-    var upper = [];
-    for (var i = sorted.length - 1; i >= 0; i--) {
-        var p = sorted[i];
-        while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 1e-6) {
-            upper.pop();
-        }
-        upper.push(p);
-    }
-    upper.pop();
-    lower.pop();
-    return lower.concat(upper);
-}
-/**
- * Extrudes a convex outline into a slab between `bottomY` and `topY`, with a bevel of size
- * `bevel` around the top edge.
- */
-function createSlabMesh(name, outline, bottomY, topY, bevel, scene) {
-    var center = outline.reduce(function (sum, p) { return sum.addInPlace(p); }, new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector2(0, 0)).scaleInPlace(1 / outline.length);
-    var inset = outline.map(function (p) {
-        var offset = p.subtract(center);
-        var length = offset.length();
-        return length > bevel ? center.add(offset.scale((length - bevel) / length)) : center.clone();
-    });
-    var outward = outline.map(function (p) {
-        var offset = p.subtract(center);
-        return offset.normalize();
-    });
-    var positions = [];
-    var normals = [];
-    var indices = [];
-    var uvs = [];
-    // Planar world-space UVs so the cobble pattern has the same scale on every slab.
-    var uvScale = 1 / 8;
-    var addVertex = function (x, y, z, nx, ny, nz) {
-        positions.push(x, y, z);
-        uvs.push(x * uvScale, z * uvScale);
-        var length = Math.hypot(nx, ny, nz);
-        normals.push(nx / length, ny / length, nz / length);
-        return (positions.length / 3) - 1;
-    };
-    // Top face (fan around the center).
-    var topCenter = addVertex(center.x, topY, center.y, 0, 1, 0);
-    var topRing = inset.map(function (p) { return addVertex(p.x, topY, p.y, 0, 1, 0); });
-    for (var i = 0; i < topRing.length; i++) {
-        (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.pushOrientedTriangle)(indices, positions, normals, topCenter, topRing[i], topRing[(i + 1) % topRing.length]);
-    }
-    // Bevel and side walls, with soft normals so the edge catches the light.
-    var shoulderY = topY - bevel;
-    var count = outline.length;
-    for (var i = 0; i < count; i++) {
-        var next = (i + 1) % count;
-        var bevelTopA = addVertex(inset[i].x, topY, inset[i].y, outward[i].x * 0.6, 1, outward[i].y * 0.6);
-        var bevelTopB = addVertex(inset[next].x, topY, inset[next].y, outward[next].x * 0.6, 1, outward[next].y * 0.6);
-        var shoulderA = addVertex(outline[i].x, shoulderY, outline[i].y, outward[i].x, 0.6, outward[i].y);
-        var shoulderB = addVertex(outline[next].x, shoulderY, outline[next].y, outward[next].x, 0.6, outward[next].y);
-        (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.pushOrientedTriangle)(indices, positions, normals, bevelTopA, shoulderA, shoulderB);
-        (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.pushOrientedTriangle)(indices, positions, normals, bevelTopA, shoulderB, bevelTopB);
-        var wallTopA = addVertex(outline[i].x, shoulderY, outline[i].y, outward[i].x, 0.15, outward[i].y);
-        var wallTopB = addVertex(outline[next].x, shoulderY, outline[next].y, outward[next].x, 0.15, outward[next].y);
-        var wallBottomA = addVertex(outline[i].x, bottomY, outline[i].y, outward[i].x, 0, outward[i].y);
-        var wallBottomB = addVertex(outline[next].x, bottomY, outline[next].y, outward[next].x, 0, outward[next].y);
-        (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.pushOrientedTriangle)(indices, positions, normals, wallTopA, wallBottomA, wallBottomB);
-        (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.pushOrientedTriangle)(indices, positions, normals, wallTopA, wallBottomB, wallTopB);
-    }
-    return (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.buildMesh)(name, positions, normals, indices, scene, uvs);
-}
 // ==================================================================== Signs
 /**
  * Signs lying on the ground: extruded 3D text, and the Fruit Factory description (white text on a
@@ -2165,8 +2006,8 @@ function createSlabMesh(name, outline, bottomY, topY, bevel, scene) {
  * plate, and the 3D letters get a glossy cream plastic finish.
  */
 function restyleSigns(scene) {
-    var plate = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-sign-plate", PALETTE.signPlate, { roughness: 0.5, clearCoat: 0.35 });
-    var rim = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-sign-rim", PALETTE.signRim, { roughness: 0.5, clearCoat: 0.3 });
+    var plate = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "toy-sign-plate", PALETTE.signPlate, { roughness: 0.5, clearCoat: 0.35 });
+    var rim = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "toy-sign-rim", PALETTE.signRim, { roughness: 0.5, clearCoat: 0.3 });
     // The description is a flat textured plane lying on the ground.
     var description = scene.getMeshByName("ffdescription");
     if (description) {
@@ -2183,11 +2024,11 @@ function restyleSigns(scene) {
 function createSignPlate(scene, name, x, z, yaw, width, depth, plate, rim) {
     var plateHeight = 0.5;
     var plateTop = GROUND_Y + 0.24;
-    var top = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRoundedBox)(name, width, plateHeight, depth, 0.25, scene, 3);
+    var top = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)(name, width, plateHeight, depth, 0.25, scene, 3);
     top.material = plate;
     top.position.set(x, plateTop - (plateHeight / 2), z);
     top.rotation.y = yaw;
-    var border = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRoundedBox)("".concat(name, "-rim"), width + 1.6, plateHeight, depth + 1.6, 0.25, scene, 3);
+    var border = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("".concat(name, "-rim"), width + 1.6, plateHeight, depth + 1.6, 0.25, scene, 3);
     border.material = rim;
     border.position.set(x, plateTop - 0.08 - (plateHeight / 2), z);
     border.rotation.y = yaw;
@@ -2954,6 +2795,8 @@ var __assign = (undefined && undefined.__assign) || function () {
  * movement (so it follows the slopes smoothly, flies off ramp ends and lands).
  */
 var GROUND_Y = -0.5;
+/** Ramps and platforms sit this far above the ground, just above any road under them. */
+var SURFACE_LIFT = 0.05;
 /**
  * cannon.js collision groups. Everything is in group 1 and collides with group 1 (cannon's
  * default). Ramps and platforms are in their own group, which only loose objects (bricks, cones,
@@ -3066,7 +2909,8 @@ function createPlayground(scene) {
 function createRamp(scene, ramp, materials) {
     var l = ramp.length, w = ramp.width, h = ramp.height;
     var root = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.TransformNode("ramp-".concat(ramp.name), scene);
-    root.position.set(ramp.x, GROUND_Y, ramp.z);
+    // Raised a hair so roads running underneath don't poke through the low edge.
+    root.position.set(ramp.x, GROUND_Y + SURFACE_LIFT, ramp.z);
     root.rotation.y = ramp.yaw;
     // Top: a single quad from the low edge (z = -l/2, y = 0) to the high edge (z = l/2, y = h).
     var top = buildQuad("ramp-".concat(ramp.name, "-top"), [
@@ -3116,7 +2960,7 @@ function createRamp(scene, ramp, materials) {
 /** A flat-topped block with the same look as the ramps. */
 function createPlatform(scene, platform, materials) {
     var root = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.TransformNode("platform-".concat(platform.name), scene);
-    root.position.set(platform.x, GROUND_Y, platform.z);
+    root.position.set(platform.x, GROUND_Y + SURFACE_LIFT, platform.z);
     root.rotation.y = platform.yaw;
     var block = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRoundedBox)("platform-".concat(platform.name, "-body"), platform.width, platform.height, platform.length, 0.15, scene);
     block.material = materials.side;
@@ -3234,6 +3078,356 @@ function buildTriangle(name, corners, side, scene) {
     var indices = [];
     (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.pushOrientedTriangle)(indices, positions, normals, 0, 1, 2);
     return (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.buildMesh)(name, positions, normals, indices, scene, [0, 0, 1, 0, 1, 1]);
+}
+
+
+/***/ },
+
+/***/ "./src/scenes/roads.ts"
+/*!*****************************!*\
+  !*** ./src/scenes/roads.ts ***!
+  \*****************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   createRoadNetwork: () => (/* binding */ createRoadNetwork),
+/* harmony export */   getRoadClearAreas: () => (/* binding */ getRoadClearAreas)
+/* harmony export */ });
+/* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core */ "./node_modules/@babylonjs/core/index.js");
+/* harmony import */ var _playground__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./playground */ "./src/scenes/playground.ts");
+/* harmony import */ var _toyStyle__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./toyStyle */ "./src/scenes/toyStyle.ts");
+
+
+
+/**
+ * The road network:
+ *
+ * - a winding main loop past the start, the targets on the podium, the Berserk
+ *   corner and AI trophies, the projects and back past the signpost;
+ * - a stunt road that branches off it, runs through the cone slalom and under the jump ramps, then
+ *   sweeps north and back into the loop;
+ * - a hump road that leaves the stunt road, goes over the hump bridge and rejoins it before the
+ *   jump;
+ * - a path out towards the brick tower that thins out into stepping stones on the grass.
+ *
+ * To keep them from dominating the view, roads are not solid ribbons: they are laid as separate
+ * paving slabs with thin strips of grass between them (two staggered rows on the main road,
+ * single slabs with wider gaps and the odd missing one on side paths), with slightly ragged outer
+ * edges and a few pebbles alongside. Side paths are narrower and wobble a little in width. The
+ * cobble texture is mapped in world space, so slabs of different roads match where they meet.
+ */
+var GROUND_Y = -0.5;
+var ROAD_Y = GROUND_Y + 0.06;
+/** Clearance kept around roads for decorations. */
+var EDGE_MARGIN = 1;
+/** World units per repeat of the cobble texture. */
+var TEXTURE_SIZE = 8;
+var SAMPLE_SPACING = 1.5;
+/** How far before an open end a road starts to narrow. */
+var FADE_LENGTH = 16;
+var ROADS = [
+    {
+        name: "loop",
+        width: 12,
+        closed: true,
+        main: true,
+        points: [[0, 0], [26, 10], [50, 24], [57, 48], [46, 74], [28, 94], [2, 92], [-22, 76], [-44, 56], [-60, 32], [-60, 10], [-46, -6], [-24, -8]],
+    },
+    {
+        // From the loop near the start, through the slalom and under both ramps, then round the
+        // east side and back into the loop north of the podium.
+        name: "stunt-road",
+        width: 10,
+        points: [[8, 3], [22, -12], [38, -22], [56, -25], [80, -25], [113, -25], [147, -25], [170, -20], [182, 2], [168, 36], [134, 54], [98, 60], [74, 67], [55, 62]],
+    },
+    {
+        // Off the stunt road, over the hump bridge, and back onto it before the jump.
+        name: "hump-road",
+        width: 10,
+        points: [[30, -19], [27, -38], [18, -58], [26, -70], [41, -70], [58, -71], [76, -74], [94, -62], [101, -42], [100, -28]],
+    },
+    {
+        name: "tower-path",
+        width: 9,
+        fadeOut: true,
+        points: [[-48, 52], [-64, 64], [-82, 70], [-98, 80]],
+    },
+];
+var ROAD_SAMPLES = ROADS.map(function (road, index) {
+    var samples = sampleCurve(road.points, SAMPLE_SPACING, !!road.closed);
+    var length = samples.length * SAMPLE_SPACING;
+    samples.forEach(function (sample, i) {
+        var distance = i * SAMPLE_SPACING;
+        var half = road.width / 2;
+        if (!road.main) {
+            // Gentle, uneven wobble so side roads don't look machine-made.
+            half *= 1 + (0.07 * Math.sin((distance * 0.21) + index)) + (0.04 * Math.sin((distance * 0.57) + (index * 2.3)));
+        }
+        if (road.fadeOut) {
+            var remaining = length - distance;
+            half *= 0.35 + (0.65 * smoothStep(0, FADE_LENGTH, remaining));
+        }
+        sample.half = half;
+    });
+    return samples;
+});
+/**
+ * Areas (axis-aligned squares) along the roads that decorations keep clear of.
+ */
+function getRoadClearAreas() {
+    var areas = [];
+    for (var _i = 0, ROAD_SAMPLES_1 = ROAD_SAMPLES; _i < ROAD_SAMPLES_1.length; _i++) {
+        var samples = ROAD_SAMPLES_1[_i];
+        for (var i = 0; i < samples.length; i += 3) {
+            var s = samples[i];
+            var half = s.half + EDGE_MARGIN + 1.5;
+            areas.push({ minX: s.x - half, maxX: s.x + half, minZ: s.z - half, maxZ: s.z + half });
+        }
+    }
+    return areas;
+}
+function createRoadNetwork(scene, cobbles, pebbles) {
+    var random = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRandom)(31);
+    var pebbleMatrices = pebbles.map(function () { return []; });
+    var addPebble = function (x, z) {
+        if ((0,_playground__WEBPACK_IMPORTED_MODULE_1__.getPlaygroundHeight)(x, z) > 0) {
+            return;
+        }
+        var size = 0.45 + (random() * 0.45);
+        pebbleMatrices[Math.floor(random() * pebbles.length)].push(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Matrix.Compose(new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(size, size * 0.55, size), _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Quaternion.RotationYawPitchRoll(random() * Math.PI * 2, 0, 0), new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(x, GROUND_Y + 0.05, z)));
+    };
+    var surfaces = [];
+    ROAD_SAMPLES.forEach(function (samples, roadIndex) {
+        var road = ROADS[roadIndex];
+        surfaces.push.apply(surfaces, buildSlabs("road-".concat(road.name), samples, !!road.main, random, scene));
+        var _loop_1 = function (side) {
+            var edgeOffset = 0.8;
+            var points = samples.map(function (s) { return ({
+                x: s.x - (s.dz * side * (s.half + edgeOffset)),
+                z: s.z + (s.dx * side * (s.half + edgeOffset)),
+                nx: -s.dz * side,
+                nz: s.dx * side,
+            }); });
+            if (road.closed) {
+                points.push(points[0]);
+            }
+            for (var _b = 0, _c = splitRuns(points, function (p) { return !isInsideOtherRoad(p.x, p.z, roadIndex); }); _b < _c.length; _b++) {
+                var run = _c[_b];
+                for (var _d = 0, run_1 = run; _d < run_1.length; _d++) {
+                    var p = run_1[_d];
+                    if (random() < 0.18) {
+                        var out = random() * 1.4;
+                        addPebble(p.x + (p.nx * out), p.z + (p.nz * out));
+                    }
+                }
+            }
+        };
+        // A loose scatter of pebbles along both edges (not where another road joins).
+        for (var _i = 0, _a = [-1, 1]; _i < _a.length; _i++) {
+            var side = _a[_i];
+            _loop_1(side);
+        }
+        if (road.fadeOut) {
+            surfaces.push.apply(surfaces, buildSteppingStones(road.name, samples, random, scene));
+        }
+    });
+    var roadMesh = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Mesh.MergeMeshes(surfaces, true, true);
+    if (roadMesh) {
+        roadMesh.name = "road-network";
+        roadMesh.material = cobbles;
+        roadMesh.isPickable = false;
+    }
+    pebbles.forEach(function (mesh, i) { return (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.addThinInstances)(mesh, pebbleMatrices[i]); });
+}
+// ==================================================================== Geometry
+/**
+ * Where a path fades out: flat cobble stones continuing along its direction, getting smaller and
+ * further apart and wandering a little to the sides.
+ */
+function buildSteppingStones(name, samples, random, scene) {
+    var end = samples[samples.length - 1];
+    var stones = [];
+    var distance = 1.5;
+    for (var i = 0; i < 9; i++) {
+        var t = i / 8;
+        var sideways = (random() - 0.5) * (2.4 + (t * 2));
+        var x = end.x + (end.dx * distance) - (end.dz * sideways);
+        var z = end.z + (end.dz * distance) + (end.dx * sideways);
+        var radius = (1.5 - (t * 0.8)) * (0.85 + (random() * 0.3));
+        stones.push(buildDisc("road-".concat(name, "-stone-").concat(i), x, z, radius, radius * (0.75 + (random() * 0.25)), random() * Math.PI, ROAD_Y, scene));
+        distance += 2.4 + (t * 2.6) + (random() * 0.8);
+    }
+    return stones;
+}
+/** Catmull-Rom curve through the points (optionally closed), resampled at even spacing. */
+function sampleCurve(points, spacing, closed) {
+    var dense = [];
+    var p = points.map(function (_a) {
+        var x = _a[0], z = _a[1];
+        return new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector2(x, z);
+    });
+    var n = p.length;
+    var at = function (i) { return (closed ? p[((i % n) + n) % n] : p[Math.max(0, Math.min(n - 1, i))]); };
+    var segments = closed ? n : n - 1;
+    for (var i = 0; i < segments; i++) {
+        for (var t = 0; t < 1; t += 0.02) {
+            dense.push(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector2.CatmullRom(at(i - 1), at(i), at(i + 1), at(i + 2), t));
+        }
+    }
+    dense.push(closed ? p[0] : p[n - 1]);
+    var samples = [dense[0]];
+    var carried = 0;
+    for (var i = 1; i < dense.length; i++) {
+        var from = dense[i - 1];
+        var to = dense[i];
+        var segment = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector2.Distance(from, to);
+        while (carried + segment >= spacing) {
+            var t = (spacing - carried) / segment;
+            var point = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector2.Lerp(from, to, t);
+            samples.push(point);
+            segment -= spacing - carried;
+            from = point;
+            carried = 0;
+        }
+        carried += segment;
+    }
+    if (!closed && _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector2.Distance(samples[samples.length - 1], dense[dense.length - 1]) > spacing * 0.3) {
+        samples.push(dense[dense.length - 1]);
+    }
+    var count = samples.length;
+    return samples.map(function (point, i) {
+        var prev = closed ? samples[(i - 1 + count) % count] : samples[Math.max(0, i - 1)];
+        var next = closed ? samples[(i + 1) % count] : samples[Math.min(count - 1, i + 1)];
+        var direction = next.subtract(prev).normalize();
+        return { x: point.x, z: point.y, dx: direction.x, dz: direction.y, half: 0 };
+    });
+}
+/** True if a point lies on another road's surface. */
+function isInsideOtherRoad(x, z, roadIndex) {
+    return ROAD_SAMPLES.some(function (samples, i) {
+        if (i === roadIndex) {
+            return false;
+        }
+        var segments = ROADS[i].closed ? samples.length : samples.length - 1;
+        for (var k = 0; k < segments; k++) {
+            var a = samples[k];
+            var b = samples[(k + 1) % samples.length];
+            var abx = b.x - a.x;
+            var abz = b.z - a.z;
+            var t = Math.max(0, Math.min(1, (((x - a.x) * abx) + ((z - a.z) * abz)) / ((abx * abx) + (abz * abz) || 1)));
+            var half = a.half + ((b.half - a.half) * t);
+            if (Math.hypot(x - (a.x + (abx * t)), z - (a.z + (abz * t))) < half + 0.4) {
+                return true;
+            }
+        }
+        return false;
+    });
+}
+/** Splits a sequence of points into the runs where `keep` holds. */
+function splitRuns(points, keep) {
+    var runs = [];
+    var current = [];
+    for (var _i = 0, points_1 = points; _i < points_1.length; _i++) {
+        var point = points_1[_i];
+        if (keep(point)) {
+            current.push(point);
+        }
+        else if (current.length) {
+            runs.push(current);
+            current = [];
+        }
+    }
+    if (current.length) {
+        runs.push(current);
+    }
+    return runs;
+}
+/**
+ * The road surface as separate paving slabs along the samples. Each slab covers a few samples,
+ * is pulled back a little at both ends (leaving a strip of grass to the next one) and has a
+ * slightly ragged outer edge. The main road has two rows of slabs split down the middle, with the
+ * joints staggered; side paths have one row, wider gaps and the occasional missing slab.
+ */
+function buildSlabs(name, samples, main, random, scene) {
+    var slabs = [];
+    // Rows across the road, as fractions of the half-width (-1 = left edge, 1 = right edge).
+    var rows = main
+        ? [{ from: -1, to: -0.03 }, { from: 0.03, to: 1 }]
+        : [{ from: -1, to: 1 }];
+    rows.forEach(function (row, rowIndex) {
+        // Stagger the joints between rows.
+        var start = main && rowIndex === 1 ? 2 : 0;
+        while (start < samples.length - 1) {
+            var span = main ? 4 + Math.floor(random() * 3) : 3 + Math.floor(random() * 3);
+            var end = Math.min(samples.length - 1, start + span);
+            var skip = !main && random() < 0.1;
+            if (!skip && end - start >= 1) {
+                var gap = main ? 0.35 + (random() * 0.25) : 0.55 + (random() * 0.5);
+                var narrow = main ? 1 : 0.88 + (random() * 0.12);
+                slabs.push(buildSlab("".concat(name, "-slab-").concat(rowIndex, "-").concat(start), samples.slice(start, end + 1), row, gap, narrow, random, scene));
+            }
+            start = end;
+        }
+    });
+    return slabs;
+}
+function buildSlab(name, run, row, gap, narrow, random, scene) {
+    var positions = [];
+    var normals = [];
+    var uvs = [];
+    var indices = [];
+    var last = run.length - 1;
+    run.forEach(function (s, i) {
+        // Pull the ends in along the road to leave a gap to the next slab.
+        var pull = i === 0 ? gap / 2 : i === last ? -gap / 2 : 0;
+        var cx = s.x + (s.dx * pull);
+        var cz = s.z + (s.dz * pull);
+        for (var _i = 0, _a = [row.from, row.to]; _i < _a.length; _i++) {
+            var edge = _a[_i];
+            // Outer edges are a little ragged; the joint down the middle stays straight.
+            var outer = Math.abs(edge) > 0.5;
+            var offset = s.half * narrow * edge + (outer ? Math.sign(edge) * (random() - 0.6) * 0.5 : 0);
+            var x = cx - (s.dz * offset);
+            var z = cz + (s.dx * offset);
+            positions.push(x, ROAD_Y, z);
+            normals.push(0, 1, 0);
+            uvs.push(x / TEXTURE_SIZE, z / TEXTURE_SIZE);
+        }
+    });
+    for (var i = 0; i < last; i++) {
+        var a = i * 2;
+        (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.pushOrientedTriangle)(indices, positions, normals, a, a + 1, a + 2);
+        (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.pushOrientedTriangle)(indices, positions, normals, a + 1, a + 3, a + 2);
+    }
+    return (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.buildMesh)(name, positions, normals, indices, scene, uvs);
+}
+/** Flat (slightly oval) disc with world-space UVs, used for the stepping stones. */
+function buildDisc(name, cx, cz, radiusX, radiusZ, rotation, y, scene) {
+    var positions = [cx, y, cz];
+    var normals = [0, 1, 0];
+    var uvs = [cx / TEXTURE_SIZE, cz / TEXTURE_SIZE];
+    var indices = [];
+    var steps = 14;
+    var cos = Math.cos(rotation);
+    var sin = Math.sin(rotation);
+    for (var i = 0; i < steps; i++) {
+        var angle = (i / steps) * Math.PI * 2;
+        var lx = Math.cos(angle) * radiusX;
+        var lz = Math.sin(angle) * radiusZ;
+        var x = cx + (lx * cos) - (lz * sin);
+        var z = cz + (lx * sin) + (lz * cos);
+        positions.push(x, y, z);
+        normals.push(0, 1, 0);
+        uvs.push(x / TEXTURE_SIZE, z / TEXTURE_SIZE);
+    }
+    for (var i = 0; i < steps; i++) {
+        (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.pushOrientedTriangle)(indices, positions, normals, 0, 1 + i, 1 + ((i + 1) % steps));
+    }
+    return (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.buildMesh)(name, positions, normals, indices, scene, uvs);
+}
+function smoothStep(edge0, edge1, value) {
+    var t = Math.max(0, Math.min(1, (value - edge0) / (edge1 - edge0)));
+    return t * t * (3 - (2 * t));
 }
 
 
@@ -7244,4 +7438,4 @@ function addBullseye(scene, id, parent, y, materials) {
 /***/ }
 
 }]);
-//# sourceMappingURL=src_scenes_tools_ts.b83b479dc6ffa7d7abd9.js.map
+//# sourceMappingURL=src_scenes_tools_ts.b56e2091391a962710be.js.map
