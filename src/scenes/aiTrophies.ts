@@ -61,7 +61,7 @@ const SPOTS: Spot[] = [
     { logo: "gemini", label: "Gemini", x: 31, z: 124, yawOffset: -0.1, pushable: true, scale: STANDING_SCALE },
     { logo: "mistral", label: "Mistral", x: 30, z: -4, yawOffset: 0.08, pushable: true, scale: STANDING_SCALE },
     { logo: "deepseek", label: "DeepSeek", x: -48, z: 40, yawOffset: -0.12, pushable: true, scale: STANDING_SCALE },
-    { logo: "huggingface", label: "Hugging Face", x: 64, z: -72, yawOffset: 0.14, pushable: true, scale: STANDING_SCALE },
+    { logo: "huggingface", label: "Hugging Face", x: 72, z: -100, yawOffset: 0.14, pushable: true, scale: STANDING_SCALE },
 ];
 
 export function createAiTrophies(scene: BABYLON.Scene): void {

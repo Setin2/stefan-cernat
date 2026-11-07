@@ -1,6 +1,7 @@
 import * as BABYLON from "@babylonjs/core";
 
 import { createLumpyBall, createRandom, createTemplate, createToyMaterial } from "./toyStyle";
+import { addStaticBox } from "./staticBodies";
 
 /**
  * Toy-style cherry blossom trees: a smooth tapered trunk with a root flare and two branches, a
@@ -39,7 +40,15 @@ export const TREE_POSITIONS = [
     new BABYLON.Vector3(-39.5430, 5.1848, -44.9435),
     new BABYLON.Vector3(-54.0394, 5.1848, -22.0382),
     new BABYLON.Vector3(57.1332, 5.1848, 77.0256),
+    // A few more towards the edges of the play area, away from the paths.
+    new BABYLON.Vector3(-72, 5.1848, 98),
+    new BABYLON.Vector3(-118, 5.1848, 62),
+    new BABYLON.Vector3(100, 5.1848, 72),
+    new BABYLON.Vector3(162, 5.1848, -58),
 ];
+
+/** Trees further than this from the tank stop swaying and dropping petals (nobody sees them). */
+const ANIMATION_DISTANCE = 160;
 
 const PALETTE = {
     bark: "#5E4436",
@@ -56,19 +65,39 @@ export function instantiateTrees(_this: TreeContext): void {
 
     const templates = createTreeTemplates(scene);
     const petalTexture = createPetalTexture(scene);
-    const swayingCanopies: { node: BABYLON.TransformNode; phase: number }[] = [];
+    const swayingCanopies: { node: BABYLON.TransformNode; phase: number; position: BABYLON.Vector3; petals: BABYLON.ParticleSystem; active: boolean }[] = [];
 
     treeCoordinates.forEach((position, index) => {
         const canopy = instantiateTree(templates, position, index, scene);
-        swayingCanopies.push({ node: canopy, phase: index * 1.7 });
-        createFallingPetals(scene, petalTexture, position, index);
+        const petals = createFallingPetals(scene, petalTexture, position, index);
+        swayingCanopies.push({ node: canopy, phase: index * 1.7, position, petals, active: true });
     });
 
-    // A slow breeze. The canopies pivot at the top of the trunk.
+    // A slow breeze. The canopies pivot at the top of the trunk. Only trees near the tank are
+    // animated; far ones keep still and stop dropping petals.
+    const tank = scene.getMeshByName("tank_holder");
     let time = 0;
+    let lastDistanceCheck = -1;
     scene.onBeforeRenderObservable.add(() => {
         time += scene.getEngine().getDeltaTime() / 1000;
-        for (const { node, phase } of swayingCanopies) {
+        if (tank && time - lastDistanceCheck > 0.5) {
+            lastDistanceCheck = time;
+            for (const tree of swayingCanopies) {
+                const near = Math.hypot(tree.position.x - tank.position.x, tree.position.z - tank.position.z) < ANIMATION_DISTANCE;
+                if (near !== tree.active) {
+                    tree.active = near;
+                    if (near) {
+                        tree.petals.start();
+                    } else {
+                        tree.petals.stop();
+                    }
+                }
+            }
+        }
+        for (const { node, phase, active } of swayingCanopies) {
+            if (!active) {
+                continue;
+            }
             node.rotation.z = Math.sin((time * 0.7) + phase) * 0.018;
             node.rotation.x = Math.sin((time * 0.53) + (phase * 1.3)) * 0.012;
         }
@@ -211,7 +240,11 @@ function instantiateTree(templates: TreeTemplates, position: BABYLON.Vector3, in
         mesh.computeWorldMatrix(true);
     });
 
-    trunk.physicsImpostor = new BABYLON.PhysicsImpostor(trunk, BABYLON.PhysicsImpostor.BoxImpostor, { mass: 0, restitution: 0 }, scene);
+    // Solid trunk (a plain static body: it never moves).
+    trunk.computeWorldMatrix(true);
+    const trunkBox = trunk.getBoundingInfo().boundingBox;
+    const trunkSize = trunkBox.maximumWorld.subtract(trunkBox.minimumWorld);
+    addStaticBox(scene, trunkBox.centerWorld, trunkSize.x, trunkSize.y, trunkSize.z);
 
     return canopy;
 }
@@ -219,7 +252,7 @@ function instantiateTree(templates: TreeTemplates, position: BABYLON.Vector3, in
 /**
  * A few petals drifting down from each canopy.
  */
-function createFallingPetals(scene: BABYLON.Scene, texture: BABYLON.Texture, treePosition: BABYLON.Vector3, index: number): void {
+function createFallingPetals(scene: BABYLON.Scene, texture: BABYLON.Texture, treePosition: BABYLON.Vector3, index: number): BABYLON.ParticleSystem {
     const petals = new BABYLON.ParticleSystem(`tree-petals-${index}`, 40, scene);
     petals.particleTexture = texture;
     petals.emitter = treePosition.add(new BABYLON.Vector3(0, CANOPY_PIVOT_Y + 8, 0));
@@ -249,6 +282,7 @@ function createFallingPetals(scene: BABYLON.Scene, texture: BABYLON.Texture, tre
     petals.preWarmCycles = 120;
     petals.preWarmStepOffset = 5;
     petals.start();
+    return petals;
 }
 
 /** Soft petal shape drawn once into a small texture. */

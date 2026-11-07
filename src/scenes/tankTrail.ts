@@ -60,6 +60,9 @@ export function createTankTrail(scene: BABYLON.Scene, holder: BABYLON.AbstractMe
     }
 
     const lastPosition = holder.position.clone();
+    // Height of the holder when on the ground; above it the tank is on a ramp or in the air, and
+    // leaves no prints or dust (they would end up inside the ramp or on the ground below).
+    const groundedY = holder.position.y;
     const lastPrintPosition = holder.position.clone();
     const forward = new BABYLON.Vector3();
     let time = 0;
@@ -68,10 +71,11 @@ export function createTankTrail(scene: BABYLON.Scene, holder: BABYLON.AbstractMe
         const deltaSeconds = Math.min(scene.getEngine().getDeltaTime() / 1000, 0.1);
         time += deltaSeconds;
 
-        const moved = BABYLON.Vector3.Distance(holder.position, lastPosition);
+        const moved = Math.hypot(holder.position.x - lastPosition.x, holder.position.z - lastPosition.z);
         const speed = deltaSeconds > 0 ? moved / deltaSeconds : 0;
         lastPosition.copyFrom(holder.position);
-        const driving = speed > MIN_SPEED;
+        const onGround = holder.position.y < groundedY + 0.3;
+        const driving = speed > MIN_SPEED && onGround;
 
         if (prints) {
             if (!driving) {

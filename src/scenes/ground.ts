@@ -1,20 +1,22 @@
 import * as BABYLON from "@babylonjs/core";
 
+import { PLAYGROUND_LANES } from "./playground";
+import { addStaticSphere } from "./staticBodies";
 import { addThinInstances, createLumpyBall, createRandom, createTemplate, createToyMaterial } from "./toyStyle";
 
 /**
  * Gives the flat ground some character without changing its shape: a soft play-mat texture, and
- * small decorations scattered around (pebbles, fallen petals under the trees, toy flowers and a few
- * rounded bushes).
+ * decorations scattered around (bushes, boulders, pebbles, fallen petals under the trees and toy
+ * flowers).
  *
  * Everything is placed from a fixed seed, so the layout is the same on every visit, and kept clear
- * of gameplay objects (anything with a physics body, the roads, signs and the spawn area). Only the
- * bushes are solid.
+ * of gameplay objects (anything with a physics body, the roads, signs and the spawn area). The
+ * bushes and boulders are solid.
  */
 
 const GROUND_Y = -0.5;
 /** Decorations are scattered within this distance of the world origin. */
-const SCATTER_RADIUS = 175;
+const SCATTER_RADIUS = 230;
 /** Keep the area around the tank's spawn point clear. */
 const SPAWN_CLEAR_RADIUS = 28;
 
@@ -29,6 +31,7 @@ const PALETTE = {
     flowerCenter: "#D9A13B",
     flowers: ["#F3C6D1", "#F4EBDD", "#E9AFBF"],
     bushes: ["#6E9F7E", "#5B8C70", "#82B08F"],
+    boulders: ["#B8B1A3", "#9C968A", "#CFC7B8"],
 };
 
 type Area = { minX: number; maxX: number; minZ: number; maxZ: number };
@@ -138,7 +141,7 @@ function scatterDecorations(scene: BABYLON.Scene, treePositions: BABYLON.Vector3
         createLumpyBall(`deco-bush-puff-${i}`, scene, random),
         createToyMaterial(scene, `toy-bush-${i}`, hex, { roughness: 0.6, clearCoat: 0.15 }),
     ));
-    for (let i = 0; i < 12; i++) {
+    for (let i = 0; i < 20; i++) {
         const spot = randomSpot(9, 45);
         if (!spot) {
             continue;
@@ -161,12 +164,28 @@ function scatterDecorations(scene: BABYLON.Scene, treePositions: BABYLON.Vector3
         }
 
         // A simple solid sphere so the tank bumps into the bush instead of driving through it.
-        const collider = BABYLON.MeshBuilder.CreateSphere(`deco-bush-collider-${i}`, { diameter: 7, segments: 4 }, scene);
-        collider.position.set(spot.x, GROUND_Y + 2, spot.y);
-        collider.isVisible = false;
-        collider.isPickable = false;
-        collider.physicsImpostor = new BABYLON.PhysicsImpostor(collider, BABYLON.PhysicsImpostor.SphereImpostor, { mass: 0, restitution: 0 }, scene);
+        addStaticSphere(scene, new BABYLON.Vector3(spot.x, GROUND_Y + 2, spot.y), 3.5);
         blocked.push({ minX: spot.x - 4, maxX: spot.x + 4, minZ: spot.y - 4, maxZ: spot.y + 4 });
+    }
+
+    // ---- Boulders: big solid rocks to steer around.
+    const boulderMaterials = PALETTE.boulders.map((hex, i) => createToyMaterial(scene, `toy-boulder-${i}`, hex, { roughness: 0.7, clearCoat: 0.15 }));
+    for (let i = 0; i < 10; i++) {
+        const spot = randomSpot(8, 50);
+        if (!spot) {
+            continue;
+        }
+        const size = 2.6 + (random() * 2.6);
+        const boulder = createLumpyBall(`deco-boulder-${i}`, scene, random, 2.2, 2);
+        boulder.material = boulderMaterials[i % boulderMaterials.length];
+        boulder.scaling.set(size * (1 + (random() * 0.4)), size * 0.75, size);
+        boulder.rotation.y = random() * Math.PI * 2;
+        boulder.position.set(spot.x, GROUND_Y + (size * 0.45), spot.y);
+        boulder.isPickable = false;
+
+        addStaticSphere(scene, boulder.position, size);
+        const margin = size + 1;
+        blocked.push({ minX: spot.x - margin, maxX: spot.x + margin, minZ: spot.y - margin, maxZ: spot.y + margin });
     }
 
     // ---- Pebbles, alone and in small groups.
@@ -176,7 +195,7 @@ function scatterDecorations(scene: BABYLON.Scene, treePositions: BABYLON.Vector3
         return pebble;
     });
     const pebbleMatrices: BABYLON.Matrix[][] = pebbleMeshes.map(() => []);
-    for (let group = 0; group < 70; group++) {
+    for (let group = 0; group < 95; group++) {
         const spot = randomSpot(2);
         if (!spot) {
             continue;
@@ -225,7 +244,7 @@ function scatterDecorations(scene: BABYLON.Scene, treePositions: BABYLON.Vector3
     // ---- Toy flowers in little clusters.
     const flowerMeshes = PALETTE.flowers.map((hex, i) => createFlowerMesh(scene, `deco-flower-${i}`, hex));
     const flowerMatrices: BABYLON.Matrix[][] = flowerMeshes.map(() => []);
-    for (let cluster = 0; cluster < 18; cluster++) {
+    for (let cluster = 0; cluster < 26; cluster++) {
         const spot = randomSpot(4);
         if (!spot) {
             continue;
@@ -257,7 +276,8 @@ function scatterDecorations(scene: BABYLON.Scene, treePositions: BABYLON.Vector3
 function collectBlockedAreas(scene: BABYLON.Scene): Area[] {
     const tank = scene.getMeshByName("tank_holder");
     const ignored = /^(ground|tank_holder|splatter\d*|ball|deco-|ground-petal)/;
-    const areas: Area[] = [];
+    // The ramps' run-up lanes stay clear too.
+    const areas: Area[] = PLAYGROUND_LANES.map((lane) => ({ ...lane }));
     for (const mesh of scene.meshes) {
         if (!mesh.isEnabled() || ignored.test(mesh.name) || (tank && mesh.isDescendantOf(tank))) {
             continue;

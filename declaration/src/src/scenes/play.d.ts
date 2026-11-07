@@ -53,6 +53,12 @@ export default class Play extends Node {
      * equal sub-steps of at most 1/120s keeps the simulation stable at any frame rate while still
      * advancing exactly the frame's time, so motion stays smooth.
      */
+    /**
+     * Babylon copies every physics body's transform to its mesh (and back) on every physics step.
+     * Bodies that cannon.js has put to sleep (settled bricks, cones, trophies) don't move, so that
+     * work is skipped for them until something wakes them up.
+     */
+    private skipSleepingBodySync;
     private configurePhysicsSubsteps;
     /**
      * Initializes textures manually to keep them loading reliably in production builds.

@@ -15,6 +15,7 @@ import { createAiTrophies } from "./aiTrophies";
 import { createWaypointSigns } from "./waypointSigns";
 import { createTankTrail } from "./tankTrail";
 import { createClouds } from "./clouds";
+import { collideWithRamps, createPlayground } from "./playground";
 import { UI, createCard, createKeycap, createRow, createSpacer, createText, refreshWhenFontLoaded, type GuiModule } from "./uiStyle";
 import { initializeShadows } from "./shadows";
 
@@ -74,6 +75,7 @@ export default class Play extends Node {
         this.easterEgg();
         this.play();
         this.optimizeScene();
+        this.skipSleepingBodySync();
 
         this.onDisposeObservable.addOnce(() => {
             this.disposeControlOverlay();
@@ -106,10 +108,18 @@ export default class Play extends Node {
             console.error("AI trophies failed", error);
         }
         createWaypointSigns(this.scene);
+        try {
+            createPlayground(this.scene);
+        } catch (error) {
+            console.error("Playground failed", error);
+        }
         instantiateBricks({ scene: this.scene, tank: this.tank, brickSound: this.brickSound }, -5, 8, -30, 3, [6, 6, 4, 2], 0);
         // Center and angle match where this wall has always been placed (it was previously
         // built at (130, -50) and then rotated 300 rad around the world origin).
         instantiateBricks({ scene: this.scene, tank: this.tank, brickSound: this.brickSound }, 47.1152, 8, 131.0731, 4, [6, 6, 6, 4], 4.6903);
+        // New brick builds to knock over: a pyramid south of the start and a tower in the north-west.
+        instantiateBricks({ scene: this.scene, tank: this.tank, brickSound: this.brickSound }, 25, 8, -100, 5, [5, 4, 3, 2, 1], 0.3);
+        instantiateBricks({ scene: this.scene, tank: this.tank, brickSound: this.brickSound }, -64, 8, 76, 6, [1, 1, 1, 1, 1, 1], 0.4);
         // After the bricks: walls measure the ground height with a ray, and decorations avoid them.
         decorateGround(this.scene, TREE_POSITIONS);
         try {
@@ -246,6 +256,38 @@ export default class Play extends Node {
      * equal sub-steps of at most 1/120s keeps the simulation stable at any frame rate while still
      * advancing exactly the frame's time, so motion stays smooth.
      */
+    /**
+     * Babylon copies every physics body's transform to its mesh (and back) on every physics step.
+     * Bodies that cannon.js has put to sleep (settled bricks, cones, trophies) don't move, so that
+     * work is skipped for them until something wakes them up.
+     */
+    private skipSleepingBodySync(): void {
+        const SLEEPING = 2;
+        for (const impostor of this.scene.getPhysicsEngine()?.getImpostors() ?? []) {
+            const body = impostor.physicsBody as { sleepState?: number } | null;
+            if (!body || impostor.mass === 0 || impostor.object === this.tank) {
+                continue;
+            }
+            // Loose objects also land on and bump into the ramps (the tank rides them instead).
+            collideWithRamps(impostor);
+            const beforeStep = impostor.beforeStep;
+            const afterStep = impostor.afterStep;
+            // The two always run as a pair (a body can fall asleep during the step).
+            let synced = false;
+            impostor.beforeStep = () => {
+                synced = body.sleepState !== SLEEPING;
+                if (synced) {
+                    beforeStep();
+                }
+            };
+            impostor.afterStep = () => {
+                if (synced) {
+                    afterStep();
+                }
+            };
+        }
+    }
+
     private configurePhysicsSubsteps(): void {
         const plugin = this.scene.getPhysicsEngine()?.getPhysicsPlugin();
         if (!plugin) {

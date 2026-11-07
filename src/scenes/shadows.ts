@@ -42,6 +42,8 @@ export type ShadowOptions = {
 export function initializeShadows(scene: BABYLON.Scene, options: ShadowOptions): BABYLON.ShadowGenerator | null {
     const sun = setUpLights(scene);
     const generator = createGenerator(scene, sun, options);
+    /** Every mesh that casts a shadow; see refreshCasters below for which are drawn. */
+    const casters: BABYLON.AbstractMesh[] = [];
 
     const isCaster = (mesh: BABYLON.AbstractMesh): boolean => {
         // Physics colliders are hidden with visibility 0, which still renders into shadow maps.
@@ -66,7 +68,7 @@ export function initializeShadows(scene: BABYLON.Scene, options: ShadowOptions):
             mesh.sourceMesh.receiveShadows = true;
         }
         if (isCaster(mesh)) {
-            generator.addShadowCaster(mesh, false);
+            casters.push(mesh);
         }
     };
 
@@ -81,11 +83,49 @@ export function initializeShadows(scene: BABYLON.Scene, options: ShadowOptions):
         // Wait a frame: the mesh gets its material, position and visibility after creation.
         scene.onAfterRenderObservable.addOnce(() => {
             if (!mesh.isDisposed() && isCaster(mesh)) {
-                generator.addShadowCaster(mesh, false);
+                casters.push(mesh);
+                refreshCasters();
             }
         });
     });
     scene.onDisposeObservable.addOnce(() => scene.onNewMeshAddedObservable.remove(added));
+
+    // Only the casters inside (or near) the area the shadow map currently covers are drawn into
+    // it; the rest of the world is skipped. The list is refreshed a few times a second as the map
+    // follows the camera.
+    const map = generator.getShadowMap();
+    const point = new BABYLON.Vector3();
+    const refreshCasters = () => {
+        if (!map) {
+            return;
+        }
+        const transform = generator.getTransformMatrix();
+        const visible: BABYLON.AbstractMesh[] = [];
+        for (let i = casters.length - 1; i >= 0; i--) {
+            const mesh = casters[i];
+            if (mesh.isDisposed()) {
+                casters.splice(i, 1);
+                continue;
+            }
+            const sphere = mesh.getBoundingInfo().boundingSphere;
+            BABYLON.Vector3.TransformCoordinatesToRef(sphere.centerWorld, transform, point);
+            const margin = 1 + (sphere.radiusWorld / SHADOW_HALF_SIZE) + 0.05;
+            if (Math.abs(point.x) <= margin && Math.abs(point.y) <= margin) {
+                visible.push(mesh);
+            }
+        }
+        map.renderList = visible;
+    };
+    let sinceRefresh = 0;
+    const refreshObserver = scene.onBeforeRenderObservable.add(() => {
+        sinceRefresh += scene.getEngine().getDeltaTime();
+        if (sinceRefresh >= 250) {
+            sinceRefresh = 0;
+            refreshCasters();
+        }
+    });
+    scene.onDisposeObservable.addOnce(() => scene.onBeforeRenderObservable.remove(refreshObserver));
+    refreshCasters();
 
     return generator;
 }
@@ -128,6 +168,10 @@ function createGenerator(scene: BABYLON.Scene, sun: BABYLON.DirectionalLight, op
 
     const generator = new BABYLON.ShadowGenerator(SHADOW_MAP_SIZE, sun);
     applyCommonSettings(generator);
+    // Fade shadows out towards the edge of the map. Without it, a tall object touching the edge
+    // smears its shadow across everything beyond the map (the ground there keeps sampling the
+    // edge pixels), which shows up as long dark streaks in the distance.
+    generator.frustumEdgeFalloff = 0.25;
 
     // Centre the map a little ahead of the focus point, in the direction the camera looks, and
     // snap it to whole texels so shadow edges don't shimmer while driving.

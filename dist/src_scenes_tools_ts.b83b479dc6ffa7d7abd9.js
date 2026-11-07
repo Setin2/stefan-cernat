@@ -64,7 +64,7 @@ var SPOTS = [
     { logo: "gemini", label: "Gemini", x: 31, z: 124, yawOffset: -0.1, pushable: true, scale: STANDING_SCALE },
     { logo: "mistral", label: "Mistral", x: 30, z: -4, yawOffset: 0.08, pushable: true, scale: STANDING_SCALE },
     { logo: "deepseek", label: "DeepSeek", x: -48, z: 40, yawOffset: -0.12, pushable: true, scale: STANDING_SCALE },
-    { logo: "huggingface", label: "Hugging Face", x: 64, z: -72, yawOffset: 0.14, pushable: true, scale: STANDING_SCALE },
+    { logo: "huggingface", label: "Hugging Face", x: 72, z: -100, yawOffset: 0.14, pushable: true, scale: STANDING_SCALE },
 ];
 function createAiTrophies(scene) {
     removeFigures(scene);
@@ -1420,21 +1420,36 @@ function restyleTrophy(scene) {
 /* harmony export */   decorateGround: () => (/* binding */ decorateGround)
 /* harmony export */ });
 /* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core */ "./node_modules/@babylonjs/core/index.js");
-/* harmony import */ var _toyStyle__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./toyStyle */ "./src/scenes/toyStyle.ts");
+/* harmony import */ var _playground__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./playground */ "./src/scenes/playground.ts");
+/* harmony import */ var _staticBodies__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./staticBodies */ "./src/scenes/staticBodies.ts");
+/* harmony import */ var _toyStyle__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./toyStyle */ "./src/scenes/toyStyle.ts");
+var __assign = (undefined && undefined.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
+
+
 
 
 /**
  * Gives the flat ground some character without changing its shape: a soft play-mat texture, and
- * small decorations scattered around (pebbles, fallen petals under the trees, toy flowers and a few
- * rounded bushes).
+ * decorations scattered around (bushes, boulders, pebbles, fallen petals under the trees and toy
+ * flowers).
  *
  * Everything is placed from a fixed seed, so the layout is the same on every visit, and kept clear
- * of gameplay objects (anything with a physics body, the roads, signs and the spawn area). Only the
- * bushes are solid.
+ * of gameplay objects (anything with a physics body, the roads, signs and the spawn area). The
+ * bushes and boulders are solid.
  */
 var GROUND_Y = -0.5;
 /** Decorations are scattered within this distance of the world origin. */
-var SCATTER_RADIUS = 175;
+var SCATTER_RADIUS = 230;
 /** Keep the area around the tank's spawn point clear. */
 var SPAWN_CLEAR_RADIUS = 28;
 var PALETTE = {
@@ -1448,6 +1463,7 @@ var PALETTE = {
     flowerCenter: "#D9A13B",
     flowers: ["#F3C6D1", "#F4EBDD", "#E9AFBF"],
     bushes: ["#6E9F7E", "#5B8C70", "#82B08F"],
+    boulders: ["#B8B1A3", "#9C968A", "#CFC7B8"],
 };
 function decorateGround(scene, treePositions) {
     try {
@@ -1483,7 +1499,7 @@ function restyleGroundMaterial(scene) {
         }
     }
     // Foam speckle.
-    var random = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRandom)(3);
+    var random = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createRandom)(3);
     for (var i = 0; i < 2600; i++) {
         var light = random() > 0.5;
         context.fillStyle = light ? "rgba(255,255,255,0.06)" : "rgba(0,30,60,0.07)";
@@ -1519,7 +1535,7 @@ function restyleGroundMaterial(scene) {
 }
 // ==================================================================== Decorations
 function scatterDecorations(scene, treePositions) {
-    var random = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRandom)(2024);
+    var random = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createRandom)(2024);
     var blocked = collectBlockedAreas(scene);
     var isFree = function (x, z, margin) {
         if (Math.hypot(x, z) < SPAWN_CLEAR_RADIUS + margin) {
@@ -1541,8 +1557,8 @@ function scatterDecorations(scene, treePositions) {
         return null;
     };
     // ---- Bushes first (they are solid, so later decorations avoid them).
-    var bushTemplates = PALETTE.bushes.map(function (hex, i) { return (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createTemplate)((0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createLumpyBall)("deco-bush-puff-".concat(i), scene, random), (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-bush-".concat(i), hex, { roughness: 0.6, clearCoat: 0.15 })); });
-    for (var i = 0; i < 12; i++) {
+    var bushTemplates = PALETTE.bushes.map(function (hex, i) { return (0,_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createTemplate)((0,_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createLumpyBall)("deco-bush-puff-".concat(i), scene, random), (0,_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createToyMaterial)(scene, "toy-bush-".concat(i), hex, { roughness: 0.6, clearCoat: 0.15 })); });
+    for (var i = 0; i < 20; i++) {
         var spot = randomSpot(9, 45);
         if (!spot) {
             continue;
@@ -1563,21 +1579,35 @@ function scatterDecorations(scene, treePositions) {
             puff.isPickable = false;
         }
         // A simple solid sphere so the tank bumps into the bush instead of driving through it.
-        var collider = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateSphere("deco-bush-collider-".concat(i), { diameter: 7, segments: 4 }, scene);
-        collider.position.set(spot.x, GROUND_Y + 2, spot.y);
-        collider.isVisible = false;
-        collider.isPickable = false;
-        collider.physicsImpostor = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.PhysicsImpostor(collider, _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.PhysicsImpostor.SphereImpostor, { mass: 0, restitution: 0 }, scene);
+        (0,_staticBodies__WEBPACK_IMPORTED_MODULE_2__.addStaticSphere)(scene, new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(spot.x, GROUND_Y + 2, spot.y), 3.5);
         blocked.push({ minX: spot.x - 4, maxX: spot.x + 4, minZ: spot.y - 4, maxZ: spot.y + 4 });
+    }
+    // ---- Boulders: big solid rocks to steer around.
+    var boulderMaterials = PALETTE.boulders.map(function (hex, i) { return (0,_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createToyMaterial)(scene, "toy-boulder-".concat(i), hex, { roughness: 0.7, clearCoat: 0.15 }); });
+    for (var i = 0; i < 10; i++) {
+        var spot = randomSpot(8, 50);
+        if (!spot) {
+            continue;
+        }
+        var size = 2.6 + (random() * 2.6);
+        var boulder = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createLumpyBall)("deco-boulder-".concat(i), scene, random, 2.2, 2);
+        boulder.material = boulderMaterials[i % boulderMaterials.length];
+        boulder.scaling.set(size * (1 + (random() * 0.4)), size * 0.75, size);
+        boulder.rotation.y = random() * Math.PI * 2;
+        boulder.position.set(spot.x, GROUND_Y + (size * 0.45), spot.y);
+        boulder.isPickable = false;
+        (0,_staticBodies__WEBPACK_IMPORTED_MODULE_2__.addStaticSphere)(scene, boulder.position, size);
+        var margin = size + 1;
+        blocked.push({ minX: spot.x - margin, maxX: spot.x + margin, minZ: spot.y - margin, maxZ: spot.y + margin });
     }
     // ---- Pebbles, alone and in small groups.
     var pebbleMeshes = PALETTE.pebbles.map(function (hex, i) {
-        var pebble = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createLumpyBall)("deco-pebble-".concat(i), scene, random, 1.8, 2);
-        pebble.material = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-pebble-".concat(i), hex, { roughness: 0.65, clearCoat: 0.2 });
+        var pebble = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createLumpyBall)("deco-pebble-".concat(i), scene, random, 1.8, 2);
+        pebble.material = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createToyMaterial)(scene, "toy-pebble-".concat(i), hex, { roughness: 0.65, clearCoat: 0.2 });
         return pebble;
     });
     var pebbleMatrices = pebbleMeshes.map(function () { return []; });
-    for (var group = 0; group < 70; group++) {
+    for (var group = 0; group < 95; group++) {
         var spot = randomSpot(2);
         if (!spot) {
             continue;
@@ -1593,11 +1623,11 @@ function scatterDecorations(scene, treePositions) {
             pebbleMatrices[Math.floor(random() * pebbleMeshes.length)].push(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Matrix.Compose(new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(size, size * 0.6, size * (0.8 + (random() * 0.4))), _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Quaternion.RotationYawPitchRoll(random() * Math.PI * 2, 0, 0), new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(x, GROUND_Y + (size * 0.15), z)));
         }
     }
-    pebbleMeshes.forEach(function (mesh, i) { return (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.addThinInstances)(mesh, pebbleMatrices[i]); });
+    pebbleMeshes.forEach(function (mesh, i) { return (0,_toyStyle__WEBPACK_IMPORTED_MODULE_3__.addThinInstances)(mesh, pebbleMatrices[i]); });
     // ---- Fallen petals around each tree.
     var petalMeshes = PALETTE.petals.map(function (hex, i) {
         var petal = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder("ground-petal-".concat(i), { diameter: 1, height: 0.06, tessellation: 10 }, scene);
-        petal.material = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-ground-petal-".concat(i), hex, { roughness: 0.6 });
+        petal.material = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createToyMaterial)(scene, "toy-ground-petal-".concat(i), hex, { roughness: 0.6 });
         return petal;
     });
     var petalMatrices = petalMeshes.map(function () { return []; });
@@ -1613,11 +1643,11 @@ function scatterDecorations(scene, treePositions) {
             petalMatrices[Math.floor(random() * petalMeshes.length)].push(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Matrix.Compose(new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(size * 1.6, 1, size), _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Quaternion.RotationYawPitchRoll(random() * Math.PI * 2, (random() - 0.5) * 0.2, (random() - 0.5) * 0.2), new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(x, GROUND_Y + 0.03 + (random() * 0.02), z)));
         }
     }
-    petalMeshes.forEach(function (mesh, i) { return (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.addThinInstances)(mesh, petalMatrices[i]); });
+    petalMeshes.forEach(function (mesh, i) { return (0,_toyStyle__WEBPACK_IMPORTED_MODULE_3__.addThinInstances)(mesh, petalMatrices[i]); });
     // ---- Toy flowers in little clusters.
     var flowerMeshes = PALETTE.flowers.map(function (hex, i) { return createFlowerMesh(scene, "deco-flower-".concat(i), hex); });
     var flowerMatrices = flowerMeshes.map(function () { return []; });
-    for (var cluster = 0; cluster < 18; cluster++) {
+    for (var cluster = 0; cluster < 26; cluster++) {
         var spot = randomSpot(4);
         if (!spot) {
             continue;
@@ -1634,7 +1664,7 @@ function scatterDecorations(scene, treePositions) {
             flowerMatrices[random() < 0.75 ? colorIndex : Math.floor(random() * flowerMeshes.length)].push(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Matrix.Compose(new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(size, size * (0.8 + (random() * 0.5)), size), _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Quaternion.RotationYawPitchRoll(random() * Math.PI * 2, (random() - 0.5) * 0.25, (random() - 0.5) * 0.25), new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(x, GROUND_Y, z)));
         }
     }
-    flowerMeshes.forEach(function (mesh, i) { return (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.addThinInstances)(mesh, flowerMatrices[i]); });
+    flowerMeshes.forEach(function (mesh, i) { return (0,_toyStyle__WEBPACK_IMPORTED_MODULE_3__.addThinInstances)(mesh, flowerMatrices[i]); });
 }
 /**
  * Areas to keep clear: every visible object standing on the ground (buildings, props, trees,
@@ -1644,7 +1674,8 @@ function scatterDecorations(scene, treePositions) {
 function collectBlockedAreas(scene) {
     var tank = scene.getMeshByName("tank_holder");
     var ignored = /^(ground|tank_holder|splatter\d*|ball|deco-|ground-petal)/;
-    var areas = [];
+    // The ramps' run-up lanes stay clear too.
+    var areas = _playground__WEBPACK_IMPORTED_MODULE_1__.PLAYGROUND_LANES.map(function (lane) { return (__assign({}, lane)); });
     for (var _i = 0, _a = scene.meshes; _i < _a.length; _i++) {
         var mesh = _a[_i];
         if (!mesh.isEnabled() || ignored.test(mesh.name) || (tank && mesh.isDescendantOf(tank))) {
@@ -1666,9 +1697,9 @@ function collectBlockedAreas(scene) {
 }
 /** A small toy flower: stem, five rounded petals and a centre, merged into one mesh. */
 function createFlowerMesh(scene, name, petalHex) {
-    var stemMaterial = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "".concat(name, "-stem"), PALETTE.stem, { roughness: 0.6 });
-    var petalMaterial = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "".concat(name, "-petals"), petalHex, { roughness: 0.5, clearCoat: 0.3 });
-    var centerMaterial = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "".concat(name, "-center"), PALETTE.flowerCenter, { roughness: 0.45, clearCoat: 0.3 });
+    var stemMaterial = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createToyMaterial)(scene, "".concat(name, "-stem"), PALETTE.stem, { roughness: 0.6 });
+    var petalMaterial = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createToyMaterial)(scene, "".concat(name, "-petals"), petalHex, { roughness: 0.5, clearCoat: 0.3 });
+    var centerMaterial = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createToyMaterial)(scene, "".concat(name, "-center"), PALETTE.flowerCenter, { roughness: 0.45, clearCoat: 0.3 });
     var stem = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder("".concat(name, "-stem"), { diameter: 0.16, height: 1.4, tessellation: 6 }, scene);
     stem.position.y = 0.7;
     stem.material = stemMaterial;
@@ -2279,8 +2310,9 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _waypointSigns__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ./waypointSigns */ "./src/scenes/waypointSigns.ts");
 /* harmony import */ var _tankTrail__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ./tankTrail */ "./src/scenes/tankTrail.ts");
 /* harmony import */ var _clouds__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ./clouds */ "./src/scenes/clouds.ts");
-/* harmony import */ var _uiStyle__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ./uiStyle */ "./src/scenes/uiStyle.ts");
-/* harmony import */ var _shadows__WEBPACK_IMPORTED_MODULE_16__ = __webpack_require__(/*! ./shadows */ "./src/scenes/shadows.ts");
+/* harmony import */ var _playground__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ./playground */ "./src/scenes/playground.ts");
+/* harmony import */ var _uiStyle__WEBPACK_IMPORTED_MODULE_16__ = __webpack_require__(/*! ./uiStyle */ "./src/scenes/uiStyle.ts");
+/* harmony import */ var _shadows__WEBPACK_IMPORTED_MODULE_17__ = __webpack_require__(/*! ./shadows */ "./src/scenes/shadows.ts");
 var __extends = (undefined && undefined.__extends) || (function () {
     var extendStatics = function (d, b) {
         extendStatics = Object.setPrototypeOf ||
@@ -2349,6 +2381,7 @@ var __generator = (undefined && undefined.__generator) || function (thisArg, bod
 
 
 
+
 var Play = /** @class */ (function (_super) {
     __extends(Play, _super);
     // @ts-ignore Babylon attaches script classes without calling Node's public constructor shape.
@@ -2398,6 +2431,7 @@ var Play = /** @class */ (function (_super) {
         this.easterEgg();
         this.play();
         this.optimizeScene();
+        this.skipSleepingBodySync();
         this.onDisposeObservable.addOnce(function () {
             _this.disposeControlOverlay();
         });
@@ -2429,10 +2463,19 @@ var Play = /** @class */ (function (_super) {
             console.error("AI trophies failed", error);
         }
         (0,_waypointSigns__WEBPACK_IMPORTED_MODULE_12__.createWaypointSigns)(this.scene);
+        try {
+            (0,_playground__WEBPACK_IMPORTED_MODULE_15__.createPlayground)(this.scene);
+        }
+        catch (error) {
+            console.error("Playground failed", error);
+        }
         (0,_bricks__WEBPACK_IMPORTED_MODULE_4__.instantiateBricks)({ scene: this.scene, tank: this.tank, brickSound: this.brickSound }, -5, 8, -30, 3, [6, 6, 4, 2], 0);
         // Center and angle match where this wall has always been placed (it was previously
         // built at (130, -50) and then rotated 300 rad around the world origin).
         (0,_bricks__WEBPACK_IMPORTED_MODULE_4__.instantiateBricks)({ scene: this.scene, tank: this.tank, brickSound: this.brickSound }, 47.1152, 8, 131.0731, 4, [6, 6, 6, 4], 4.6903);
+        // New brick builds to knock over: a pyramid south of the start and a tower in the north-west.
+        (0,_bricks__WEBPACK_IMPORTED_MODULE_4__.instantiateBricks)({ scene: this.scene, tank: this.tank, brickSound: this.brickSound }, 25, 8, -100, 5, [5, 4, 3, 2, 1], 0.3);
+        (0,_bricks__WEBPACK_IMPORTED_MODULE_4__.instantiateBricks)({ scene: this.scene, tank: this.tank, brickSound: this.brickSound }, -64, 8, 76, 6, [1, 1, 1, 1, 1, 1], 0.4);
         // After the bricks: walls measure the ground height with a ray, and decorations avoid them.
         (0,_ground__WEBPACK_IMPORTED_MODULE_8__.decorateGround)(this.scene, _trees__WEBPACK_IMPORTED_MODULE_3__.TREE_POSITIONS);
         try {
@@ -2485,7 +2528,7 @@ var Play = /** @class */ (function (_super) {
      */
     Play.prototype.initializeShadows = function () {
         var _this = this;
-        (0,_shadows__WEBPACK_IMPORTED_MODULE_16__.initializeShadows)(this.scene, {
+        (0,_shadows__WEBPACK_IMPORTED_MODULE_17__.initializeShadows)(this.scene, {
             camera: this.camera,
             focus: function () { return _this.tank.position; },
         });
@@ -2566,6 +2609,43 @@ var Play = /** @class */ (function (_super) {
      * equal sub-steps of at most 1/120s keeps the simulation stable at any frame rate while still
      * advancing exactly the frame's time, so motion stays smooth.
      */
+    /**
+     * Babylon copies every physics body's transform to its mesh (and back) on every physics step.
+     * Bodies that cannon.js has put to sleep (settled bricks, cones, trophies) don't move, so that
+     * work is skipped for them until something wakes them up.
+     */
+    Play.prototype.skipSleepingBodySync = function () {
+        var _a, _b;
+        var SLEEPING = 2;
+        var _loop_1 = function (impostor) {
+            var body = impostor.physicsBody;
+            if (!body || impostor.mass === 0 || impostor.object === this_1.tank) {
+                return "continue";
+            }
+            // Loose objects also land on and bump into the ramps (the tank rides them instead).
+            (0,_playground__WEBPACK_IMPORTED_MODULE_15__.collideWithRamps)(impostor);
+            var beforeStep = impostor.beforeStep;
+            var afterStep = impostor.afterStep;
+            // The two always run as a pair (a body can fall asleep during the step).
+            var synced = false;
+            impostor.beforeStep = function () {
+                synced = body.sleepState !== SLEEPING;
+                if (synced) {
+                    beforeStep();
+                }
+            };
+            impostor.afterStep = function () {
+                if (synced) {
+                    afterStep();
+                }
+            };
+        };
+        var this_1 = this;
+        for (var _i = 0, _c = (_b = (_a = this.scene.getPhysicsEngine()) === null || _a === void 0 ? void 0 : _a.getImpostors()) !== null && _b !== void 0 ? _b : []; _i < _c.length; _i++) {
+            var impostor = _c[_i];
+            _loop_1(impostor);
+        }
+    };
     Play.prototype.configurePhysicsSubsteps = function () {
         var _a, _b, _c;
         var plugin = (_a = this.scene.getPhysicsEngine()) === null || _a === void 0 ? void 0 : _a.getPhysicsPlugin();
@@ -2693,7 +2773,7 @@ var Play = /** @class */ (function (_super) {
  * right corner, in the same toy style as the rest of the UI.
  */
 function createControlOverlay(gui, ui, options) {
-    var panel = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_15__.createCard)(gui, "controls-panel", { radius: 20 });
+    var panel = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_16__.createCard)(gui, "controls-panel", { radius: 20 });
     panel.width = options.isTouchDevice ? "92%" : "370px";
     panel.height = "1px";
     panel.adaptHeightToChildren = true;
@@ -2707,17 +2787,17 @@ function createControlOverlay(gui, ui, options) {
     stack.paddingTop = "16px";
     stack.paddingBottom = "18px";
     panel.addControl(stack);
-    var eyebrow = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_15__.createText)(gui, "controls-eyebrow", "HOW TO PLAY", { size: 12, weight: "900", color: _uiStyle__WEBPACK_IMPORTED_MODULE_15__.UI.pinkDeep });
+    var eyebrow = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_16__.createText)(gui, "controls-eyebrow", "HOW TO PLAY", { size: 12, weight: "900", color: _uiStyle__WEBPACK_IMPORTED_MODULE_16__.UI.pinkDeep });
     eyebrow.height = "18px";
     eyebrow.paddingLeft = "20px";
     stack.addControl(eyebrow);
-    var title = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_15__.createText)(gui, "controls-title", options.isTouchDevice ? "Best on a desktop" : "Drive, aim and explore", { size: 24, weight: "900", color: _uiStyle__WEBPACK_IMPORTED_MODULE_15__.UI.navy });
+    var title = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_16__.createText)(gui, "controls-title", options.isTouchDevice ? "Best on a desktop" : "Drive, aim and explore", { size: 24, weight: "900", color: _uiStyle__WEBPACK_IMPORTED_MODULE_16__.UI.navy });
     title.height = "36px";
     title.paddingLeft = "20px";
     stack.addControl(title);
-    var description = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_15__.createText)(gui, "controls-description", options.isTouchDevice
+    var description = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_16__.createText)(gui, "controls-description", options.isTouchDevice
         ? "The portfolio is built around keyboard driving. You can look around here, but driving and shooting need a keyboard."
-        : "Drive the tank between the projects and shoot the glowing targets to open links.", { size: 14, weight: "700", color: _uiStyle__WEBPACK_IMPORTED_MODULE_15__.UI.muted });
+        : "Drive the tank between the projects and shoot the glowing targets to open links.", { size: 14, weight: "700", color: _uiStyle__WEBPACK_IMPORTED_MODULE_16__.UI.muted });
     description.textWrapping = true;
     description.resizeToFit = true;
     description.paddingLeft = "20px";
@@ -2733,37 +2813,37 @@ function createControlOverlay(gui, ui, options) {
         { keys: ["Esc"], text: "Close the help" },
     ];
     rows.forEach(function (row, index) {
-        var line = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_15__.createRow)(gui, "controls-line-".concat(index), 36);
+        var line = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_16__.createRow)(gui, "controls-line-".concat(index), 36);
         line.paddingLeft = "20px";
         line.horizontalAlignment = gui.Control.HORIZONTAL_ALIGNMENT_LEFT;
-        var keys = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_15__.createRow)(gui, "controls-keys-".concat(index), 36);
+        var keys = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_16__.createRow)(gui, "controls-keys-".concat(index), 36);
         keys.width = "130px";
         row.keys.forEach(function (key, k) {
-            var cap = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_15__.createKeycap)(gui, "controls-key-".concat(index, "-").concat(k), key);
+            var cap = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_16__.createKeycap)(gui, "controls-key-".concat(index, "-").concat(k), key);
             cap.paddingRight = "4px";
             cap.width = "".concat(parseInt(String(cap.width), 10) + 4, "px");
             keys.addControl(cap);
         });
         line.addControl(keys);
-        var text = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_15__.createText)(gui, "controls-text-".concat(index), row.text, { size: 15, weight: "800", color: _uiStyle__WEBPACK_IMPORTED_MODULE_15__.UI.text });
+        var text = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_16__.createText)(gui, "controls-text-".concat(index), row.text, { size: 15, weight: "800", color: _uiStyle__WEBPACK_IMPORTED_MODULE_16__.UI.text });
         text.width = "200px";
         line.addControl(text);
         stack.addControl(line);
     });
-    var actions = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_15__.createRow)(gui, "controls-actions", 56);
+    var actions = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_16__.createRow)(gui, "controls-actions", 56);
     actions.paddingTop = "14px";
     actions.paddingLeft = "20px";
     actions.horizontalAlignment = gui.Control.HORIZONTAL_ALIGNMENT_LEFT;
     stack.addControl(actions);
-    var closeButton = createButton(gui, "controls-close", "Got it!", _uiStyle__WEBPACK_IMPORTED_MODULE_15__.UI.pink, _uiStyle__WEBPACK_IMPORTED_MODULE_15__.UI.navyDeep, 110);
+    var closeButton = createButton(gui, "controls-close", "Got it!", _uiStyle__WEBPACK_IMPORTED_MODULE_16__.UI.pink, _uiStyle__WEBPACK_IMPORTED_MODULE_16__.UI.navyDeep, 110);
     closeButton.onPointerClickObservable.add(function () { return options.onClose(); });
     actions.addControl(closeButton);
-    actions.addControl((0,_uiStyle__WEBPACK_IMPORTED_MODULE_15__.createSpacer)(gui, "controls-actions-gap", 10));
-    var muteButton = createButton(gui, "controls-mute", "Sound on/off", _uiStyle__WEBPACK_IMPORTED_MODULE_15__.UI.cream, _uiStyle__WEBPACK_IMPORTED_MODULE_15__.UI.navy, 130);
+    actions.addControl((0,_uiStyle__WEBPACK_IMPORTED_MODULE_16__.createSpacer)(gui, "controls-actions-gap", 10));
+    var muteButton = createButton(gui, "controls-mute", "Sound on/off", _uiStyle__WEBPACK_IMPORTED_MODULE_16__.UI.cream, _uiStyle__WEBPACK_IMPORTED_MODULE_16__.UI.navy, 130);
     muteButton.onPointerClickObservable.add(function () { return options.onToggleMute(); });
     actions.addControl(muteButton);
     // Shortcut badge, top right (below the FPS counter): [H] Help  [M] Mute
-    var badge = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_15__.createCard)(gui, "controls-hint-badge", { radius: 18, thickness: 2 });
+    var badge = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_16__.createCard)(gui, "controls-hint-badge", { radius: 18, thickness: 2 });
     badge.width = "1px";
     badge.adaptWidthToChildren = true;
     badge.height = "42px";
@@ -2774,15 +2854,15 @@ function createControlOverlay(gui, ui, options) {
     badge.shadowOffsetY = 3;
     badge.isPointerBlocker = true;
     badge.hoverCursor = "pointer";
-    var badgeRow = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_15__.createRow)(gui, "controls-hint-row", 42);
+    var badgeRow = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_16__.createRow)(gui, "controls-hint-row", 42);
     badgeRow.paddingLeft = "8px";
     badgeRow.paddingRight = "8px";
     badge.addControl(badgeRow);
-    var helpText = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_15__.createText)(gui, "controls-hint-help", "", { size: 13, weight: "800", color: _uiStyle__WEBPACK_IMPORTED_MODULE_15__.UI.navy });
-    var muteText = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_15__.createText)(gui, "controls-hint-mute", "", { size: 13, weight: "800", color: _uiStyle__WEBPACK_IMPORTED_MODULE_15__.UI.navy });
+    var helpText = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_16__.createText)(gui, "controls-hint-help", "", { size: 13, weight: "800", color: _uiStyle__WEBPACK_IMPORTED_MODULE_16__.UI.navy });
+    var muteText = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_16__.createText)(gui, "controls-hint-mute", "", { size: 13, weight: "800", color: _uiStyle__WEBPACK_IMPORTED_MODULE_16__.UI.navy });
     for (var _i = 0, _a = [["H", helpText], ["M", muteText]]; _i < _a.length; _i++) {
         var _b = _a[_i], key = _b[0], text = _b[1];
-        badgeRow.addControl((0,_uiStyle__WEBPACK_IMPORTED_MODULE_15__.createKeycap)(gui, "controls-hint-key-".concat(key), key));
+        badgeRow.addControl((0,_uiStyle__WEBPACK_IMPORTED_MODULE_16__.createKeycap)(gui, "controls-hint-key-".concat(key), key));
         text.resizeToFit = true;
         text.paddingLeft = "7px";
         text.paddingRight = "9px";
@@ -2791,7 +2871,7 @@ function createControlOverlay(gui, ui, options) {
     badge.onPointerClickObservable.add(function () { return options.onToggle(); });
     ui.addControl(panel);
     ui.addControl(badge);
-    (0,_uiStyle__WEBPACK_IMPORTED_MODULE_15__.refreshWhenFontLoaded)(ui);
+    (0,_uiStyle__WEBPACK_IMPORTED_MODULE_16__.refreshWhenFontLoaded)(ui);
     var hint = {
         update: function (helpVisible, muted) {
             helpText.text = helpVisible ? "Hide help" : "Help";
@@ -2807,12 +2887,12 @@ function createButton(gui, name, label, background, color, width) {
     button.height = "40px";
     button.thickness = 3;
     button.cornerRadius = 20;
-    button.color = _uiStyle__WEBPACK_IMPORTED_MODULE_15__.UI.navy;
+    button.color = _uiStyle__WEBPACK_IMPORTED_MODULE_16__.UI.navy;
     button.background = background;
-    button.shadowColor = _uiStyle__WEBPACK_IMPORTED_MODULE_15__.UI.shadow;
+    button.shadowColor = _uiStyle__WEBPACK_IMPORTED_MODULE_16__.UI.shadow;
     button.shadowOffsetY = 3;
     button.shadowBlur = 0;
-    button.fontFamily = _uiStyle__WEBPACK_IMPORTED_MODULE_15__.UI.font;
+    button.fontFamily = _uiStyle__WEBPACK_IMPORTED_MODULE_16__.UI.font;
     button.fontWeight = "900";
     button.fontSize = 14;
     if (button.textBlock) {
@@ -2828,6 +2908,332 @@ function createButton(gui, name, label, background, color, width) {
         button.scaleY = 1;
     };
     return button;
+}
+
+
+/***/ },
+
+/***/ "./src/scenes/playground.ts"
+/*!**********************************!*\
+  !*** ./src/scenes/playground.ts ***!
+  \**********************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   PLAYGROUND_LANES: () => (/* binding */ PLAYGROUND_LANES),
+/* harmony export */   collideWithRamps: () => (/* binding */ collideWithRamps),
+/* harmony export */   createPlayground: () => (/* binding */ createPlayground),
+/* harmony export */   getPlaygroundHeight: () => (/* binding */ getPlaygroundHeight)
+/* harmony export */ });
+/* unused harmony export RAMP_COLLISION_GROUP */
+/* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core */ "./node_modules/@babylonjs/core/index.js");
+/* harmony import */ var _toyStyle__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./toyStyle */ "./src/scenes/toyStyle.ts");
+/* harmony import */ var _staticBodies__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./staticBodies */ "./src/scenes/staticBodies.ts");
+var __assign = (undefined && undefined.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
+
+
+
+/**
+ * Toy playground pieces to drive over and knock around:
+ *
+ * - a stunt park: a slalom of toy traffic cones leading to a kicker ramp, a gap, and a landing ramp,
+ * - a hump bridge near the start: up a ramp, over a platform and down the other side.
+ *
+ * Ramps and platforms are solid for loose objects (bricks, cones, shots), but not for the tank: the
+ * tank rides on them through `getPlaygroundHeight`, which tank.ts uses for its own simple vertical
+ * movement (so it follows the slopes smoothly, flies off ramp ends and lands).
+ */
+var GROUND_Y = -0.5;
+/**
+ * cannon.js collision groups. Everything is in group 1 and collides with group 1 (cannon's
+ * default). Ramps and platforms are in their own group, which only loose objects (bricks, cones,
+ * trophies, shots) add to their collision mask with `collideWithRamps`; the tank doesn't, so it
+ * drives onto them using its own height logic instead.
+ */
+var DEFAULT_COLLISION_GROUP = 1;
+var RAMP_COLLISION_GROUP = 2;
+/** Lets a loose object's body collide with the ramps and platforms too. */
+function collideWithRamps(impostor) {
+    var body = impostor === null || impostor === void 0 ? void 0 : impostor.physicsBody;
+    if (body) {
+        body.collisionFilterMask = DEFAULT_COLLISION_GROUP | RAMP_COLLISION_GROUP;
+    }
+}
+var RAMPS = [
+    // Stunt park: kicker (rising towards +X), a 14-unit gap, then the landing ramp (rising towards
+    // -X). At full speed the tank clears the gap and lands about half way down the landing ramp.
+    { name: "stunt-kicker", x: 113, z: -25, yaw: Math.PI / 2, length: 18, width: 16, height: 5 },
+    { name: "stunt-landing", x: 147, z: -25, yaw: -Math.PI / 2, length: 22, width: 16, height: 5 },
+    // Hump bridge south-east of the start.
+    { name: "hump-up", x: 32, z: -70, yaw: Math.PI / 2, length: 12, width: 14, height: 3 },
+    { name: "hump-down", x: 50, z: -70, yaw: -Math.PI / 2, length: 12, width: 14, height: 3 },
+];
+var PLATFORMS = [
+    { name: "hump-top", x: 41, z: -70, yaw: Math.PI / 2, length: 6, width: 14, height: 3 },
+];
+var CONES = Array.from({ length: 7 }, function (_, i) { return ({
+    x: 58 + (i * 6.5),
+    z: -25 + (i % 2 === 0 ? 4.5 : -4.5),
+}); });
+/** Run-up lanes that decorations (bushes, boulders) must keep clear of. */
+var PLAYGROUND_LANES = [
+    { minX: 40, maxX: 165, minZ: -38, maxZ: -12 },
+    { minX: 0, maxX: 80, minZ: -82, maxZ: -58 },
+];
+var PALETTE = {
+    rampTop: "#F4EBDD",
+    rampStripe: "#E8869F",
+    rampSide: "#456F99",
+    rampRail: "#344B63",
+    cone: "#E8743B",
+    coneStripe: "#F4EBDD",
+    coneBase: "#344B63",
+};
+/**
+ * Height of the playground surface (ramps and platforms) above the ground at a point, or 0 where
+ * there is none.
+ */
+function getPlaygroundHeight(x, z) {
+    var height = 0;
+    for (var _i = 0, RAMPS_1 = RAMPS; _i < RAMPS_1.length; _i++) {
+        var ramp = RAMPS_1[_i];
+        var local = toLocal(ramp, x, z);
+        if (Math.abs(local.across) <= ramp.width / 2 && Math.abs(local.along) <= ramp.length / 2) {
+            height = Math.max(height, ramp.height * ((local.along + (ramp.length / 2)) / ramp.length));
+        }
+    }
+    for (var _a = 0, PLATFORMS_1 = PLATFORMS; _a < PLATFORMS_1.length; _a++) {
+        var platform = PLATFORMS_1[_a];
+        var local = toLocal(platform, x, z);
+        if (Math.abs(local.across) <= platform.width / 2 && Math.abs(local.along) <= platform.length / 2) {
+            height = Math.max(height, platform.height);
+        }
+    }
+    return height;
+}
+function toLocal(shape, x, z) {
+    var dx = x - shape.x;
+    var dz = z - shape.z;
+    var sin = Math.sin(shape.yaw);
+    var cos = Math.cos(shape.yaw);
+    return { along: (dx * sin) + (dz * cos), across: (dx * cos) - (dz * sin) };
+}
+function createPlayground(scene) {
+    var materials = {
+        top: createStripedMaterial(scene),
+        side: (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-ramp-side", PALETTE.rampSide, { roughness: 0.45, clearCoat: 0.4 }),
+        rail: (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-ramp-rail", PALETTE.rampRail, { roughness: 0.4, clearCoat: 0.5 }),
+    };
+    for (var _i = 0, RAMPS_2 = RAMPS; _i < RAMPS_2.length; _i++) {
+        var ramp = RAMPS_2[_i];
+        try {
+            createRamp(scene, ramp, materials);
+        }
+        catch (error) {
+            console.error("Ramp \"".concat(ramp.name, "\" failed"), error);
+        }
+    }
+    for (var _a = 0, PLATFORMS_2 = PLATFORMS; _a < PLATFORMS_2.length; _a++) {
+        var platform = PLATFORMS_2[_a];
+        try {
+            createPlatform(scene, platform, materials);
+        }
+        catch (error) {
+            console.error("Platform \"".concat(platform.name, "\" failed"), error);
+        }
+    }
+    try {
+        createCones(scene);
+    }
+    catch (error) {
+        console.error("Cones failed", error);
+    }
+}
+/**
+ * A wedge: striped top sloping up along local +Z, blue sides and back, and a rail along each top
+ * edge. Plus an invisible tilted slab under the slope for loose objects to collide with.
+ */
+function createRamp(scene, ramp, materials) {
+    var l = ramp.length, w = ramp.width, h = ramp.height;
+    var root = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.TransformNode("ramp-".concat(ramp.name), scene);
+    root.position.set(ramp.x, GROUND_Y, ramp.z);
+    root.rotation.y = ramp.yaw;
+    // Top: a single quad from the low edge (z = -l/2, y = 0) to the high edge (z = l/2, y = h).
+    var top = buildQuad("ramp-".concat(ramp.name, "-top"), [
+        [-w / 2, 0.02, -l / 2], [w / 2, 0.02, -l / 2], [w / 2, h, l / 2], [-w / 2, h, l / 2],
+    ], scene, { u: w / 6, v: Math.hypot(l, h) / 6 });
+    top.material = materials.top;
+    top.parent = root;
+    // Sides (triangles) and the back (a rectangle at the high end).
+    var sides = [];
+    for (var _i = 0, _a = [-1, 1]; _i < _a.length; _i++) {
+        var side = _a[_i];
+        sides.push(buildTriangle("ramp-".concat(ramp.name, "-side-").concat(side), [
+            [side * w / 2, 0, -l / 2], [side * w / 2, 0, l / 2], [side * w / 2, h, l / 2],
+        ], side, scene));
+    }
+    sides.push(buildQuad("ramp-".concat(ramp.name, "-back"), [
+        [-w / 2, 0, l / 2], [w / 2, 0, l / 2], [w / 2, h, l / 2], [-w / 2, h, l / 2],
+    ], scene));
+    var body = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Mesh.MergeMeshes(sides, true, true);
+    if (body) {
+        body.name = "ramp-".concat(ramp.name, "-body");
+        body.material = materials.side;
+        body.parent = root;
+    }
+    // Rounded rails along the top edges, following the slope.
+    var slope = Math.atan2(h, l);
+    var slopeLength = Math.hypot(l, h);
+    for (var _b = 0, _c = [-1, 1]; _b < _c.length; _b++) {
+        var side = _c[_b];
+        var rail = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRoundedBox)("ramp-".concat(ramp.name, "-rail-").concat(side), 0.7, 0.6, slopeLength, 0.25, scene);
+        rail.material = materials.rail;
+        rail.parent = root;
+        rail.rotation.x = -slope;
+        rail.position.set(side * ((w / 2) - 0.2), (h / 2) + 0.2, 0);
+    }
+    for (var _d = 0, _e = root.getChildMeshes(); _d < _e.length; _d++) {
+        var mesh = _e[_d];
+        mesh.isPickable = false;
+    }
+    // Collider for loose objects: a slab whose top is the slope.
+    var thickness = Math.min(2, h);
+    var normal = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, Math.cos(slope), -Math.sin(slope));
+    var center = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, h / 2, 0).subtract(normal.scale(thickness / 2));
+    var worldCenter = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.TransformCoordinates(center, _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Matrix.RotationY(ramp.yaw));
+    (0,_staticBodies__WEBPACK_IMPORTED_MODULE_2__.addStaticBox)(scene, new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(ramp.x + worldCenter.x, GROUND_Y + worldCenter.y, ramp.z + worldCenter.z), w, thickness, slopeLength, __assign({ rotation: _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Quaternion.RotationYawPitchRoll(ramp.yaw, -slope, 0) }, LOOSE_OBJECTS_ONLY));
+}
+/** A flat-topped block with the same look as the ramps. */
+function createPlatform(scene, platform, materials) {
+    var root = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.TransformNode("platform-".concat(platform.name), scene);
+    root.position.set(platform.x, GROUND_Y, platform.z);
+    root.rotation.y = platform.yaw;
+    var block = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRoundedBox)("platform-".concat(platform.name, "-body"), platform.width, platform.height, platform.length, 0.15, scene);
+    block.material = materials.side;
+    block.parent = root;
+    block.position.y = platform.height / 2;
+    var top = buildQuad("platform-".concat(platform.name, "-top"), [
+        [-platform.width / 2, platform.height + 0.02, -platform.length / 2],
+        [platform.width / 2, platform.height + 0.02, -platform.length / 2],
+        [platform.width / 2, platform.height + 0.02, platform.length / 2],
+        [-platform.width / 2, platform.height + 0.02, platform.length / 2],
+    ], scene, { u: platform.width / 6, v: platform.length / 6 });
+    top.material = materials.top;
+    top.parent = root;
+    for (var _i = 0, _a = [-1, 1]; _i < _a.length; _i++) {
+        var side = _a[_i];
+        var rail = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRoundedBox)("platform-".concat(platform.name, "-rail-").concat(side), 0.7, 0.6, platform.length, 0.25, scene);
+        rail.material = materials.rail;
+        rail.parent = root;
+        rail.position.set(side * ((platform.width / 2) - 0.2), platform.height + 0.2, 0);
+    }
+    for (var _b = 0, _c = root.getChildMeshes(); _b < _c.length; _b++) {
+        var mesh = _c[_b];
+        mesh.isPickable = false;
+    }
+    (0,_staticBodies__WEBPACK_IMPORTED_MODULE_2__.addStaticBox)(scene, new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(platform.x, GROUND_Y + (platform.height / 2), platform.z), platform.width, platform.height, platform.length, __assign({ rotation: _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Quaternion.RotationYawPitchRoll(platform.yaw, 0, 0) }, LOOSE_OBJECTS_ONLY));
+}
+/** Ramps and platforms collide with loose objects but let the tank through (it rides on the height map). */
+var LOOSE_OBJECTS_ONLY = { group: RAMP_COLLISION_GROUP, mask: DEFAULT_COLLISION_GROUP };
+/**
+ * Toy traffic cones: navy base, orange cone with a cream band. Light and loose, so the tank and
+ * shots send them flying.
+ */
+function createCones(scene) {
+    var coneMaterial = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-cone", PALETTE.cone, { roughness: 0.4, clearCoat: 0.6 });
+    var stripeMaterial = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-cone-stripe", PALETTE.coneStripe, { roughness: 0.4, clearCoat: 0.6 });
+    var baseMaterial = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-cone-base", PALETTE.coneBase, { roughness: 0.45, clearCoat: 0.4 });
+    CONES.forEach(function (spot, i) {
+        var height = 3.4;
+        // The body is the collider: physics first, then the visible parts are parented to it.
+        var collider = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder("cone-".concat(i), { diameter: 2.2, height: height, tessellation: 12 }, scene);
+        collider.position.set(spot.x, GROUND_Y + (height / 2) + 0.02, spot.z);
+        collider.isVisible = false;
+        collider.isPickable = false;
+        collider.physicsImpostor = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.PhysicsImpostor(collider, _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.PhysicsImpostor.CylinderImpostor, { mass: 0.4, friction: 0.6, restitution: 0.2 }, scene);
+        var parts = [];
+        var base = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRoundedBox)("cone-".concat(i, "-base"), 2.5, 0.4, 2.5, 0.15, scene, 2);
+        base.material = baseMaterial;
+        base.position.y = (-height / 2) + 0.2;
+        parts.push(base);
+        var cone = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder("cone-".concat(i, "-body"), { diameterTop: 0.35, diameterBottom: 1.9, height: height - 0.4, tessellation: 24 }, scene);
+        cone.material = coneMaterial;
+        cone.position.y = 0.2;
+        parts.push(cone);
+        var stripe = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder("cone-".concat(i, "-stripe"), { diameterTop: 0.95, diameterBottom: 1.3, height: 0.7, tessellation: 24 }, scene);
+        stripe.material = stripeMaterial;
+        stripe.position.y = 0.45;
+        parts.push(stripe);
+        for (var _i = 0, parts_1 = parts; _i < parts_1.length; _i++) {
+            var part = parts_1[_i];
+            part.parent = collider;
+            part.isPickable = false;
+            part.metadata = { keepUnfrozen: true };
+        }
+    });
+}
+/** Cream top with diagonal pink stripes, repeated over the surface. */
+function createStripedMaterial(scene) {
+    var size = 256;
+    var texture = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.DynamicTexture("toy-ramp-stripes", { width: size, height: size }, scene, true);
+    var context = texture.getContext();
+    context.fillStyle = PALETTE.rampTop;
+    context.fillRect(0, 0, size, size);
+    // Chevrons pointing up the slope (V runs along the slope).
+    context.fillStyle = PALETTE.rampStripe;
+    for (var i = 0; i < 2; i++) {
+        var y = (i * size) / 2;
+        context.beginPath();
+        context.moveTo(0, y + (size * 0.3));
+        context.lineTo(size / 2, y + (size * 0.05));
+        context.lineTo(size, y + (size * 0.3));
+        context.lineTo(size, y + (size * 0.42));
+        context.lineTo(size / 2, y + (size * 0.17));
+        context.lineTo(0, y + (size * 0.42));
+        context.closePath();
+        context.fill();
+    }
+    texture.update();
+    texture.wrapU = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Texture.WRAP_ADDRESSMODE;
+    texture.wrapV = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Texture.WRAP_ADDRESSMODE;
+    var material = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-ramp-top", "#FFFFFF", { roughness: 0.5, clearCoat: 0.3 });
+    material.albedoTexture = texture;
+    return material;
+}
+function buildQuad(name, corners, scene, uvScale) {
+    if (uvScale === void 0) { uvScale = { u: 1, v: 1 }; }
+    var positions = corners.flat();
+    var a = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.FromArray(corners[0]);
+    var b = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.FromArray(corners[1]);
+    var d = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.FromArray(corners[3]);
+    // Normal pointing out of the shape: up for the tops, +Z for the back.
+    var normal = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.Cross(d.subtract(a), b.subtract(a)).normalize();
+    if (normal.y < -0.01 || (Math.abs(normal.y) < 0.01 && normal.z < 0)) {
+        normal = normal.scale(-1);
+    }
+    var normals = [0, 1, 2, 3].flatMap(function () { return [normal.x, normal.y, normal.z]; });
+    var indices = [];
+    (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.pushOrientedTriangle)(indices, positions, normals, 0, 1, 2);
+    (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.pushOrientedTriangle)(indices, positions, normals, 0, 2, 3);
+    var uvs = [0, 0, uvScale.u, 0, uvScale.u, uvScale.v, 0, uvScale.v];
+    return (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.buildMesh)(name, positions, normals, indices, scene, uvs);
+}
+function buildTriangle(name, corners, side, scene) {
+    var positions = corners.flat();
+    var normals = [0, 1, 2].flatMap(function () { return [side, 0, 0]; });
+    var indices = [];
+    (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.pushOrientedTriangle)(indices, positions, normals, 0, 1, 2);
+    return (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.buildMesh)(name, positions, normals, indices, scene, [0, 0, 1, 0, 1, 1]);
 }
 
 
@@ -2898,6 +3304,8 @@ var MIN_CASTER_SIZE = 1.3;
 function initializeShadows(scene, options) {
     var sun = setUpLights(scene);
     var generator = createGenerator(scene, sun, options);
+    /** Every mesh that casts a shadow; see refreshCasters below for which are drawn. */
+    var casters = [];
     var isCaster = function (mesh) {
         // Physics colliders are hidden with visibility 0, which still renders into shadow maps.
         if (!mesh.isEnabled() || !mesh.isVisible || mesh.visibility <= 0) {
@@ -2921,7 +3329,7 @@ function initializeShadows(scene, options) {
             mesh.sourceMesh.receiveShadows = true;
         }
         if (isCaster(mesh)) {
-            generator.addShadowCaster(mesh, false);
+            casters.push(mesh);
         }
     };
     scene.meshes.forEach(function (mesh) {
@@ -2934,11 +3342,48 @@ function initializeShadows(scene, options) {
         // Wait a frame: the mesh gets its material, position and visibility after creation.
         scene.onAfterRenderObservable.addOnce(function () {
             if (!mesh.isDisposed() && isCaster(mesh)) {
-                generator.addShadowCaster(mesh, false);
+                casters.push(mesh);
+                refreshCasters();
             }
         });
     });
     scene.onDisposeObservable.addOnce(function () { return scene.onNewMeshAddedObservable.remove(added); });
+    // Only the casters inside (or near) the area the shadow map currently covers are drawn into
+    // it; the rest of the world is skipped. The list is refreshed a few times a second as the map
+    // follows the camera.
+    var map = generator.getShadowMap();
+    var point = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3();
+    var refreshCasters = function () {
+        if (!map) {
+            return;
+        }
+        var transform = generator.getTransformMatrix();
+        var visible = [];
+        for (var i = casters.length - 1; i >= 0; i--) {
+            var mesh = casters[i];
+            if (mesh.isDisposed()) {
+                casters.splice(i, 1);
+                continue;
+            }
+            var sphere = mesh.getBoundingInfo().boundingSphere;
+            _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.TransformCoordinatesToRef(sphere.centerWorld, transform, point);
+            var margin = 1 + (sphere.radiusWorld / SHADOW_HALF_SIZE) + 0.05;
+            if (Math.abs(point.x) <= margin && Math.abs(point.y) <= margin) {
+                visible.push(mesh);
+            }
+        }
+        map.renderList = visible;
+    };
+    var sinceRefresh = 0;
+    var refreshObserver = scene.onBeforeRenderObservable.add(function () {
+        sinceRefresh += scene.getEngine().getDeltaTime();
+        if (sinceRefresh >= 250) {
+            sinceRefresh = 0;
+            refreshCasters();
+        }
+    });
+    scene.onDisposeObservable.addOnce(function () { return scene.onBeforeRenderObservable.remove(refreshObserver); });
+    refreshCasters();
     return generator;
 }
 function setUpLights(scene) {
@@ -2974,6 +3419,10 @@ function createGenerator(scene, sun, options) {
     sun.shadowMaxZ = SUN_DISTANCE + 120;
     var generator = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.ShadowGenerator(SHADOW_MAP_SIZE, sun);
     applyCommonSettings(generator);
+    // Fade shadows out towards the edge of the map. Without it, a tall object touching the edge
+    // smears its shadow across everything beyond the map (the ground there keeps sampling the
+    // edge pixels), which shows up as long dark streaks in the distance.
+    generator.frustumEdgeFalloff = 0.25;
     // Centre the map a little ahead of the focus point, in the direction the camera looks, and
     // snap it to whole texels so shadow edges don't shimmer while driving.
     var texel = (SHADOW_HALF_SIZE * 2) / SHADOW_MAP_SIZE;
@@ -3006,6 +3455,60 @@ function applyCommonSettings(generator) {
 
 /***/ },
 
+/***/ "./src/scenes/staticBodies.ts"
+/*!************************************!*\
+  !*** ./src/scenes/staticBodies.ts ***!
+  \************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   addStaticBox: () => (/* binding */ addStaticBox),
+/* harmony export */   addStaticSphere: () => (/* binding */ addStaticSphere)
+/* harmony export */ });
+function getCannon(scene) {
+    var _a;
+    var plugin = (_a = scene.getPhysicsEngine()) === null || _a === void 0 ? void 0 : _a.getPhysicsPlugin();
+    if (!(plugin === null || plugin === void 0 ? void 0 : plugin.BJSCANNON) || !plugin.world) {
+        return null;
+    }
+    return { CANNON: plugin.BJSCANNON, world: plugin.world };
+}
+function addBody(scene, shape, center, options) {
+    var cannon = getCannon(scene);
+    if (!cannon) {
+        return false;
+    }
+    var body = new cannon.CANNON.Body({ mass: 0 });
+    body.addShape(shape(cannon.CANNON));
+    body.position.set(center.x, center.y, center.z);
+    var rotation = options.rotation;
+    if (rotation) {
+        body.quaternion.set(rotation.x, rotation.y, rotation.z, rotation.w);
+    }
+    if (options.group !== undefined) {
+        body.collisionFilterGroup = options.group;
+    }
+    if (options.mask !== undefined) {
+        body.collisionFilterMask = options.mask;
+    }
+    cannon.world.addBody(body);
+    scene.onDisposeObservable.addOnce(function () { return cannon.world.removeBody(body); });
+    return true;
+}
+/** A static box of the given full size, centred at `center`. */
+function addStaticBox(scene, center, width, height, depth, options) {
+    if (options === void 0) { options = {}; }
+    return addBody(scene, function (CANNON) { return new CANNON.Box(new CANNON.Vec3(width / 2, height / 2, depth / 2)); }, center, options);
+}
+/** A static sphere. */
+function addStaticSphere(scene, center, radius, options) {
+    if (options === void 0) { options = {}; }
+    return addBody(scene, function (CANNON) { return new CANNON.Sphere(radius); }, center, options);
+}
+
+
+/***/ },
+
 /***/ "./src/scenes/tank.ts"
 /*!****************************!*\
   !*** ./src/scenes/tank.ts ***!
@@ -3019,7 +3522,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ });
 /* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core */ "./node_modules/@babylonjs/core/index.js");
 /* harmony import */ var _toyTarget__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./toyTarget */ "./src/scenes/toyTarget.ts");
-/* harmony import */ var _uiStyle__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./uiStyle */ "./src/scenes/uiStyle.ts");
+/* harmony import */ var _playground__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./playground */ "./src/scenes/playground.ts");
+/* harmony import */ var _uiStyle__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./uiStyle */ "./src/scenes/uiStyle.ts");
 var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -3059,6 +3563,7 @@ var __generator = (undefined && undefined.__generator) || function (thisArg, bod
 
 
 
+
 /**
  * Initialize the movement of the player tank.
  */
@@ -3091,6 +3596,16 @@ function initializeTankMovement(_this, rotationSpeed) {
     var turnAcceleration = 12;
     var cameraFollowSharpness = 6;
     var tankCollisionRadius = getHorizontalRadius(_this.tank) * 0.55;
+    // Ramps and platforms: the tank keeps its own height above the ground (see getPlaygroundHeight)
+    // and falls with this gravity, so it rides up slopes, flies off ramp ends and lands.
+    var tankGravity = 60;
+    var maxClimbStep = 1.2;
+    var maxLaunchSpeed = 22;
+    var elevation = 0;
+    var verticalSpeed = 0;
+    var grounded = true;
+    var modelPitch = 0;
+    var toyModel = _this.scene.getTransformNodeByName("toy-tank-root");
     var lastFpsUpdateTime = 0;
     var currentTurnSpeed = 0;
     var currentMoveSpeed = 0;
@@ -3143,6 +3658,11 @@ function initializeTankMovement(_this, rotationSpeed) {
         if (collidesWithTree(nextPosition)) {
             currentMoveSpeed = 0;
         }
+        // A surface much higher than the tank's bottom (the back of a ramp, a platform's side) is
+        // a wall: stop instead of popping up onto it.
+        if ((0,_playground__WEBPACK_IMPORTED_MODULE_2__.getPlaygroundHeight)(nextPosition.x, nextPosition.z) - elevation > maxClimbStep) {
+            currentMoveSpeed = 0;
+        }
         // The tank is moved by the physics engine using this velocity (rather than by setting its
         // position directly), so the engine knows how fast it is going: bricks and other loose
         // objects get knocked away with real momentum, and static objects still block it.
@@ -3168,7 +3688,7 @@ function initializeTankMovement(_this, rotationSpeed) {
         if (currentTurnSpeed !== 0) {
             _this.tank.rotate(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Axis.Y, currentTurnSpeed * deltaSeconds, _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Space.WORLD);
         }
-        _this.tank.position.y = baseTankY;
+        updateVerticalMovement(deltaSeconds);
         var rotationQuaternion = _this.tank.rotationQuaternion;
         if (rotationQuaternion) {
             _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Quaternion.RotationYawPitchRollToRef(getYaw(_this.tank), 0, 0, uprightRotation);
@@ -3198,6 +3718,49 @@ function initializeTankMovement(_this, rotationSpeed) {
     _this.scene.onDisposeObservable.addOnce(function () {
         _this.scene.onBeforePhysicsObservable.remove(tankControllerObserver);
     });
+    /**
+     * Follows the ground and ramps, keeping the upward speed a slope gives, so driving off the top
+     * of a ramp launches the tank; in the air it falls until it lands. The visual model leans with
+     * the slope (or noses up and down in the air).
+     */
+    function updateVerticalMovement(deltaSeconds) {
+        if (deltaSeconds <= 0) {
+            return;
+        }
+        var position = _this.tank.position;
+        var ground = (0,_playground__WEBPACK_IMPORTED_MODULE_2__.getPlaygroundHeight)(position.x, position.z);
+        verticalSpeed -= tankGravity * deltaSeconds;
+        var next = elevation + (verticalSpeed * deltaSeconds);
+        if (next <= ground) {
+            // On the surface: move with it, remembering how fast it carried the tank upwards.
+            verticalSpeed = Math.min(maxLaunchSpeed, (ground - elevation) / deltaSeconds);
+            elevation = ground;
+            grounded = true;
+        }
+        else {
+            elevation = next;
+            grounded = false;
+        }
+        position.y = baseTankY + elevation;
+        if (!toyModel) {
+            return;
+        }
+        var targetPitch;
+        if (grounded) {
+            var yaw = getYaw(_this.tank);
+            var fx = Math.sin(yaw) * 3;
+            var fz = Math.cos(yaw) * 3;
+            var ahead = (0,_playground__WEBPACK_IMPORTED_MODULE_2__.getPlaygroundHeight)(position.x + fx, position.z + fz);
+            var behind = (0,_playground__WEBPACK_IMPORTED_MODULE_2__.getPlaygroundHeight)(position.x - fx, position.z - fz);
+            targetPitch = Math.atan2(ahead - behind, 6);
+        }
+        else {
+            targetPitch = Math.max(-0.45, Math.min(0.45, Math.atan2(verticalSpeed, Math.max(Math.abs(currentMoveSpeed), 12)) * 0.8));
+        }
+        modelPitch += (targetPitch - modelPitch) * Math.min(1, deltaSeconds * 10);
+        // Positive rotation around X tips the nose (+Z) down, so nose-up is negative.
+        toyModel.rotation.x = -modelPitch;
+    }
     function moveToward(current, target, maxDelta) {
         if (Math.abs(target - current) <= maxDelta) {
             return target;
@@ -3427,12 +3990,12 @@ function initializeShooting(_this, forward) {
                         reticle.cooldown.alpha = cooldownProgress > 0 ? 0.95 : 0;
                         reticle.cooldown.width = "".concat(Math.max(16, cooldownProgress * 56), "px");
                         reticle.cooldown.height = "".concat(Math.max(16, cooldownProgress * 56), "px");
-                        reticle.cooldown.color = hasRecentHit(now, hitFeedbackUntil) ? _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.mint : _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.gold;
+                        reticle.cooldown.color = hasRecentHit(now, hitFeedbackUntil) ? _uiStyle__WEBPACK_IMPORTED_MODULE_3__.UI.mint : _uiStyle__WEBPACK_IMPORTED_MODULE_3__.UI.gold;
                         var hasAimLock = aimedTargetLabel !== "";
-                        reticle.frame.color = hasAimLock ? _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.pink : _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.cream;
+                        reticle.frame.color = hasAimLock ? _uiStyle__WEBPACK_IMPORTED_MODULE_3__.UI.pink : _uiStyle__WEBPACK_IMPORTED_MODULE_3__.UI.cream;
                         reticle.frame.thickness = hasAimLock ? 4 : 3;
-                        reticle.dot.background = hasAimLock ? _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.pink : _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.cream;
-                        reticle.label.color = hasAimLock ? _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.pinkDeep : _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.navy;
+                        reticle.dot.background = hasAimLock ? _uiStyle__WEBPACK_IMPORTED_MODULE_3__.UI.pink : _uiStyle__WEBPACK_IMPORTED_MODULE_3__.UI.cream;
+                        reticle.label.color = hasAimLock ? _uiStyle__WEBPACK_IMPORTED_MODULE_3__.UI.pinkDeep : _uiStyle__WEBPACK_IMPORTED_MODULE_3__.UI.navy;
                         reticle.label.text = hasAimLock
                             ? "LOCKED: ".concat(aimedTargetLabel)
                             : nearestTargetDistanceSquared <= targetHintRangeSquared
@@ -3484,8 +4047,8 @@ function initializeShooting(_this, forward) {
                                     impactBurst.container.linkWithMesh(target.mesh);
                                     impactBurst.container.isVisible = true;
                                     impactBurstUntil = now + 420;
-                                    reticle.frame.color = _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.mint;
-                                    reticle.dot.background = _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.mint;
+                                    reticle.frame.color = _uiStyle__WEBPACK_IMPORTED_MODULE_3__.UI.mint;
+                                    reticle.dot.background = _uiStyle__WEBPACK_IMPORTED_MODULE_3__.UI.mint;
                                     reticle.label.text = "DIRECT HIT: ".concat(target.label);
                                     clearTimeout(activeShot.disposeTimeout);
                                     activeShot.dispose();
@@ -3517,6 +4080,7 @@ function initializeShooting(_this, forward) {
                         shotSpawnPosition.y += shotHeightOffset;
                         shotBall.position.copyFrom(shotSpawnPosition);
                         shotBall.physicsImpostor = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.PhysicsImpostor(shotBall, _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.PhysicsImpostor.SphereImpostor, { mass: 0.5, restitution: 0 }, _this.scene);
+                        (0,_playground__WEBPACK_IMPORTED_MODULE_2__.collideWithRamps)(shotBall.physicsImpostor);
                         // Shots inherit the tank's motion, so firing while driving still goes where you aim.
                         var tankVelocity = (_b = _this.tank.physicsImpostor) === null || _b === void 0 ? void 0 : _b.getLinearVelocity();
                         if (tankVelocity) {
@@ -3561,18 +4125,18 @@ function initializeShooting(_this, forward) {
     });
 }
 var OBJECTIVE_MOODS = {
-    explore: { label: "EXPLORE", color: _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.navy },
-    nearby: { label: "TARGET NEARBY", color: _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.gold },
-    locked: { label: "LOCKED ON", color: _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.pink },
-    found: { label: "NEW LINK FOUND", color: _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.mint },
-    hit: { label: "DIRECT HIT", color: _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.mint },
+    explore: { label: "EXPLORE", color: _uiStyle__WEBPACK_IMPORTED_MODULE_3__.UI.navy },
+    nearby: { label: "TARGET NEARBY", color: _uiStyle__WEBPACK_IMPORTED_MODULE_3__.UI.gold },
+    locked: { label: "LOCKED ON", color: _uiStyle__WEBPACK_IMPORTED_MODULE_3__.UI.pink },
+    found: { label: "NEW LINK FOUND", color: _uiStyle__WEBPACK_IMPORTED_MODULE_3__.UI.mint },
+    hit: { label: "DIRECT HIT", color: _uiStyle__WEBPACK_IMPORTED_MODULE_3__.UI.mint },
 };
 /**
  * The card in the top-left corner: a coloured eyebrow saying what is going on, progress pips for
  * the links found so far, and the current hint.
  */
 function createObjectiveHint(gui, ui) {
-    var card = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_2__.createCard)(gui, "objective-hint");
+    var card = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_3__.createCard)(gui, "objective-hint");
     card.width = "360px";
     card.height = "1px";
     card.adaptHeightToChildren = true;
@@ -3601,17 +4165,17 @@ function createObjectiveHint(gui, ui) {
     badge.thickness = 0;
     badge.cornerRadius = 12;
     badge.horizontalAlignment = gui.Control.HORIZONTAL_ALIGNMENT_LEFT;
-    var badgeText = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_2__.createText)(gui, "objective-hint-badge-text", "", { size: 12, weight: "900", color: _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.cream, align: "center" });
+    var badgeText = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_3__.createText)(gui, "objective-hint-badge-text", "", { size: 12, weight: "900", color: _uiStyle__WEBPACK_IMPORTED_MODULE_3__.UI.cream, align: "center" });
     badgeText.resizeToFit = true;
     badgeText.paddingLeft = "10px";
     badgeText.paddingRight = "10px";
     badge.addControl(badgeText);
     header.addControl(badge, 0, 0);
-    var pips = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_2__.createRow)(gui, "objective-hint-pips", 24);
+    var pips = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_3__.createRow)(gui, "objective-hint-pips", 24);
     pips.horizontalAlignment = gui.Control.HORIZONTAL_ALIGNMENT_RIGHT;
     header.addControl(pips, 0, 1);
     var pipControls = [];
-    var text = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_2__.createText)(gui, "objective-hint-text", "", { size: 15, weight: "700" });
+    var text = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_3__.createText)(gui, "objective-hint-text", "", { size: 15, weight: "700" });
     text.textWrapping = true;
     text.resizeToFit = true;
     text.lineSpacing = "2px";
@@ -3620,7 +4184,7 @@ function createObjectiveHint(gui, ui) {
     text.paddingTop = "8px";
     stack.addControl(text);
     ui.addControl(card);
-    (0,_uiStyle__WEBPACK_IMPORTED_MODULE_2__.refreshWhenFontLoaded)(ui);
+    (0,_uiStyle__WEBPACK_IMPORTED_MODULE_3__.refreshWhenFontLoaded)(ui);
     var lastStatus = "";
     var hint = {
         get text() {
@@ -3649,13 +4213,13 @@ function createObjectiveHint(gui, ui) {
                 pip.height = "18px";
                 pip.thickness = 2;
                 pip.cornerRadius = 5;
-                pip.color = _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.navy;
+                pip.color = _uiStyle__WEBPACK_IMPORTED_MODULE_3__.UI.navy;
                 slot.addControl(pip);
                 pips.addControl(slot);
                 pipControls.push(pip);
             }
             pipControls.forEach(function (pip, i) {
-                pip.background = i < found ? _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.pink : _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.sand;
+                pip.background = i < found ? _uiStyle__WEBPACK_IMPORTED_MODULE_3__.UI.pink : _uiStyle__WEBPACK_IMPORTED_MODULE_3__.UI.sand;
             });
         },
     };
@@ -3668,9 +4232,9 @@ function createReticle(gui, ui) {
     frame.height = "34px";
     frame.thickness = 3;
     frame.cornerRadius = 17;
-    frame.color = _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.cream;
+    frame.color = _uiStyle__WEBPACK_IMPORTED_MODULE_3__.UI.cream;
     frame.background = "transparent";
-    frame.shadowColor = _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.navyDeep;
+    frame.shadowColor = _uiStyle__WEBPACK_IMPORTED_MODULE_3__.UI.navyDeep;
     frame.shadowBlur = 0;
     frame.shadowOffsetY = 2;
     frame.horizontalAlignment = gui.Control.HORIZONTAL_ALIGNMENT_CENTER;
@@ -3681,19 +4245,19 @@ function createReticle(gui, ui) {
     dot.height = "8px";
     dot.thickness = 0;
     dot.cornerRadius = 4;
-    dot.background = _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.cream;
+    dot.background = _uiStyle__WEBPACK_IMPORTED_MODULE_3__.UI.cream;
     frame.addControl(dot);
     // Grows while the gun reloads.
     var cooldown = new gui.Ellipse("reticle-cooldown");
     cooldown.width = "16px";
     cooldown.height = "16px";
     cooldown.thickness = 3;
-    cooldown.color = _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.gold;
+    cooldown.color = _uiStyle__WEBPACK_IMPORTED_MODULE_3__.UI.gold;
     cooldown.alpha = 0;
     cooldown.isPointerBlocker = false;
     ui.addControl(cooldown);
     // Status pill under the sight.
-    var pill = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_2__.createCard)(gui, "reticle-pill", { radius: 12, thickness: 2 });
+    var pill = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_3__.createCard)(gui, "reticle-pill", { radius: 12, thickness: 2 });
     pill.height = "26px";
     pill.width = "1px";
     pill.adaptWidthToChildren = true;
@@ -3702,7 +4266,7 @@ function createReticle(gui, ui) {
     pill.horizontalAlignment = gui.Control.HORIZONTAL_ALIGNMENT_CENTER;
     pill.verticalAlignment = gui.Control.VERTICAL_ALIGNMENT_CENTER;
     pill.isPointerBlocker = false;
-    var label = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_2__.createText)(gui, "reticle-label", "0/0 LINKS FOUND", { size: 12, weight: "900", color: _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.navy, align: "center" });
+    var label = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_3__.createText)(gui, "reticle-label", "0/0 LINKS FOUND", { size: 12, weight: "900", color: _uiStyle__WEBPACK_IMPORTED_MODULE_3__.UI.navy, align: "center" });
     label.resizeToFit = true;
     label.paddingLeft = "12px";
     label.paddingRight = "12px";
@@ -3716,13 +4280,13 @@ function createReticle(gui, ui) {
     return { frame: frame, dot: dot, label: label, pill: pill, cooldown: cooldown };
 }
 function createHitFeedback(gui, ui) {
-    var container = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_2__.createCard)(gui, "hit-feedback", { radius: 18, background: _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.mint, border: _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.navy });
+    var container = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_3__.createCard)(gui, "hit-feedback", { radius: 18, background: _uiStyle__WEBPACK_IMPORTED_MODULE_3__.UI.mint, border: _uiStyle__WEBPACK_IMPORTED_MODULE_3__.UI.navy });
     container.width = "150px";
     container.height = "40px";
     container.linkOffsetY = -96;
     container.isPointerBlocker = false;
     container.isVisible = false;
-    var text = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_2__.createText)(gui, "hit-feedback-text", "DIRECT HIT!", { size: 16, weight: "900", color: _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.navyDeep, align: "center" });
+    var text = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_3__.createText)(gui, "hit-feedback-text", "DIRECT HIT!", { size: 16, weight: "900", color: _uiStyle__WEBPACK_IMPORTED_MODULE_3__.UI.navyDeep, align: "center" });
     container.addControl(text);
     ui.addControl(container);
     return { container: container, text: text };
@@ -3740,7 +4304,7 @@ function createImpactBurst(gui, ui) {
     ring.width = "90px";
     ring.height = "90px";
     ring.thickness = 5;
-    ring.color = _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.gold;
+    ring.color = _uiStyle__WEBPACK_IMPORTED_MODULE_3__.UI.gold;
     ring.background = "rgba(217, 161, 59, 0.12)";
     ring.alpha = 0.9;
     container.addControl(ring);
@@ -3765,22 +4329,22 @@ function createTargetLabel(gui, ui, mesh, label) {
     container.isPointerBlocker = false;
     container.isVisible = false;
     // Pointer: a rotated square peeking out under the card.
-    var pointer = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_2__.createCard)(gui, "label-pointer-".concat(mesh.name), { radius: 3 });
+    var pointer = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_3__.createCard)(gui, "label-pointer-".concat(mesh.name), { radius: 3 });
     pointer.width = "16px";
     pointer.height = "16px";
     pointer.rotation = Math.PI / 4;
     pointer.top = "24px";
     pointer.shadowOffsetY = 0;
     container.addControl(pointer);
-    var card = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_2__.createCard)(gui, "label-card-".concat(mesh.name), { radius: 14 });
+    var card = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_3__.createCard)(gui, "label-card-".concat(mesh.name), { radius: 14 });
     card.height = "54px";
     card.top = "-6px";
     card.shadowOffsetY = 0;
     container.addControl(card);
-    var name = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_2__.createText)(gui, "label-name-".concat(mesh.name), label, { size: 16, weight: "900", color: _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.navy, align: "center" });
+    var name = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_3__.createText)(gui, "label-name-".concat(mesh.name), label, { size: 16, weight: "900", color: _uiStyle__WEBPACK_IMPORTED_MODULE_3__.UI.navy, align: "center" });
     name.top = "-8px";
     card.addControl(name);
-    var action = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_2__.createText)(gui, "label-action-".concat(mesh.name), "Shoot to open", { size: 12, weight: "800", color: _uiStyle__WEBPACK_IMPORTED_MODULE_2__.UI.pinkDeep, align: "center" });
+    var action = (0,_uiStyle__WEBPACK_IMPORTED_MODULE_3__.createText)(gui, "label-action-".concat(mesh.name), "Shoot to open", { size: 12, weight: "800", color: _uiStyle__WEBPACK_IMPORTED_MODULE_3__.UI.pinkDeep, align: "center" });
     action.top = "11px";
     card.addControl(action);
     // The control must be on the texture before it can follow a mesh.
@@ -3873,16 +4437,20 @@ function createTankTrail(scene, holder) {
         return null;
     }
     var lastPosition = holder.position.clone();
+    // Height of the holder when on the ground; above it the tank is on a ramp or in the air, and
+    // leaves no prints or dust (they would end up inside the ramp or on the ground below).
+    var groundedY = holder.position.y;
     var lastPrintPosition = holder.position.clone();
     var forward = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3();
     var time = 0;
     var observer = scene.onAfterRenderObservable.add(function () {
         var deltaSeconds = Math.min(scene.getEngine().getDeltaTime() / 1000, 0.1);
         time += deltaSeconds;
-        var moved = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.Distance(holder.position, lastPosition);
+        var moved = Math.hypot(holder.position.x - lastPosition.x, holder.position.z - lastPosition.z);
         var speed = deltaSeconds > 0 ? moved / deltaSeconds : 0;
         lastPosition.copyFrom(holder.position);
-        var driving = speed > MIN_SPEED;
+        var onGround = holder.position.y < groundedY + 0.3;
+        var driving = speed > MIN_SPEED && onGround;
         if (prints) {
             if (!driving) {
                 // Restart the spacing from here, so the next print isn't stretched over a gap.
@@ -6066,6 +6634,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ });
 /* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core */ "./node_modules/@babylonjs/core/index.js");
 /* harmony import */ var _toyStyle__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./toyStyle */ "./src/scenes/toyStyle.ts");
+/* harmony import */ var _staticBodies__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./staticBodies */ "./src/scenes/staticBodies.ts");
 var __assign = (undefined && undefined.__assign) || function () {
     __assign = Object.assign || function(t) {
         for (var s, i = 1, n = arguments.length; i < n; i++) {
@@ -6077,6 +6646,7 @@ var __assign = (undefined && undefined.__assign) || function () {
     };
     return __assign.apply(this, arguments);
 };
+
 
 
 var TRUNK_HEIGHT = 15;
@@ -6093,7 +6663,14 @@ var TREE_POSITIONS = [
     new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(-39.5430, 5.1848, -44.9435),
     new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(-54.0394, 5.1848, -22.0382),
     new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(57.1332, 5.1848, 77.0256),
+    // A few more towards the edges of the play area, away from the paths.
+    new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(-72, 5.1848, 98),
+    new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(-118, 5.1848, 62),
+    new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(100, 5.1848, 72),
+    new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(162, 5.1848, -58),
 ];
+/** Trees further than this from the tank stop swaying and dropping petals (nobody sees them). */
+var ANIMATION_DISTANCE = 160;
 var PALETTE = {
     bark: "#5E4436",
     barkDark: "#47332A",
@@ -6109,15 +6686,37 @@ function instantiateTrees(_this) {
     var swayingCanopies = [];
     treeCoordinates.forEach(function (position, index) {
         var canopy = instantiateTree(templates, position, index, scene);
-        swayingCanopies.push({ node: canopy, phase: index * 1.7 });
-        createFallingPetals(scene, petalTexture, position, index);
+        var petals = createFallingPetals(scene, petalTexture, position, index);
+        swayingCanopies.push({ node: canopy, phase: index * 1.7, position: position, petals: petals, active: true });
     });
-    // A slow breeze. The canopies pivot at the top of the trunk.
+    // A slow breeze. The canopies pivot at the top of the trunk. Only trees near the tank are
+    // animated; far ones keep still and stop dropping petals.
+    var tank = scene.getMeshByName("tank_holder");
     var time = 0;
+    var lastDistanceCheck = -1;
     scene.onBeforeRenderObservable.add(function () {
         time += scene.getEngine().getDeltaTime() / 1000;
-        for (var _i = 0, swayingCanopies_1 = swayingCanopies; _i < swayingCanopies_1.length; _i++) {
-            var _a = swayingCanopies_1[_i], node = _a.node, phase = _a.phase;
+        if (tank && time - lastDistanceCheck > 0.5) {
+            lastDistanceCheck = time;
+            for (var _i = 0, swayingCanopies_1 = swayingCanopies; _i < swayingCanopies_1.length; _i++) {
+                var tree = swayingCanopies_1[_i];
+                var near = Math.hypot(tree.position.x - tank.position.x, tree.position.z - tank.position.z) < ANIMATION_DISTANCE;
+                if (near !== tree.active) {
+                    tree.active = near;
+                    if (near) {
+                        tree.petals.start();
+                    }
+                    else {
+                        tree.petals.stop();
+                    }
+                }
+            }
+        }
+        for (var _a = 0, swayingCanopies_2 = swayingCanopies; _a < swayingCanopies_2.length; _a++) {
+            var _b = swayingCanopies_2[_a], node = _b.node, phase = _b.phase, active = _b.active;
+            if (!active) {
+                continue;
+            }
             node.rotation.z = Math.sin((time * 0.7) + phase) * 0.018;
             node.rotation.x = Math.sin((time * 0.53) + (phase * 1.3)) * 0.012;
         }
@@ -6239,7 +6838,11 @@ function instantiateTree(templates, position, index, scene) {
         mesh.metadata = __assign(__assign({}, ((_a = mesh.metadata) !== null && _a !== void 0 ? _a : {})), { keepUnfrozen: true });
         mesh.computeWorldMatrix(true);
     });
-    trunk.physicsImpostor = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.PhysicsImpostor(trunk, _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.PhysicsImpostor.BoxImpostor, { mass: 0, restitution: 0 }, scene);
+    // Solid trunk (a plain static body: it never moves).
+    trunk.computeWorldMatrix(true);
+    var trunkBox = trunk.getBoundingInfo().boundingBox;
+    var trunkSize = trunkBox.maximumWorld.subtract(trunkBox.minimumWorld);
+    (0,_staticBodies__WEBPACK_IMPORTED_MODULE_2__.addStaticBox)(scene, trunkBox.centerWorld, trunkSize.x, trunkSize.y, trunkSize.z);
     return canopy;
 }
 /**
@@ -6273,6 +6876,7 @@ function createFallingPetals(scene, texture, treePosition, index) {
     petals.preWarmCycles = 120;
     petals.preWarmStepOffset = 5;
     petals.start();
+    return petals;
 }
 /** Soft petal shape drawn once into a small texture. */
 function createPetalTexture(scene) {
@@ -6402,7 +7006,9 @@ function createSpacer(gui, name, width) {
 /* harmony export */   createWaypointSigns: () => (/* binding */ createWaypointSigns)
 /* harmony export */ });
 /* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core */ "./node_modules/@babylonjs/core/index.js");
-/* harmony import */ var _toyStyle__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./toyStyle */ "./src/scenes/toyStyle.ts");
+/* harmony import */ var _staticBodies__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./staticBodies */ "./src/scenes/staticBodies.ts");
+/* harmony import */ var _toyStyle__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./toyStyle */ "./src/scenes/toyStyle.ts");
+
 
 
 var GROUND_Y = -0.5;
@@ -6457,12 +7063,12 @@ function createWaypointSigns(scene) {
         });
     }
     var materials = {
-        board: (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-signpost-board", PALETTE.board, { roughness: 0.45, clearCoat: 0.5 }),
-        rim: (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-signpost-rim", PALETTE.rim, { roughness: 0.45, clearCoat: 0.4 }),
-        post: (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-signpost-post", PALETTE.post, { roughness: 0.55, clearCoat: 0.3 }),
-        base: (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-signpost-base", PALETTE.base, { roughness: 0.5, clearCoat: 0.3 }),
-        cap: (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-signpost-cap", PALETTE.cap, { roughness: 0.35, clearCoat: 0.6 }),
-        gold: (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-signpost-gold", PALETTE.gold, { roughness: 0.25, metallic: 0.6, clearCoat: 0.6 }),
+        board: (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "toy-signpost-board", PALETTE.board, { roughness: 0.45, clearCoat: 0.5 }),
+        rim: (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "toy-signpost-rim", PALETTE.rim, { roughness: 0.45, clearCoat: 0.4 }),
+        post: (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "toy-signpost-post", PALETTE.post, { roughness: 0.55, clearCoat: 0.3 }),
+        base: (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "toy-signpost-base", PALETTE.base, { roughness: 0.5, clearCoat: 0.3 }),
+        cap: (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "toy-signpost-cap", PALETTE.cap, { roughness: 0.35, clearCoat: 0.6 }),
+        gold: (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "toy-signpost-gold", PALETTE.gold, { roughness: 0.25, metallic: 0.6, clearCoat: 0.6 }),
     };
     // Each new signpost replaces its text on the ground (which stays if the signpost fails).
     var replaces = { "sign-crossroads": projectsText, "sign-targets": targetText };
@@ -6490,8 +7096,8 @@ function createSignpost(scene, signpost, materials) {
         return mesh;
     };
     // Sand base with a bevelled top, and the post.
-    add((0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRoundedBox)("".concat(id, "-base"), 2.8, 0.7, 2.8, 0.25, scene), materials.base).position.y = 0.35;
-    var post = add((0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRoundedBox)("".concat(id, "-post"), 0.9, signpost.postHeight, 0.9, 0.3, scene), materials.post);
+    add((0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("".concat(id, "-base"), 2.8, 0.7, 2.8, 0.25, scene), materials.base).position.y = 0.35;
+    var post = add((0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("".concat(id, "-post"), 0.9, signpost.postHeight, 0.9, 0.3, scene), materials.post);
     post.position.y = 0.6 + (signpost.postHeight / 2);
     var top = 0.6 + signpost.postHeight;
     if (signpost.bullseye) {
@@ -6505,32 +7111,20 @@ function createSignpost(scene, signpost, materials) {
         createBoard(scene, "".concat(id, "-board-").concat(index), board, root, materials);
         // Solid box around the board and its rim.
         var center = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(board.direction * ((board.length / 2) - 1.1), board.y, -0.65);
-        addStaticBox(scene, "".concat(id, "-board-").concat(index, "-collider"), root, center, board.length + 0.6, board.height + 0.6, 0.8);
+        addSignCollider(scene, root, center, board.length + 0.6, board.height + 0.6, 0.8);
     });
     if (signpost.bullseye) {
-        addStaticBox(scene, "".concat(id, "-bullseye-collider"), root, new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, top + 1.15, -0.4), 2.5, 2.5, 1);
+        addSignCollider(scene, root, new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, top + 1.15, -0.4), 2.5, 2.5, 1);
     }
     // Static collider around the post so the tank bumps into it instead of driving through.
-    // (Created without a parent: Babylon skips physics bodies for parented meshes.)
-    var height = (signpost.postHeight + 0.6) * SCALE;
-    var collider = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder("".concat(id, "-collider"), { diameter: 1.4 * SCALE, height: height, tessellation: 12 }, scene);
-    collider.position.set(signpost.x, GROUND_Y + (height / 2), signpost.z);
-    collider.isVisible = false;
-    collider.isPickable = false;
-    collider.physicsImpostor = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.PhysicsImpostor(collider, _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.PhysicsImpostor.CylinderImpostor, { mass: 0, restitution: 0 }, scene);
+    addSignCollider(scene, root, new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, (signpost.postHeight + 0.6) / 2, 0), 1.4, signpost.postHeight + 0.6, 1.4);
 }
-/**
- * Invisible static box in the signpost's (scaled, rotated) space, so the tank hits the boards.
- * It is created without a parent, as Babylon skips physics bodies for parented meshes.
- */
-function addStaticBox(scene, name, root, localCenter, width, height, depth) {
+/** Static collision box in the signpost's (scaled, rotated) space, so the tank hits the boards. */
+function addSignCollider(scene, root, localCenter, width, height, depth) {
     root.computeWorldMatrix(true);
-    var box = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateBox(name, { width: width * SCALE, height: height * SCALE, depth: depth * SCALE }, scene);
-    box.position.copyFrom(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.TransformCoordinates(localCenter, root.getWorldMatrix()));
-    box.rotation.y = root.rotation.y;
-    box.isVisible = false;
-    box.isPickable = false;
-    box.physicsImpostor = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.PhysicsImpostor(box, _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.PhysicsImpostor.BoxImpostor, { mass: 0, restitution: 0 }, scene);
+    (0,_staticBodies__WEBPACK_IMPORTED_MODULE_1__.addStaticBox)(scene, _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.TransformCoordinates(localCenter, root.getWorldMatrix()), width * SCALE, height * SCALE, depth * SCALE, {
+        rotation: _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Quaternion.RotationYawPitchRoll(root.rotation.y, 0, 0),
+    });
 }
 /**
  * An arrow-shaped board (a pentagon pointing along `direction`) mounted in front of the post, its
@@ -6553,10 +7147,10 @@ function createBoard(scene, id, board, parent, materials) {
         var x = _a[0], y = _a[1];
         return [x * direction, y];
     }); };
-    var front = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.extrudeOutline)("".concat(id, "-face"), arrow(length, height, tip), 0.5, 0.12, scene);
+    var front = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.extrudeOutline)("".concat(id, "-face"), arrow(length, height, tip), 0.5, 0.12, scene);
     front.material = materials.board;
     front.parent = node;
-    var rim = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.extrudeOutline)("".concat(id, "-rim"), arrow(length + 0.6, height + 0.6, tip + 0.3), 0.4, 0.1, scene);
+    var rim = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_2__.extrudeOutline)("".concat(id, "-rim"), arrow(length + 0.6, height + 0.6, tip + 0.3), 0.4, 0.1, scene);
     rim.material = materials.rim;
     rim.parent = node;
     rim.position.z = 0.2;
@@ -6650,4 +7244,4 @@ function addBullseye(scene, id, parent, y, materials) {
 /***/ }
 
 }]);
-//# sourceMappingURL=src_scenes_tools_ts.15bdd5f4b9c87b760cf6.js.map
+//# sourceMappingURL=src_scenes_tools_ts.b83b479dc6ffa7d7abd9.js.map

@@ -1,5 +1,6 @@
 import * as BABYLON from "@babylonjs/core";
 
+import { addStaticBox } from "./staticBodies";
 import { createRoundedBox, createToyMaterial, extrudeOutline } from "./toyStyle";
 
 /**
@@ -141,34 +142,22 @@ function createSignpost(scene: BABYLON.Scene, signpost: Signpost, materials: Mat
         createBoard(scene, `${id}-board-${index}`, board, root, materials);
         // Solid box around the board and its rim.
         const center = new BABYLON.Vector3(board.direction * ((board.length / 2) - 1.1), board.y, -0.65);
-        addStaticBox(scene, `${id}-board-${index}-collider`, root, center, board.length + 0.6, board.height + 0.6, 0.8);
+        addSignCollider(scene, root, center, board.length + 0.6, board.height + 0.6, 0.8);
     });
     if (signpost.bullseye) {
-        addStaticBox(scene, `${id}-bullseye-collider`, root, new BABYLON.Vector3(0, top + 1.15, -0.4), 2.5, 2.5, 1);
+        addSignCollider(scene, root, new BABYLON.Vector3(0, top + 1.15, -0.4), 2.5, 2.5, 1);
     }
 
     // Static collider around the post so the tank bumps into it instead of driving through.
-    // (Created without a parent: Babylon skips physics bodies for parented meshes.)
-    const height = (signpost.postHeight + 0.6) * SCALE;
-    const collider = BABYLON.MeshBuilder.CreateCylinder(`${id}-collider`, { diameter: 1.4 * SCALE, height, tessellation: 12 }, scene);
-    collider.position.set(signpost.x, GROUND_Y + (height / 2), signpost.z);
-    collider.isVisible = false;
-    collider.isPickable = false;
-    collider.physicsImpostor = new BABYLON.PhysicsImpostor(collider, BABYLON.PhysicsImpostor.CylinderImpostor, { mass: 0, restitution: 0 }, scene);
+    addSignCollider(scene, root, new BABYLON.Vector3(0, (signpost.postHeight + 0.6) / 2, 0), 1.4, signpost.postHeight + 0.6, 1.4);
 }
 
-/**
- * Invisible static box in the signpost's (scaled, rotated) space, so the tank hits the boards.
- * It is created without a parent, as Babylon skips physics bodies for parented meshes.
- */
-function addStaticBox(scene: BABYLON.Scene, name: string, root: BABYLON.TransformNode, localCenter: BABYLON.Vector3, width: number, height: number, depth: number): void {
+/** Static collision box in the signpost's (scaled, rotated) space, so the tank hits the boards. */
+function addSignCollider(scene: BABYLON.Scene, root: BABYLON.TransformNode, localCenter: BABYLON.Vector3, width: number, height: number, depth: number): void {
     root.computeWorldMatrix(true);
-    const box = BABYLON.MeshBuilder.CreateBox(name, { width: width * SCALE, height: height * SCALE, depth: depth * SCALE }, scene);
-    box.position.copyFrom(BABYLON.Vector3.TransformCoordinates(localCenter, root.getWorldMatrix()));
-    box.rotation.y = root.rotation.y;
-    box.isVisible = false;
-    box.isPickable = false;
-    box.physicsImpostor = new BABYLON.PhysicsImpostor(box, BABYLON.PhysicsImpostor.BoxImpostor, { mass: 0, restitution: 0 }, scene);
+    addStaticBox(scene, BABYLON.Vector3.TransformCoordinates(localCenter, root.getWorldMatrix()), width * SCALE, height * SCALE, depth * SCALE, {
+        rotation: BABYLON.Quaternion.RotationYawPitchRoll(root.rotation.y, 0, 0),
+    });
 }
 
 /**
