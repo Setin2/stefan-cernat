@@ -1,8 +1,8 @@
 import * as BABYLON from "@babylonjs/core";
 
 import { getYaw } from "../core/math";
-import { getPlaygroundHeight } from "../world/playground";
 import type { TankContext } from "./context";
+import { createGroundContact } from "./groundContact";
 
 /**
  * Keyboard driving (W/A/S/D), riding the ramps, and the camera following the tank.
@@ -36,16 +36,8 @@ export function initializeTankMovement(_this: TankContext, rotationSpeed: number
     const turnAcceleration = 12;
     const cameraFollowSharpness = 6;
     const tankCollisionRadius = getHorizontalRadius(_this.tank) * 0.55;
-    // Ramps and platforms: the tank keeps its own height above the ground (see getPlaygroundHeight)
-    // and falls with this gravity, so it rides up slopes, flies off ramp ends and lands.
-    const tankGravity = 60;
-    const maxClimbStep = 1.2;
-    const maxLaunchSpeed = 22;
-    let elevation = 0;
-    let verticalSpeed = 0;
-    let grounded = true;
-    let modelPitch = 0;
-    const toyModel = _this.scene.getTransformNodeByName("toy-tank-root");
+    // Ramps, platforms and the tank's tilt (see groundContact.ts).
+    const groundContact = createGroundContact(_this.tank, _this.scene.getTransformNodeByName("toy-tank-root"));
     let currentTurnSpeed = 0;
     let currentMoveSpeed = 0;
 
@@ -107,9 +99,8 @@ export function initializeTankMovement(_this: TankContext, rotationSpeed: number
         if (collidesWithTree(nextPosition)) {
             currentMoveSpeed = 0;
         }
-        // A surface much higher than the tank's bottom (the back of a ramp, a platform's side) is
-        // a wall: stop instead of popping up onto it.
-        if (getPlaygroundHeight(nextPosition.x, nextPosition.z) - elevation > maxClimbStep) {
+        // The back of a ramp or a platform's side is a wall: stop instead of driving into it.
+        if (currentMoveSpeed !== 0 && groundContact.isBlocked(nextPosition.x, nextPosition.z, yaw, currentMoveSpeed > 0 ? 1 : -1)) {
             currentMoveSpeed = 0;
         }
 
@@ -143,7 +134,7 @@ export function initializeTankMovement(_this: TankContext, rotationSpeed: number
             _this.tank.rotate(BABYLON.Axis.Y, currentTurnSpeed * deltaSeconds, BABYLON.Space.WORLD);
         }
 
-        updateVerticalMovement(deltaSeconds);
+        groundContact.update(deltaSeconds, getYaw(_this.tank), currentMoveSpeed);
 
         const rotationQuaternion = _this.tank.rotationQuaternion;
         if (rotationQuaternion) {
@@ -176,50 +167,6 @@ export function initializeTankMovement(_this: TankContext, rotationSpeed: number
     _this.scene.onDisposeObservable.addOnce(() => {
         _this.scene.onBeforePhysicsObservable.remove(tankControllerObserver);
     });
-
-    /**
-     * Follows the ground and ramps, keeping the upward speed a slope gives, so driving off the top
-     * of a ramp launches the tank; in the air it falls until it lands. The visual model leans with
-     * the slope (or noses up and down in the air).
-     */
-    function updateVerticalMovement(deltaSeconds: number): void {
-        if (deltaSeconds <= 0) {
-            return;
-        }
-        const position = _this.tank.position;
-        const ground = getPlaygroundHeight(position.x, position.z);
-
-        verticalSpeed -= tankGravity * deltaSeconds;
-        const next = elevation + (verticalSpeed * deltaSeconds);
-        if (next <= ground) {
-            // On the surface: move with it, remembering how fast it carried the tank upwards.
-            verticalSpeed = Math.min(maxLaunchSpeed, (ground - elevation) / deltaSeconds);
-            elevation = ground;
-            grounded = true;
-        } else {
-            elevation = next;
-            grounded = false;
-        }
-        position.y = baseTankY + elevation;
-
-        if (!toyModel) {
-            return;
-        }
-        let targetPitch: number;
-        if (grounded) {
-            const yaw = getYaw(_this.tank);
-            const fx = Math.sin(yaw) * 3;
-            const fz = Math.cos(yaw) * 3;
-            const ahead = getPlaygroundHeight(position.x + fx, position.z + fz);
-            const behind = getPlaygroundHeight(position.x - fx, position.z - fz);
-            targetPitch = Math.atan2(ahead - behind, 6);
-        } else {
-            targetPitch = Math.max(-0.45, Math.min(0.45, Math.atan2(verticalSpeed, Math.max(Math.abs(currentMoveSpeed), 12)) * 0.8));
-        }
-        modelPitch += (targetPitch - modelPitch) * Math.min(1, deltaSeconds * 10);
-        // Positive rotation around X tips the nose (+Z) down, so nose-up is negative.
-        toyModel.rotation.x = -modelPitch;
-    }
 
     function moveToward(current: number, target: number, maxDelta: number): number {
         if (Math.abs(target - current) <= maxDelta) {

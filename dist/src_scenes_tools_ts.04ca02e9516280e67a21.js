@@ -126,6 +126,11 @@ function optimizeScene(scene, tank) {
 /* harmony import */ var _world_playground__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../world/playground */ "./src/scenes/world/playground.ts");
 
 
+/**
+ * Surface of the ground. cannon.js multiplies the two touching bodies' values, so with bricks
+ * (0.8 friction) this gives ~0.7 grip, and shots (0.8 restitution) bounce a little off it.
+ */
+var GROUND_MATERIAL = { friction: 0.9, restitution: 0.4 };
 var GRAVITY = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, -40, 0);
 var MAX_SUB_STEP_SECONDS = 1 / 120;
 /** cannon.js Body.SLEEPING */
@@ -159,7 +164,9 @@ function enablePhysics(scene) {
         if (SAPBroadphase) {
             world.broadphase = new SAPBroadphase(world);
         }
+        fixFriction(world);
     }
+    setGroundMaterial(scene, cannonPlugin);
     var executeStep = plugin.executeStep.bind(plugin);
     plugin.executeStep = function (delta, impostors) {
         var subSteps = Math.max(1, Math.ceil(delta / MAX_SUB_STEP_SECONDS - 1e-6));
@@ -170,16 +177,87 @@ function enablePhysics(scene) {
     };
 }
 /**
+ * cannon.js 0.6.2 limits each friction *impulse* by the friction *force* (mu * g * mass) without
+ * multiplying it by the step time, so friction comes out 1/dt times too strong: about 120x with
+ * our 1/120s sub-steps. Nothing could slide: a pushed brick stopped dead in one step and flipped
+ * over its front edge instead, and friction values made no difference. Scaling the limits by the
+ * step time gives real Coulomb friction (later fixed the same way in cannon-es).
+ */
+function fixFriction(world) {
+    var narrowphase = world.narrowphase;
+    var createFrictionEquations = narrowphase.createFrictionEquationsFromContact;
+    narrowphase.createFrictionEquationsFromContact = function (contact, out) {
+        var created = createFrictionEquations.call(this, contact, out);
+        if (created) {
+            // It appends one pair of tangent equations per contact.
+            for (var i = out.length - 2; i < out.length; i++) {
+                out[i].minForce *= world.dt;
+                out[i].maxForce *= world.dt;
+            }
+        }
+        return created;
+    };
+}
+/**
+ * The imported scene gives the ground 0.2 friction and 0.9 restitution, which made everything
+ * slide on it like ice once friction worked. It gets its own material (Babylon shares materials
+ * between bodies with equal values, so the existing one isn't edited in place).
+ */
+function setGroundMaterial(scene, plugin) {
+    var _a;
+    var ground = scene.getMeshByName("ground");
+    var engine = scene.getPhysicsEngine();
+    var impostor = ground && ((_a = ground.physicsImpostor) !== null && _a !== void 0 ? _a : engine === null || engine === void 0 ? void 0 : engine.getImpostorForPhysicsObject(ground));
+    var body = impostor === null || impostor === void 0 ? void 0 : impostor.physicsBody;
+    if (!body || !plugin.BJSCANNON) {
+        return;
+    }
+    var material = new plugin.BJSCANNON.Material("ground");
+    material.friction = GROUND_MATERIAL.friction;
+    material.restitution = GROUND_MATERIAL.restitution;
+    body.material = material;
+}
+/**
+ * The tank's collision box, relative to the holder's centre: the hull and tracks of the toy model
+ * (the thin barrel sticks out of it). The imported holder is a 12-unit cube reaching ~2.7 units
+ * above the turret, so bricks used to land on an invisible roof above the tank.
+ */
+var TANK_HALF_EXTENTS = { x: 6.2, y: 4.65, z: 6.9 };
+var TANK_BOX_OFFSET_Y = -1.35;
+/**
+ * A second, thin box around the gun barrel (see toyTank.ts: axis 0.9 above the holder's centre,
+ * from the turret out to the muzzle brake at z ~11.2), so it can't poke through walls and bricks.
+ */
+var BARREL_HALF_EXTENTS = { x: 0.7, y: 0.7, z: 2.35 };
+var BARREL_OFFSET = { y: 0.9, z: 8.85 };
+/**
  * Gives the tank holder its physics body. Movement sets the tank's velocity every frame, so
  * linear damping isn't needed; strong angular damping keeps knocks from bricks from spinning it
  * between frames.
  */
 function createTankBody(scene, tank) {
+    var _a, _b;
+    var CANNON = (_b = (_a = scene.getPhysicsEngine()) === null || _a === void 0 ? void 0 : _a.getPhysicsPlugin()) === null || _b === void 0 ? void 0 : _b.BJSCANNON;
     tank.physicsImpostor = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.PhysicsImpostor(tank, _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.PhysicsImpostor.BoxImpostor, { mass: 1000, restitution: 0 }, scene);
     var body = tank.physicsImpostor.physicsBody;
-    if (body) {
-        body.angularDamping = 0.98;
-        body.allowSleep = false;
+    if (!body) {
+        return;
+    }
+    body.angularDamping = 0.98;
+    body.allowSleep = false;
+    var box = body.shapes[0];
+    if ((box === null || box === void 0 ? void 0 : box.halfExtents) && box.updateConvexPolyhedronRepresentation) {
+        box.halfExtents.set(TANK_HALF_EXTENTS.x, TANK_HALF_EXTENTS.y, TANK_HALF_EXTENTS.z);
+        box.updateConvexPolyhedronRepresentation();
+        box.updateBoundingSphereRadius();
+        body.shapeOffsets[0].set(0, TANK_BOX_OFFSET_Y, 0);
+        if (CANNON) {
+            var barrel = new CANNON.Box(new CANNON.Vec3(BARREL_HALF_EXTENTS.x, BARREL_HALF_EXTENTS.y, BARREL_HALF_EXTENTS.z));
+            body.addShape(barrel, new CANNON.Vec3(0, BARREL_OFFSET.y, BARREL_OFFSET.z));
+        }
+        body.updateBoundingRadius();
+        body.updateMassProperties();
+        body.aabbNeedsUpdate = true;
     }
 }
 /**
@@ -1088,6 +1166,152 @@ var scriptsMap = {
 
 /***/ },
 
+/***/ "./src/scenes/tank/groundContact.ts"
+/*!******************************************!*\
+  !*** ./src/scenes/tank/groundContact.ts ***!
+  \******************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   createGroundContact: () => (/* binding */ createGroundContact)
+/* harmony export */ });
+/* harmony import */ var _core_math__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../core/math */ "./src/scenes/core/math.ts");
+/* harmony import */ var _world_playground__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../world/playground */ "./src/scenes/world/playground.ts");
+
+
+/**
+ * How the tank sits on the ground and the ramps.
+ *
+ * The tank's bottom is sampled at a grid of points under its tracks instead of a single point
+ * under its centre. The model is tilted (pitch and roll) to fit the surface under it, and its
+ * height is then chosen so that the lowest point of the *tilted* tank just touches the surface,
+ * so no corner sinks into a ramp, a platform edge or the ground, even while the tilt is still
+ * catching up (at the foot of a ramp, rolling off an edge, or landing nose first).
+ *
+ * The tank falls with its own gravity, keeps the upward speed a slope gives it (so driving off a
+ * ramp launches it) and noses up or down in the air with its flight path.
+ */
+/**
+ * Sample points under the tracks, in tank-local units (x to the right, z forwards): along both
+ * outer track edges and the centre line, close enough together that a ramp's lip or a platform's
+ * edge can't slip in between. `lift` is how far the rounded track ends curve up off the ground
+ * (see toyTank.ts: end wheels at z = +-5, belt radius 1.8).
+ */
+var FOOTPRINT_X = [-5.9, 0, 5.9];
+var FOOTPRINT_Z = Array.from({ length: 19 }, function (_, i) { return -6.3 + (i * 0.7); });
+var FOOTPRINT = FOOTPRINT_X.flatMap(function (x) { return FOOTPRINT_Z.map(function (z) {
+    var overhang = Math.max(0, Math.abs(z) - 5);
+    return { x: x, z: z, lift: 1.8 - Math.sqrt((1.8 * 1.8) - (overhang * overhang)) };
+}); });
+var SUM_X2 = FOOTPRINT.reduce(function (sum, p) { return sum + (p.x * p.x); }, 0);
+var SUM_Z2 = FOOTPRINT.reduce(function (sum, p) { return sum + (p.z * p.z); }, 0);
+/** How far ahead of the centre the front (or back) of the tracks reaches, for the wall check. */
+var LEAD_Z = 7;
+var GRAVITY = 60;
+var MAX_LAUNCH_SPEED = 22;
+/** Steeper steps than this (the back of a ramp, a platform's side) are walls. */
+var MAX_CLIMB_STEP = 1.2;
+var MAX_TILT = 0.5;
+/** How quickly the model's tilt follows the surface (per second). */
+var GROUNDED_TILT_RATE = 14;
+var AIR_PITCH_RATE = 6;
+var AIR_ROLL_RATE = 3;
+function createGroundContact(tank, model) {
+    var baseY = tank.position.y;
+    var heights = new Array(FOOTPRINT.length).fill(0);
+    var elevation = 0;
+    var verticalSpeed = 0;
+    var grounded = true;
+    var pitch = 0;
+    var roll = 0;
+    var sampleFootprint = function (x, z, sin, cos) {
+        // Babylon is left-handed: local +z is (sin, cos) and local +x is (cos, -sin) in world x/z.
+        FOOTPRINT.forEach(function (p, i) {
+            heights[i] = (0,_world_playground__WEBPACK_IMPORTED_MODULE_1__.getPlaygroundHeight)(x + (p.x * cos) + (p.z * sin), z - (p.x * sin) + (p.z * cos));
+        });
+    };
+    /** Height of the tank's centre at which its lowest point, tilted as now, touches the surface. */
+    var supportHeight = function () {
+        var tanPitch = Math.tan(pitch);
+        var tanRoll = Math.tan(roll);
+        var support = 0;
+        FOOTPRINT.forEach(function (p, i) {
+            support = Math.max(support, heights[i] - (p.z * tanPitch) - (p.x * tanRoll) - p.lift);
+        });
+        return support;
+    };
+    var update = function (deltaSeconds, yaw, forwardSpeed) {
+        if (deltaSeconds <= 0) {
+            return;
+        }
+        var sin = Math.sin(yaw);
+        var cos = Math.cos(yaw);
+        var position = tank.position;
+        sampleFootprint(position.x, position.z, sin, cos);
+        // Tilt: on the ground, towards the plane that best fits the surface under the tracks; in
+        // the air, the nose follows the flight path and the roll levels out.
+        if (grounded) {
+            var slopeZ_1 = 0;
+            var slopeX_1 = 0;
+            FOOTPRINT.forEach(function (p, i) {
+                slopeZ_1 += p.z * heights[i];
+                slopeX_1 += p.x * heights[i];
+            });
+            var rate = Math.min(1, deltaSeconds * GROUNDED_TILT_RATE);
+            pitch += ((0,_core_math__WEBPACK_IMPORTED_MODULE_0__.clamp)(Math.atan(slopeZ_1 / SUM_Z2), -MAX_TILT, MAX_TILT) - pitch) * rate;
+            roll += ((0,_core_math__WEBPACK_IMPORTED_MODULE_0__.clamp)(Math.atan(slopeX_1 / SUM_X2), -MAX_TILT, MAX_TILT) - roll) * rate;
+        }
+        else {
+            var flightPitch = Math.atan2(verticalSpeed, Math.max(Math.abs(forwardSpeed), 12)) * 0.8;
+            pitch += ((0,_core_math__WEBPACK_IMPORTED_MODULE_0__.clamp)(flightPitch, -0.45, 0.45) - pitch) * Math.min(1, deltaSeconds * AIR_PITCH_RATE);
+            roll -= roll * Math.min(1, deltaSeconds * AIR_ROLL_RATE);
+        }
+        var support = supportHeight();
+        verticalSpeed -= GRAVITY * deltaSeconds;
+        var next = elevation + (verticalSpeed * deltaSeconds);
+        if (next <= support) {
+            // On the surface: move with it, keeping the speed it gives (so the lip of a ramp launches
+            // the tank and it stays glued to a downhill slope). A landing never pushes it back up.
+            var surfaceSpeed = (support - elevation) / deltaSeconds;
+            verticalSpeed = grounded ? Math.min(MAX_LAUNCH_SPEED, surfaceSpeed) : Math.min(0, surfaceSpeed);
+            elevation = support;
+            grounded = true;
+        }
+        else {
+            elevation = next;
+            grounded = false;
+        }
+        position.y = baseY + elevation;
+        if (model) {
+            // rotation.x = -pitch lifts the nose (+z); rotation.z = roll lifts the right side (+x).
+            model.rotation.x = -pitch;
+            model.rotation.z = roll;
+        }
+    };
+    var isBlocked = function (x, z, yaw, direction) {
+        var sin = Math.sin(yaw);
+        var cos = Math.cos(yaw);
+        var lead = LEAD_Z * direction;
+        var leadBottom = elevation + (lead * Math.tan(pitch));
+        for (var _i = 0, FOOTPRINT_X_1 = FOOTPRINT_X; _i < FOOTPRINT_X_1.length; _i++) {
+            var across = FOOTPRINT_X_1[_i];
+            var leadX = x + (across * cos) + (lead * sin);
+            var leadZ = z - (across * sin) + (lead * cos);
+            var ahead = (0,_world_playground__WEBPACK_IMPORTED_MODULE_1__.getPlaygroundHeight)(leadX, leadZ);
+            // A sudden step (not a slope) that rises clearly above the bottom of the tracks.
+            var behind = (0,_world_playground__WEBPACK_IMPORTED_MODULE_1__.getPlaygroundHeight)(leadX - (1.5 * direction * sin), leadZ - (1.5 * direction * cos));
+            if (ahead - behind > MAX_CLIMB_STEP && ahead - leadBottom > MAX_CLIMB_STEP) {
+                return true;
+            }
+        }
+        return false;
+    };
+    return { update: update, isBlocked: isBlocked };
+}
+
+
+/***/ },
+
 /***/ "./src/scenes/tank/movement.ts"
 /*!*************************************!*\
   !*** ./src/scenes/tank/movement.ts ***!
@@ -1099,7 +1323,7 @@ var scriptsMap = {
 /* harmony export */ });
 /* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core */ "./node_modules/@babylonjs/core/index.js");
 /* harmony import */ var _core_math__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../core/math */ "./src/scenes/core/math.ts");
-/* harmony import */ var _world_playground__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../world/playground */ "./src/scenes/world/playground.ts");
+/* harmony import */ var _groundContact__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./groundContact */ "./src/scenes/tank/groundContact.ts");
 
 
 
@@ -1135,16 +1359,8 @@ function initializeTankMovement(_this, rotationSpeed) {
     var turnAcceleration = 12;
     var cameraFollowSharpness = 6;
     var tankCollisionRadius = getHorizontalRadius(_this.tank) * 0.55;
-    // Ramps and platforms: the tank keeps its own height above the ground (see getPlaygroundHeight)
-    // and falls with this gravity, so it rides up slopes, flies off ramp ends and lands.
-    var tankGravity = 60;
-    var maxClimbStep = 1.2;
-    var maxLaunchSpeed = 22;
-    var elevation = 0;
-    var verticalSpeed = 0;
-    var grounded = true;
-    var modelPitch = 0;
-    var toyModel = _this.scene.getTransformNodeByName("toy-tank-root");
+    // Ramps, platforms and the tank's tilt (see groundContact.ts).
+    var groundContact = (0,_groundContact__WEBPACK_IMPORTED_MODULE_2__.createGroundContact)(_this.tank, _this.scene.getTransformNodeByName("toy-tank-root"));
     var currentTurnSpeed = 0;
     var currentMoveSpeed = 0;
     _this.camera.lockedTarget = null;
@@ -1196,9 +1412,8 @@ function initializeTankMovement(_this, rotationSpeed) {
         if (collidesWithTree(nextPosition)) {
             currentMoveSpeed = 0;
         }
-        // A surface much higher than the tank's bottom (the back of a ramp, a platform's side) is
-        // a wall: stop instead of popping up onto it.
-        if ((0,_world_playground__WEBPACK_IMPORTED_MODULE_2__.getPlaygroundHeight)(nextPosition.x, nextPosition.z) - elevation > maxClimbStep) {
+        // The back of a ramp or a platform's side is a wall: stop instead of driving into it.
+        if (currentMoveSpeed !== 0 && groundContact.isBlocked(nextPosition.x, nextPosition.z, yaw, currentMoveSpeed > 0 ? 1 : -1)) {
             currentMoveSpeed = 0;
         }
         // The tank is moved by the physics engine using this velocity (rather than by setting its
@@ -1226,7 +1441,7 @@ function initializeTankMovement(_this, rotationSpeed) {
         if (currentTurnSpeed !== 0) {
             _this.tank.rotate(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Axis.Y, currentTurnSpeed * deltaSeconds, _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Space.WORLD);
         }
-        updateVerticalMovement(deltaSeconds);
+        groundContact.update(deltaSeconds, (0,_core_math__WEBPACK_IMPORTED_MODULE_1__.getYaw)(_this.tank), currentMoveSpeed);
         var rotationQuaternion = _this.tank.rotationQuaternion;
         if (rotationQuaternion) {
             _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Quaternion.RotationYawPitchRollToRef((0,_core_math__WEBPACK_IMPORTED_MODULE_1__.getYaw)(_this.tank), 0, 0, uprightRotation);
@@ -1249,49 +1464,6 @@ function initializeTankMovement(_this, rotationSpeed) {
     _this.scene.onDisposeObservable.addOnce(function () {
         _this.scene.onBeforePhysicsObservable.remove(tankControllerObserver);
     });
-    /**
-     * Follows the ground and ramps, keeping the upward speed a slope gives, so driving off the top
-     * of a ramp launches the tank; in the air it falls until it lands. The visual model leans with
-     * the slope (or noses up and down in the air).
-     */
-    function updateVerticalMovement(deltaSeconds) {
-        if (deltaSeconds <= 0) {
-            return;
-        }
-        var position = _this.tank.position;
-        var ground = (0,_world_playground__WEBPACK_IMPORTED_MODULE_2__.getPlaygroundHeight)(position.x, position.z);
-        verticalSpeed -= tankGravity * deltaSeconds;
-        var next = elevation + (verticalSpeed * deltaSeconds);
-        if (next <= ground) {
-            // On the surface: move with it, remembering how fast it carried the tank upwards.
-            verticalSpeed = Math.min(maxLaunchSpeed, (ground - elevation) / deltaSeconds);
-            elevation = ground;
-            grounded = true;
-        }
-        else {
-            elevation = next;
-            grounded = false;
-        }
-        position.y = baseTankY + elevation;
-        if (!toyModel) {
-            return;
-        }
-        var targetPitch;
-        if (grounded) {
-            var yaw = (0,_core_math__WEBPACK_IMPORTED_MODULE_1__.getYaw)(_this.tank);
-            var fx = Math.sin(yaw) * 3;
-            var fz = Math.cos(yaw) * 3;
-            var ahead = (0,_world_playground__WEBPACK_IMPORTED_MODULE_2__.getPlaygroundHeight)(position.x + fx, position.z + fz);
-            var behind = (0,_world_playground__WEBPACK_IMPORTED_MODULE_2__.getPlaygroundHeight)(position.x - fx, position.z - fz);
-            targetPitch = Math.atan2(ahead - behind, 6);
-        }
-        else {
-            targetPitch = Math.max(-0.45, Math.min(0.45, Math.atan2(verticalSpeed, Math.max(Math.abs(currentMoveSpeed), 12)) * 0.8));
-        }
-        modelPitch += (targetPitch - modelPitch) * Math.min(1, deltaSeconds * 10);
-        // Positive rotation around X tips the nose (+Z) down, so nose-up is negative.
-        toyModel.rotation.x = -modelPitch;
-    }
     function moveToward(current, target, maxDelta) {
         if (Math.abs(target - current) <= maxDelta) {
             return target;
@@ -1333,8 +1505,9 @@ function initializeTankMovement(_this, rotationSpeed) {
 /* harmony import */ var _core_math__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../core/math */ "./src/scenes/core/math.ts");
 /* harmony import */ var _ui_style__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../ui/style */ "./src/scenes/ui/style.ts");
 /* harmony import */ var _ui_targetHud__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../ui/targetHud */ "./src/scenes/ui/targetHud.ts");
-/* harmony import */ var _world_playground__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../world/playground */ "./src/scenes/world/playground.ts");
-/* harmony import */ var _toyTarget__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./toyTarget */ "./src/scenes/tank/toyTarget.ts");
+/* harmony import */ var _world_bricks__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../world/bricks */ "./src/scenes/world/bricks.ts");
+/* harmony import */ var _world_playground__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../world/playground */ "./src/scenes/world/playground.ts");
+/* harmony import */ var _toyTarget__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./toyTarget */ "./src/scenes/tank/toyTarget.ts");
 var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -1371,12 +1544,27 @@ var __generator = (undefined && undefined.__generator) || function (thisArg, bod
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+var __spreadArray = (undefined && undefined.__spreadArray) || function (to, from, pack) {
+    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
+        if (ar || !(i in from)) {
+            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
+            ar[i] = from[i];
+        }
+    }
+    return to.concat(ar || Array.prototype.slice.call(from));
+};
 
 
 
 
 
 
+
+/**
+ * A rubber ball: heavy enough to knock a brick clean out of a wall (it rolls a few bricks' lengths
+ * away), and bouncy enough to hop off the ground.
+ */
+var SHOT_PHYSICS = { mass: 0.3, friction: 0.4, restitution: 0.8 };
 /**
  * Gives the player the ability to shoot with the tank.
  */
@@ -1465,7 +1653,7 @@ function initializeShooting(_this, forward) {
                         var _a;
                         var toyTarget = null;
                         try {
-                            toyTarget = (0,_toyTarget__WEBPACK_IMPORTED_MODULE_5__.createToyTarget)(_this.scene, target.mesh, (_a = targetMarks[target.label]) !== null && _a !== void 0 ? _a : "");
+                            toyTarget = (0,_toyTarget__WEBPACK_IMPORTED_MODULE_6__.createToyTarget)(_this.scene, target.mesh, (_a = targetMarks[target.label]) !== null && _a !== void 0 ? _a : "");
                         }
                         catch (error) {
                             console.error("Toy target creation failed, keeping the original", error);
@@ -1661,8 +1849,9 @@ function initializeShooting(_this, forward) {
                         shotSpawnPosition.addInPlace(_this.tank.position);
                         shotSpawnPosition.y += shotHeightOffset;
                         shotBall.position.copyFrom(shotSpawnPosition);
-                        shotBall.physicsImpostor = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.PhysicsImpostor(shotBall, _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.PhysicsImpostor.SphereImpostor, { mass: 0.5, restitution: 0 }, _this.scene);
-                        (0,_world_playground__WEBPACK_IMPORTED_MODULE_4__.collideWithRamps)(shotBall.physicsImpostor);
+                        shotBall.physicsImpostor = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.PhysicsImpostor(shotBall, _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.PhysicsImpostor.SphereImpostor, SHOT_PHYSICS, _this.scene);
+                        (0,_world_playground__WEBPACK_IMPORTED_MODULE_5__.collideWithRamps)(shotBall.physicsImpostor);
+                        shotBall.physicsImpostor.registerOnPhysicsCollide(__spreadArray([], (0,_world_bricks__WEBPACK_IMPORTED_MODULE_4__.getBrickImpostors)(), true), _world_bricks__WEBPACK_IMPORTED_MODULE_4__.playBrickSound);
                         // Shots inherit the tank's motion, so firing while driving still goes where you aim.
                         var tankVelocity = (_b = _this.tank.physicsImpostor) === null || _b === void 0 ? void 0 : _b.getLinearVelocity();
                         if (tankVelocity) {
@@ -2340,7 +2529,8 @@ function createToyTank(scene, holder) {
     var muzzleHeight = (root.position.y * HOLDER_SIZE) + BARREL_Y;
     return {
         root: root,
-        muzzle: { forward: BARREL_START_Z + BARREL_LENGTH + 0.4, height: muzzleHeight },
+        // Just clear of the barrel's collision box (see core/physics.ts), so shots don't hit the tank.
+        muzzle: { forward: BARREL_START_Z + BARREL_LENGTH + 0.9, height: muzzleHeight },
         fire: function () {
             recoil = 1.0;
             flashTime = 0.09;
@@ -4344,14 +4534,14 @@ function createTrophy(scene, spot, shared) {
         collider.rotation.y = yaw;
         collider.isVisible = false;
         collider.isPickable = false;
-        // No bounce, decent grip and some damping: a bump from the tank slides and tips them
-        // instead of sending them flying.
+        // No bounce and decent grip: a bump from the tank slides and tips them instead of
+        // sending them flying. Light damping, so they still fall at full speed.
         var impostor = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.PhysicsImpostor(collider, _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.PhysicsImpostor.BoxImpostor, { mass: 3, friction: 0.6, restitution: 0 }, scene);
         collider.physicsImpostor = impostor;
         var body = impostor.physicsBody;
         if (body) {
-            body.linearDamping = 0.4;
-            body.angularDamping = 0.6;
+            body.linearDamping = 0.15;
+            body.angularDamping = 0.3;
         }
         holder = collider;
     }
@@ -4732,7 +4922,9 @@ function paintVertices(mesh, color) {
 (__unused_webpack_module, __webpack_exports__, __webpack_require__) {
 
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   createBrickBuilds: () => (/* binding */ createBrickBuilds)
+/* harmony export */   createBrickBuilds: () => (/* binding */ createBrickBuilds),
+/* harmony export */   getBrickImpostors: () => (/* binding */ getBrickImpostors),
+/* harmony export */   playBrickSound: () => (/* binding */ playBrickSound)
 /* harmony export */ });
 /* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core */ "./node_modules/@babylonjs/core/index.js");
 /* harmony import */ var _core_toyStyle__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../core/toyStyle */ "./src/scenes/core/toyStyle.ts");
@@ -4755,14 +4947,92 @@ var BRICK_BUILDS = [
 ];
 /** Builds every brick wall, pyramid and tower in BRICK_BUILDS. */
 function createBrickBuilds(context) {
+    brickSound = context.brickSound;
+    brickImpostors.length = 0;
+    context.scene.onDisposeObservable.addOnce(function () {
+        brickImpostors.length = 0;
+        brickSound = null;
+    });
     for (var _i = 0, BRICK_BUILDS_1 = BRICK_BUILDS; _i < BRICK_BUILDS_1.length; _i++) {
         var build = BRICK_BUILDS_1[_i];
         instantiateBricks(context, build.x, 8, build.z, build.rows, build.rotationY);
     }
+    keepBricksCalm(context.scene, context.tank);
 }
-/** Shared by every wall, since they all play the same sound. */
+/** Bricks within this distance of the tank are kept awake (the tank is 12 wide). */
+var WAKE_DISTANCE = 16;
+/** Above anything natural: the tank drives at 38, and a brick falling off a wall reaches ~34. */
+var MAX_BRICK_SPEED = 50;
+/**
+ * Resting bricks fall asleep, and cannon.js treats a sleeping body as immovable for the step in
+ * which something first touches it. The tank (whose speed is forced every frame) then drives into
+ * bricks that can't move, and once they wake, the solver pushes them apart violently, sometimes
+ * shooting a brick off at well over 100 units/s. So bricks near the tank are woken up before it
+ * reaches them, and as a safety net brick speeds are capped after every physics step.
+ */
+function keepBricksCalm(scene, tank) {
+    var _a, _b;
+    var SLEEPING = 2;
+    var allBodies = brickImpostors
+        .map(function (impostor) { return impostor.physicsBody; })
+        .filter(function (body) { return !!body; });
+    var wakeObserver = scene.onBeforePhysicsObservable.add(function () {
+        var x = tank.position.x;
+        var z = tank.position.z;
+        for (var _i = 0, allBodies_1 = allBodies; _i < allBodies_1.length; _i++) {
+            var body = allBodies_1[_i];
+            if (body.sleepState === SLEEPING && Math.abs(body.position.x - x) < WAKE_DISTANCE && Math.abs(body.position.z - z) < WAKE_DISTANCE) {
+                body.wakeUp();
+            }
+        }
+    });
+    var world = (_b = (_a = scene.getPhysicsEngine()) === null || _a === void 0 ? void 0 : _a.getPhysicsPlugin()) === null || _b === void 0 ? void 0 : _b.world;
+    var capSpeeds = function () {
+        for (var _i = 0, allBodies_2 = allBodies; _i < allBodies_2.length; _i++) {
+            var body = allBodies_2[_i];
+            if (body.sleepState !== SLEEPING) {
+                var speed = body.velocity.length();
+                if (speed > MAX_BRICK_SPEED) {
+                    body.velocity.scale(MAX_BRICK_SPEED / speed, body.velocity);
+                }
+            }
+        }
+    };
+    world === null || world === void 0 ? void 0 : world.addEventListener("postStep", capSpeeds);
+    scene.onDisposeObservable.addOnce(function () {
+        scene.onBeforePhysicsObservable.remove(wakeObserver);
+        world === null || world === void 0 ? void 0 : world.removeEventListener("postStep", capSpeeds);
+    });
+}
+/**
+ * Toy-block physics: grippy against each other and the ground (so stacks stand and knocked
+ * bricks tumble and stop instead of skating away), barely bouncy, and only lightly damped so
+ * they fall at full speed.
+ */
+var BRICK_PHYSICS = { mass: 2, friction: 0.8, restitution: 0.1 };
+var BRICK_LINEAR_DAMPING = 0.1;
+var BRICK_ANGULAR_DAMPING = 0.2;
+/** Every brick's physics body, so shots can tell when they hit one. */
+var brickImpostors = [];
+var brickSound = null;
+function getBrickImpostors() {
+    return brickImpostors;
+}
+/**
+ * Plays the knock sound. Driving into a wall or a shot hitting one makes many bricks collide in
+ * the same moment, and they all share one sound, so it's throttled to avoid restarting it many
+ * times in a row.
+ */
 var brickSoundCooldownMs = 150;
 var lastBrickSoundTime = 0;
+function playBrickSound() {
+    var now = performance.now();
+    if (now - lastBrickSoundTime < brickSoundCooldownMs) {
+        return;
+    }
+    lastBrickSoundTime = now;
+    brickSound === null || brickSound === void 0 ? void 0 : brickSound.play();
+}
 /**
  * Set up a wall of bricks centered at (x, z) and rotated around its own center.
  * @param y fallback ground height used if no ground is found below the wall.
@@ -4771,7 +5041,6 @@ var lastBrickSoundTime = 0;
 function instantiateBricks(_this, x, y, z, numColumnsPerRow, rotationY) {
     var _a;
     if (rotationY === void 0) { rotationY = 0; }
-    var brickMass = 2;
     var brickScaleFactor = 1.1;
     var brickLength = 6 * brickScaleFactor;
     var brickDepth = 3 * brickScaleFactor;
@@ -4779,10 +5048,6 @@ function instantiateBricks(_this, x, y, z, numColumnsPerRow, rotationY) {
     var groundY = getGroundHeight(x, y, z);
     var initialY = groundY + brickHeight / 2;
     var tankImpostor = _this.tank.physicsImpostor;
-    if (!tankImpostor) {
-        console.warn("Tank physics impostor is missing. Skipping brick collision audio setup.");
-        return;
-    }
     // One hidden template per colour; the visible bricks are instances of these.
     var brickTemplates = createBrickTemplates(_this, brickLength, brickHeight, brickDepth);
     var colorOffset = Math.abs(Math.round(x + z)) % BRICK_COLORS.length;
@@ -4807,7 +5072,7 @@ function instantiateBricks(_this, x, y, z, numColumnsPerRow, rotationY) {
             // Stepping by 2 per brick and 3 per row keeps side-by-side and stacked bricks different.
             var template = brickTemplates[(colorOffset + (i * 2) + (j * 3)) % brickTemplates.length];
             var brickInstance = template.createInstance("brick".concat(j, "-").concat(i));
-            positionBrick(_this, brickInstance, localX, localY, 0, brickMass);
+            positionBrick(brickInstance, localX, localY, 0);
             // Parent only after the impostor exists: Babylon skips creating the physics
             // body for meshes that already have a parent.
             brickInstance.parent = wallParent;
@@ -4826,23 +5091,20 @@ function instantiateBricks(_this, x, y, z, numColumnsPerRow, rotationY) {
     /**
      * Position a brick mesh and set up its physics.
      */
-    function positionBrick(_this, brick, x, y, z, mass) {
+    function positionBrick(brick, x, y, z) {
         brick.position.set(x, y, z);
-        brick.physicsImpostor = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.PhysicsImpostor(brick, _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.PhysicsImpostor.BoxImpostor, { mass: mass, friction: 1 }, _this.scene);
-        // Play sound on collision with the tank. Driving into a wall makes many bricks touch the
-        // tank in the same moment, and they all share one sound, so throttle it to avoid
-        // restarting it many times in a row.
-        brick.physicsImpostor.registerOnPhysicsCollide(tankImpostor, function () {
-            var now = performance.now();
-            if (now - lastBrickSoundTime < brickSoundCooldownMs) {
-                return;
-            }
-            lastBrickSoundTime = now;
-            _this.brickSound.play();
-        });
-        var physicsBody = brick.physicsImpostor.physicsBody;
-        if (physicsBody) {
-            physicsBody.linearDamping = 0.95;
+        var impostor = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.PhysicsImpostor(brick, _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.PhysicsImpostor.BoxImpostor, BRICK_PHYSICS, _this.scene);
+        if (tankImpostor) {
+            impostor.registerOnPhysicsCollide(tankImpostor, playBrickSound);
+        }
+        brickImpostors.push(impostor);
+        var body = impostor.physicsBody;
+        if (body) {
+            body.linearDamping = BRICK_LINEAR_DAMPING;
+            body.angularDamping = BRICK_ANGULAR_DAMPING;
+            // Walls are built resting on the ground, so they start asleep: no settling jitter on
+            // load, and no simulation cost until the tank or a shot wakes them up.
+            body.sleep();
         }
     }
     function getGroundHeight(x, fallbackY, z) {
@@ -7955,4 +8217,4 @@ function addBullseye(scene, id, parent, y, materials) {
 /***/ }
 
 }]);
-//# sourceMappingURL=src_scenes_tools_ts.433df0471d26133c23e4.js.map
+//# sourceMappingURL=src_scenes_tools_ts.04ca02e9516280e67a21.js.map

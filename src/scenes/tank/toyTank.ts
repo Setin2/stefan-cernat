@@ -407,7 +407,8 @@ export function createToyTank(scene: BABYLON.Scene, holder: BABYLON.AbstractMesh
     const muzzleHeight = (root.position.y * HOLDER_SIZE) + BARREL_Y;
     return {
         root,
-        muzzle: { forward: BARREL_START_Z + BARREL_LENGTH + 0.4, height: muzzleHeight },
+        // Just clear of the barrel's collision box (see core/physics.ts), so shots don't hit the tank.
+        muzzle: { forward: BARREL_START_Z + BARREL_LENGTH + 0.9, height: muzzleHeight },
         fire: () => {
             recoil = 1.0;
             flashTime = 0.09;

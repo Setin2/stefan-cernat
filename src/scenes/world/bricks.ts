@@ -27,14 +27,104 @@ const BRICK_BUILDS: { x: number; z: number; rows: number[]; rotationY: number }[
 
 /** Builds every brick wall, pyramid and tower in BRICK_BUILDS. */
 export function createBrickBuilds(context: BrickContext): void {
+    brickSound = context.brickSound;
+    brickImpostors.length = 0;
+    context.scene.onDisposeObservable.addOnce(() => {
+        brickImpostors.length = 0;
+        brickSound = null;
+    });
     for (const build of BRICK_BUILDS) {
         instantiateBricks(context, build.x, 8, build.z, build.rows, build.rotationY);
     }
+    keepBricksCalm(context.scene, context.tank);
 }
 
-/** Shared by every wall, since they all play the same sound. */
+type BrickBody = {
+    sleepState: number;
+    wakeUp: () => void;
+    position: { x: number; z: number };
+    velocity: { length: () => number; scale: (factor: number, target: unknown) => void };
+};
+
+/** Bricks within this distance of the tank are kept awake (the tank is 12 wide). */
+const WAKE_DISTANCE = 16;
+/** Above anything natural: the tank drives at 38, and a brick falling off a wall reaches ~34. */
+const MAX_BRICK_SPEED = 50;
+
+/**
+ * Resting bricks fall asleep, and cannon.js treats a sleeping body as immovable for the step in
+ * which something first touches it. The tank (whose speed is forced every frame) then drives into
+ * bricks that can't move, and once they wake, the solver pushes them apart violently, sometimes
+ * shooting a brick off at well over 100 units/s. So bricks near the tank are woken up before it
+ * reaches them, and as a safety net brick speeds are capped after every physics step.
+ */
+function keepBricksCalm(scene: BABYLON.Scene, tank: BABYLON.AbstractMesh): void {
+    const SLEEPING = 2;
+    const allBodies = brickImpostors
+        .map((impostor) => impostor.physicsBody as BrickBody | null)
+        .filter((body): body is BrickBody => !!body);
+
+    const wakeObserver = scene.onBeforePhysicsObservable.add(() => {
+        const x = tank.position.x;
+        const z = tank.position.z;
+        for (const body of allBodies) {
+            if (body.sleepState === SLEEPING && Math.abs(body.position.x - x) < WAKE_DISTANCE && Math.abs(body.position.z - z) < WAKE_DISTANCE) {
+                body.wakeUp();
+            }
+        }
+    });
+
+    const world = (scene.getPhysicsEngine()?.getPhysicsPlugin() as unknown as { world?: { addEventListener: (event: string, listener: () => void) => void; removeEventListener: (event: string, listener: () => void) => void } } | undefined)?.world;
+    const capSpeeds = () => {
+        for (const body of allBodies) {
+            if (body.sleepState !== SLEEPING) {
+                const speed = body.velocity.length();
+                if (speed > MAX_BRICK_SPEED) {
+                    body.velocity.scale(MAX_BRICK_SPEED / speed, body.velocity);
+                }
+            }
+        }
+    };
+    world?.addEventListener("postStep", capSpeeds);
+
+    scene.onDisposeObservable.addOnce(() => {
+        scene.onBeforePhysicsObservable.remove(wakeObserver);
+        world?.removeEventListener("postStep", capSpeeds);
+    });
+}
+
+/**
+ * Toy-block physics: grippy against each other and the ground (so stacks stand and knocked
+ * bricks tumble and stop instead of skating away), barely bouncy, and only lightly damped so
+ * they fall at full speed.
+ */
+const BRICK_PHYSICS = { mass: 2, friction: 0.8, restitution: 0.1 };
+const BRICK_LINEAR_DAMPING = 0.1;
+const BRICK_ANGULAR_DAMPING = 0.2;
+
+/** Every brick's physics body, so shots can tell when they hit one. */
+const brickImpostors: BABYLON.PhysicsImpostor[] = [];
+let brickSound: BABYLON.Sound | null = null;
+
+export function getBrickImpostors(): readonly BABYLON.PhysicsImpostor[] {
+    return brickImpostors;
+}
+
+/**
+ * Plays the knock sound. Driving into a wall or a shot hitting one makes many bricks collide in
+ * the same moment, and they all share one sound, so it's throttled to avoid restarting it many
+ * times in a row.
+ */
 const brickSoundCooldownMs = 150;
 let lastBrickSoundTime = 0;
+export function playBrickSound(): void {
+    const now = performance.now();
+    if (now - lastBrickSoundTime < brickSoundCooldownMs) {
+        return;
+    }
+    lastBrickSoundTime = now;
+    brickSound?.play();
+}
 
 /**
  * Set up a wall of bricks centered at (x, z) and rotated around its own center.
@@ -49,7 +139,6 @@ function instantiateBricks(
     numColumnsPerRow: number[],
     rotationY: number = 0
 ): void {
-    const brickMass = 2;
     const brickScaleFactor = 1.1;
     const brickLength = 6 * brickScaleFactor;
     const brickDepth = 3 * brickScaleFactor;
@@ -57,11 +146,6 @@ function instantiateBricks(
     const groundY = getGroundHeight(x, y, z);
     const initialY = groundY + brickHeight / 2;
     const tankImpostor = _this.tank.physicsImpostor;
-
-    if (!tankImpostor) {
-        console.warn("Tank physics impostor is missing. Skipping brick collision audio setup.");
-        return;
-    }
 
     // One hidden template per colour; the visible bricks are instances of these.
     const brickTemplates = createBrickTemplates(_this, brickLength, brickHeight, brickDepth);
@@ -93,7 +177,7 @@ function instantiateBricks(
             // Stepping by 2 per brick and 3 per row keeps side-by-side and stacked bricks different.
             const template = brickTemplates[(colorOffset + (i * 2) + (j * 3)) % brickTemplates.length];
             const brickInstance = template.createInstance(`brick${j}-${i}`);
-            positionBrick(_this, brickInstance, localX, localY, 0, brickMass);
+            positionBrick(brickInstance, localX, localY, 0);
             // Parent only after the impostor exists: Babylon skips creating the physics
             // body for meshes that already have a parent.
             brickInstance.parent = wallParent;
@@ -119,41 +203,21 @@ function instantiateBricks(
     /**
      * Position a brick mesh and set up its physics.
      */
-    function positionBrick(
-        _this: BrickContext,
-        brick: BABYLON.Mesh | BABYLON.InstancedMesh,
-        x: number,
-        y: number,
-        z: number,
-        mass: number
-    ): void {
+    function positionBrick(brick: BABYLON.Mesh | BABYLON.InstancedMesh, x: number, y: number, z: number): void {
         brick.position.set(x, y, z);
-        brick.physicsImpostor = new BABYLON.PhysicsImpostor(
-            brick,
-            BABYLON.PhysicsImpostor.BoxImpostor,
-            { mass: mass, friction: 1 },
-            _this.scene
-        );
+        const impostor = new BABYLON.PhysicsImpostor(brick, BABYLON.PhysicsImpostor.BoxImpostor, BRICK_PHYSICS, _this.scene);
+        if (tankImpostor) {
+            impostor.registerOnPhysicsCollide(tankImpostor, playBrickSound);
+        }
+        brickImpostors.push(impostor);
 
-        // Play sound on collision with the tank. Driving into a wall makes many bricks touch the
-        // tank in the same moment, and they all share one sound, so throttle it to avoid
-        // restarting it many times in a row.
-        brick.physicsImpostor.registerOnPhysicsCollide(
-            tankImpostor,
-            () => {
-                const now = performance.now();
-                if (now - lastBrickSoundTime < brickSoundCooldownMs) {
-                    return;
-                }
-
-                lastBrickSoundTime = now;
-                _this.brickSound.play();
-            }
-        );
-
-        const physicsBody = brick.physicsImpostor.physicsBody;
-        if (physicsBody) {
-            physicsBody.linearDamping = 0.95;
+        const body = impostor.physicsBody as { linearDamping: number; angularDamping: number; sleep: () => void } | null;
+        if (body) {
+            body.linearDamping = BRICK_LINEAR_DAMPING;
+            body.angularDamping = BRICK_ANGULAR_DAMPING;
+            // Walls are built resting on the ground, so they start asleep: no settling jitter on
+            // load, and no simulation cost until the tank or a shot wakes them up.
+            body.sleep();
         }
     }
 

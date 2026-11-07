@@ -107,14 +107,14 @@ function createTrophy(scene: BABYLON.Scene, spot: Spot, shared: SharedMaterials)
         collider.rotation.y = yaw;
         collider.isVisible = false;
         collider.isPickable = false;
-        // No bounce, decent grip and some damping: a bump from the tank slides and tips them
-        // instead of sending them flying.
+        // No bounce and decent grip: a bump from the tank slides and tips them instead of
+        // sending them flying. Light damping, so they still fall at full speed.
         const impostor = new BABYLON.PhysicsImpostor(collider, BABYLON.PhysicsImpostor.BoxImpostor, { mass: 3, friction: 0.6, restitution: 0 }, scene);
         collider.physicsImpostor = impostor;
         const body = impostor.physicsBody as { linearDamping?: number; angularDamping?: number } | null;
         if (body) {
-            body.linearDamping = 0.4;
-            body.angularDamping = 0.6;
+            body.linearDamping = 0.15;
+            body.angularDamping = 0.3;
         }
         holder = collider;
     } else {

@@ -4,9 +4,16 @@ import type { Rectangle } from "@babylonjs/gui";
 import { segmentDistanceSquared } from "../core/math";
 import { UI } from "../ui/style";
 import { createHitFeedback, createImpactBurst, createObjectiveHint, createReticle, createTargetLabel, type ObjectiveMood } from "../ui/targetHud";
+import { getBrickImpostors, playBrickSound } from "../world/bricks";
 import { collideWithRamps } from "../world/playground";
 import type { TankContext } from "./context";
 import { createToyTarget, type ToyTarget } from "./toyTarget";
+
+/**
+ * A rubber ball: heavy enough to knock a brick clean out of a wall (it rolls a few bricks' lengths
+ * away), and bouncy enough to hop off the ground.
+ */
+const SHOT_PHYSICS = { mass: 0.3, friction: 0.4, restitution: 0.8 };
 
 type TargetLink = {
     mesh: BABYLON.Mesh;
@@ -329,8 +336,9 @@ export async function initializeShooting(_this: TankContext, forward: BABYLON.Ve
         shotSpawnPosition.y += shotHeightOffset;
         shotBall.position.copyFrom(shotSpawnPosition);
 
-        shotBall.physicsImpostor = new BABYLON.PhysicsImpostor(shotBall, BABYLON.PhysicsImpostor.SphereImpostor, { mass: 0.5, restitution: 0 }, _this.scene);
+        shotBall.physicsImpostor = new BABYLON.PhysicsImpostor(shotBall, BABYLON.PhysicsImpostor.SphereImpostor, SHOT_PHYSICS, _this.scene);
         collideWithRamps(shotBall.physicsImpostor);
+        shotBall.physicsImpostor.registerOnPhysicsCollide([...getBrickImpostors()], playBrickSound);
         // Shots inherit the tank's motion, so firing while driving still goes where you aim.
         const tankVelocity = _this.tank.physicsImpostor?.getLinearVelocity();
         if (tankVelocity) {

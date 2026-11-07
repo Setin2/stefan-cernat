@@ -3,10 +3,28 @@ import * as BABYLON from "@babylonjs/core";
 import { collideWithRamps } from "../world/playground";
 
 /** cannon.js internals reached through Babylon's (legacy) cannon plugin. */
-type CannonPlugin = {
-    world?: { allowSleep: boolean; broadphase: unknown };
-    BJSCANNON?: { SAPBroadphase?: new (world: unknown) => unknown };
+type FrictionEquation = { minForce: number; maxForce: number };
+type CannonWorld = {
+    allowSleep: boolean;
+    broadphase: unknown;
+    dt: number;
+    narrowphase: { createFrictionEquationsFromContact: (contact: unknown, out: FrictionEquation[]) => boolean };
 };
+type CannonPlugin = {
+    world?: CannonWorld;
+    BJSCANNON?: {
+        SAPBroadphase?: new (world: unknown) => unknown;
+        Material: new (name: string) => { friction: number; restitution: number };
+        Box: new (halfExtents: unknown) => unknown;
+        Vec3: new (x: number, y: number, z: number) => unknown;
+    };
+};
+
+/**
+ * Surface of the ground. cannon.js multiplies the two touching bodies' values, so with bricks
+ * (0.8 friction) this gives ~0.7 grip, and shots (0.8 restitution) bounce a little off it.
+ */
+const GROUND_MATERIAL = { friction: 0.9, restitution: 0.4 };
 
 const GRAVITY = new BABYLON.Vector3(0, -40, 0);
 const MAX_SUB_STEP_SECONDS = 1 / 120;
@@ -42,7 +60,9 @@ export function enablePhysics(scene: BABYLON.Scene): void {
         if (SAPBroadphase) {
             world.broadphase = new SAPBroadphase(world);
         }
+        fixFriction(world);
     }
+    setGroundMaterial(scene, cannonPlugin);
 
     const executeStep = plugin.executeStep.bind(plugin);
     plugin.executeStep = (delta, impostors) => {
@@ -55,16 +75,100 @@ export function enablePhysics(scene: BABYLON.Scene): void {
 }
 
 /**
+ * cannon.js 0.6.2 limits each friction *impulse* by the friction *force* (mu * g * mass) without
+ * multiplying it by the step time, so friction comes out 1/dt times too strong: about 120x with
+ * our 1/120s sub-steps. Nothing could slide: a pushed brick stopped dead in one step and flipped
+ * over its front edge instead, and friction values made no difference. Scaling the limits by the
+ * step time gives real Coulomb friction (later fixed the same way in cannon-es).
+ */
+function fixFriction(world: CannonWorld): void {
+    const narrowphase = world.narrowphase;
+    const createFrictionEquations = narrowphase.createFrictionEquationsFromContact;
+    narrowphase.createFrictionEquationsFromContact = function (contact, out) {
+        const created = createFrictionEquations.call(this, contact, out);
+        if (created) {
+            // It appends one pair of tangent equations per contact.
+            for (let i = out.length - 2; i < out.length; i++) {
+                out[i].minForce *= world.dt;
+                out[i].maxForce *= world.dt;
+            }
+        }
+        return created;
+    };
+}
+
+/**
+ * The imported scene gives the ground 0.2 friction and 0.9 restitution, which made everything
+ * slide on it like ice once friction worked. It gets its own material (Babylon shares materials
+ * between bodies with equal values, so the existing one isn't edited in place).
+ */
+function setGroundMaterial(scene: BABYLON.Scene, plugin: CannonPlugin): void {
+    const ground = scene.getMeshByName("ground");
+    const engine = scene.getPhysicsEngine();
+    const impostor = ground && (ground.physicsImpostor ?? engine?.getImpostorForPhysicsObject(ground));
+    const body = impostor?.physicsBody as { material: unknown } | undefined;
+    if (!body || !plugin.BJSCANNON) {
+        return;
+    }
+    const material = new plugin.BJSCANNON.Material("ground");
+    material.friction = GROUND_MATERIAL.friction;
+    material.restitution = GROUND_MATERIAL.restitution;
+    body.material = material;
+}
+
+/**
+ * The tank's collision box, relative to the holder's centre: the hull and tracks of the toy model
+ * (the thin barrel sticks out of it). The imported holder is a 12-unit cube reaching ~2.7 units
+ * above the turret, so bricks used to land on an invisible roof above the tank.
+ */
+const TANK_HALF_EXTENTS = { x: 6.2, y: 4.65, z: 6.9 };
+const TANK_BOX_OFFSET_Y = -1.35;
+/**
+ * A second, thin box around the gun barrel (see toyTank.ts: axis 0.9 above the holder's centre,
+ * from the turret out to the muzzle brake at z ~11.2), so it can't poke through walls and bricks.
+ */
+const BARREL_HALF_EXTENTS = { x: 0.7, y: 0.7, z: 2.35 };
+const BARREL_OFFSET = { y: 0.9, z: 8.85 };
+
+type CannonBoxBody = {
+    angularDamping: number;
+    allowSleep: boolean;
+    addShape: (shape: unknown, offset: unknown) => void;
+    shapes: { halfExtents?: { set: (x: number, y: number, z: number) => void }; updateConvexPolyhedronRepresentation?: () => void; updateBoundingSphereRadius: () => void }[];
+    shapeOffsets: { set: (x: number, y: number, z: number) => void }[];
+    updateBoundingRadius: () => void;
+    updateMassProperties: () => void;
+    aabbNeedsUpdate: boolean;
+};
+
+/**
  * Gives the tank holder its physics body. Movement sets the tank's velocity every frame, so
  * linear damping isn't needed; strong angular damping keeps knocks from bricks from spinning it
  * between frames.
  */
 export function createTankBody(scene: BABYLON.Scene, tank: BABYLON.AbstractMesh): void {
+    const CANNON = (scene.getPhysicsEngine()?.getPhysicsPlugin() as unknown as CannonPlugin | undefined)?.BJSCANNON;
     tank.physicsImpostor = new BABYLON.PhysicsImpostor(tank, BABYLON.PhysicsImpostor.BoxImpostor, { mass: 1000, restitution: 0 }, scene);
-    const body = tank.physicsImpostor.physicsBody as { angularDamping: number; allowSleep: boolean } | null;
-    if (body) {
-        body.angularDamping = 0.98;
-        body.allowSleep = false;
+    const body = tank.physicsImpostor.physicsBody as CannonBoxBody | null;
+    if (!body) {
+        return;
+    }
+    body.angularDamping = 0.98;
+    body.allowSleep = false;
+
+    const box = body.shapes[0];
+    if (box?.halfExtents && box.updateConvexPolyhedronRepresentation) {
+        box.halfExtents.set(TANK_HALF_EXTENTS.x, TANK_HALF_EXTENTS.y, TANK_HALF_EXTENTS.z);
+        box.updateConvexPolyhedronRepresentation();
+        box.updateBoundingSphereRadius();
+        body.shapeOffsets[0].set(0, TANK_BOX_OFFSET_Y, 0);
+        if (CANNON) {
+            const barrel = new CANNON.Box(new CANNON.Vec3(BARREL_HALF_EXTENTS.x, BARREL_HALF_EXTENTS.y, BARREL_HALF_EXTENTS.z));
+            body.addShape(barrel, new CANNON.Vec3(0, BARREL_OFFSET.y, BARREL_OFFSET.z));
+        }
+        body.updateBoundingRadius();
+        body.updateMassProperties();
+        body.aabbNeedsUpdate = true;
     }
 }
 
