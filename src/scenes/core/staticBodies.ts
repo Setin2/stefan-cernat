@@ -1,5 +1,7 @@
 import * as BABYLON from "@babylonjs/core";
 
+import { setSoundMaterial, type SurfaceMaterial } from "../audio/soundMaterials";
+
 /**
  * Static collision shapes added straight to the cannon.js world, without a Babylon mesh or physics
  * impostor. Babylon syncs every impostor's transform with its body on every physics step, which
@@ -36,6 +38,8 @@ export type StaticBodyOptions = {
     /** Collision filtering (cannon.js groups/masks); by default it collides with everything. */
     group?: number;
     mask?: number;
+    /** What it sounds like when something hits it (see audio/soundMaterials.ts). */
+    sound?: SurfaceMaterial;
 };
 
 function addBody(scene: BABYLON.Scene, shape: (CANNON: Cannon) => unknown, center: BABYLON.Vector3, options: StaticBodyOptions): boolean {
@@ -57,6 +61,7 @@ function addBody(scene: BABYLON.Scene, shape: (CANNON: Cannon) => unknown, cente
         body.collisionFilterMask = options.mask;
     }
     cannon.world.addBody(body);
+    setSoundMaterial(body, options.sound ?? "static");
     scene.onDisposeObservable.addOnce(() => cannon.world.removeBody(body));
     return true;
 }

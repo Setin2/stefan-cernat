@@ -152,6 +152,7 @@ function addSignCollider(scene: BABYLON.Scene, root: BABYLON.TransformNode, loca
     root.computeWorldMatrix(true);
     addStaticBox(scene, BABYLON.Vector3.TransformCoordinates(localCenter, root.getWorldMatrix()), width * SCALE, height * SCALE, depth * SCALE, {
         rotation: BABYLON.Quaternion.RotationYawPitchRoll(root.rotation.y, 0, 0),
+        sound: "post",
     });
 }
 

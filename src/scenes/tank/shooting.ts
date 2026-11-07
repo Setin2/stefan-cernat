@@ -4,7 +4,6 @@ import type { Rectangle } from "@babylonjs/gui";
 import { segmentDistanceSquared } from "../core/math";
 import { UI } from "../ui/style";
 import { createHitFeedback, createImpactBurst, createObjectiveHint, createReticle, createTargetLabel, type ObjectiveMood } from "../ui/targetHud";
-import { getBrickImpostors, playBrickSound } from "../world/bricks";
 import { collideWithRamps } from "../world/playground";
 import type { TankContext } from "./context";
 import { createToyTarget, type ToyTarget } from "./toyTarget";
@@ -286,6 +285,7 @@ export async function initializeShooting(_this: TankContext, forward: BABYLON.Ve
                 if (segmentDistanceSquared(activeShot.previousPosition, shotPosition, target.mesh.absolutePosition) <= target.hitRadiusSquared) {
                     didHit = true;
                     toyTargets.get(target.mesh)?.hit();
+                    _this.sounds.chime(target.mesh.absolutePosition);
                     window.open(target.url, "_blank", "noopener,noreferrer");
                     currentObjectiveText = `Direct hit! Opening ${target.label} in a new tab.`;
                     currentMood = "hit";
@@ -322,7 +322,7 @@ export async function initializeShooting(_this: TankContext, forward: BABYLON.Ve
 
         canShoot = false;
         shotCooldownUntil = performance.now() + shotCooldownMs;
-        _this.bullet.play();
+        _this.sounds.shot();
         _this.onShoot?.();
 
         _this.tank.getDirectionToRef(forward, shotDirection);
@@ -338,7 +338,7 @@ export async function initializeShooting(_this: TankContext, forward: BABYLON.Ve
 
         shotBall.physicsImpostor = new BABYLON.PhysicsImpostor(shotBall, BABYLON.PhysicsImpostor.SphereImpostor, SHOT_PHYSICS, _this.scene);
         collideWithRamps(shotBall.physicsImpostor);
-        shotBall.physicsImpostor.registerOnPhysicsCollide([...getBrickImpostors()], playBrickSound);
+        _this.impacts.track(shotBall.physicsImpostor, "ball");
         // Shots inherit the tank's motion, so firing while driving still goes where you aim.
         const tankVelocity = _this.tank.physicsImpostor?.getLinearVelocity();
         if (tankVelocity) {

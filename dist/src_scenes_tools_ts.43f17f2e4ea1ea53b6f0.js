@@ -2,6 +2,713 @@
 "use strict";
 (self["webpackChunkgame"] = self["webpackChunkgame"] || []).push([["src_scenes_tools_ts"],{
 
+/***/ "./src/scenes/audio/engineSound.ts"
+/*!*****************************************!*\
+  !*** ./src/scenes/audio/engineSound.ts ***!
+  \*****************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   createEngineSound: () => (/* binding */ createEngineSound)
+/* harmony export */ });
+/* harmony import */ var _core_math__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../core/math */ "./src/scenes/core/math.ts");
+
+/**
+ * The tank's motor: a little "putt-putt" toy engine (two detuned low oscillators, muffled and
+ * pulsed) plus the rattle of the treads (filtered noise pulsing with the track cleats). Both
+ * follow how fast the tank drives and turns, and fade out when it stops. It plays quietly in the
+ * background, on the ambience channel that dips whenever a hit or shot plays (see SoundBoard).
+ */
+var MAX_SPEED = 38;
+var MAX_TURN_SPEED = 4.2;
+var VOLUME = 0.055;
+function createEngineSound(sounds) {
+    var nodes = null;
+    sounds.whenReady(function () {
+        var output = sounds.getOutput();
+        if (output) {
+            nodes = buildEngine(output.context, output.ambience, output.noise);
+        }
+    });
+    var level = 0;
+    return {
+        update: function (forwardSpeed, turnSpeed, airborne) {
+            if (!nodes) {
+                return;
+            }
+            var drive = Math.abs(forwardSpeed) / MAX_SPEED;
+            var turn = Math.abs(turnSpeed) / MAX_TURN_SPEED;
+            var target = (0,_core_math__WEBPACK_IMPORTED_MODULE_0__.clamp)(Math.max(drive, turn * 0.55), 0, 1);
+            // Rev up quickly, wind down a little slower.
+            level += (target - level) * (target > level ? 0.12 : 0.06);
+            var time = nodes.context.currentTime;
+            var rev = level + (airborne ? 0.25 : 0);
+            nodes.output.gain.setTargetAtTime(VOLUME * Math.pow(level, 0.8), time, 0.05);
+            nodes.low.frequency.setTargetAtTime(48 + (rev * 40), time, 0.08);
+            nodes.high.frequency.setTargetAtTime(73 + (rev * 62), time, 0.08);
+            nodes.pulse.frequency.setTargetAtTime(9 + (rev * 15), time, 0.08);
+            nodes.muffle.frequency.setTargetAtTime(300 + (rev * 320), time, 0.08);
+            // The treads only rattle on the ground.
+            nodes.treadGain.gain.setTargetAtTime(airborne ? 0 : 0.3 * Math.min(1, drive + (turn * 0.4)), time, 0.06);
+            nodes.cleats.frequency.setTargetAtTime(4 + (drive * 22), time, 0.08);
+        },
+    };
+}
+function buildEngine(context, bus, noise) {
+    var output = context.createGain();
+    output.gain.value = 0;
+    output.connect(bus);
+    // Motor: two detuned oscillators, low-passed and pulsed by an LFO ("putt-putt").
+    var muffle = context.createBiquadFilter();
+    muffle.type = "lowpass";
+    muffle.Q.value = 0.9;
+    var motor = context.createGain();
+    motor.gain.value = 0.55;
+    muffle.connect(motor);
+    motor.connect(output);
+    var low = context.createOscillator();
+    low.type = "sawtooth";
+    var high = context.createOscillator();
+    high.type = "square";
+    var highGain = context.createGain();
+    highGain.gain.value = 0.22;
+    low.connect(muffle);
+    high.connect(highGain);
+    highGain.connect(muffle);
+    var pulse = context.createOscillator();
+    pulse.type = "sine";
+    var pulseDepth = context.createGain();
+    pulseDepth.gain.value = 0.4;
+    pulse.connect(pulseDepth);
+    pulseDepth.connect(motor.gain);
+    // Treads: band-passed noise, pulsed at the rate the cleats pass.
+    var tread = context.createBufferSource();
+    tread.buffer = noise;
+    tread.loop = true;
+    var treadFilter = context.createBiquadFilter();
+    treadFilter.type = "bandpass";
+    treadFilter.frequency.value = 1100;
+    treadFilter.Q.value = 0.9;
+    var treadGain = context.createGain();
+    treadGain.gain.value = 0;
+    var treadPulse = context.createGain();
+    treadPulse.gain.value = 0.5;
+    var cleats = context.createOscillator();
+    cleats.type = "square";
+    var cleatDepth = context.createGain();
+    cleatDepth.gain.value = 0.45;
+    tread.connect(treadFilter);
+    treadFilter.connect(treadPulse);
+    treadPulse.connect(treadGain);
+    treadGain.connect(output);
+    cleats.connect(cleatDepth);
+    cleatDepth.connect(treadPulse.gain);
+    [low, high, pulse, cleats].forEach(function (oscillator) { return oscillator.start(); });
+    tread.start();
+    return { context: context, output: output, low: low, high: high, pulse: pulse, muffle: muffle, treadGain: treadGain, cleats: cleats };
+}
+
+
+/***/ },
+
+/***/ "./src/scenes/audio/impactSounds.ts"
+/*!******************************************!*\
+  !*** ./src/scenes/audio/impactSounds.ts ***!
+  \******************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   createImpactSounds: () => (/* binding */ createImpactSounds)
+/* harmony export */ });
+/* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core */ "./node_modules/@babylonjs/core/index.js");
+/* harmony import */ var _soundMaterials__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./soundMaterials */ "./src/scenes/audio/soundMaterials.ts");
+
+
+function createImpactSounds(scene, sounds, tank) {
+    var _a, _b, _c;
+    var position = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3();
+    var lastContact = null;
+    // Both bodies get the event for the same contact, one right after the other: play it once.
+    var onCollide = function (event) {
+        var _a, _b;
+        var contact = event.contact;
+        if (contact === lastContact) {
+            return;
+        }
+        lastContact = contact;
+        var a = (_a = (0,_soundMaterials__WEBPACK_IMPORTED_MODULE_1__.getSoundMaterial)(contact.bi)) !== null && _a !== void 0 ? _a : "static";
+        var b = (_b = (0,_soundMaterials__WEBPACK_IMPORTED_MODULE_1__.getSoundMaterial)(contact.bj)) !== null && _b !== void 0 ? _b : "static";
+        position.set(contact.bi.position.x + contact.ri.x, contact.bi.position.y + contact.ri.y, contact.bi.position.z + contact.ri.z);
+        sounds.impact(a, b, Math.abs(contact.getImpactVelocityAlongNormal()), position);
+    };
+    var listening = new WeakSet();
+    var track = function (impostor, material) {
+        var body = impostor === null || impostor === void 0 ? void 0 : impostor.physicsBody;
+        if (!body) {
+            return;
+        }
+        (0,_soundMaterials__WEBPACK_IMPORTED_MODULE_1__.setSoundMaterial)(body, material);
+        // Scenery never moves into anything, so it only needs a material: whatever hits it plays.
+        if (!(0,_soundMaterials__WEBPACK_IMPORTED_MODULE_1__.isSurface)(material) && !listening.has(body)) {
+            listening.add(body);
+            body.addEventListener("collide", onCollide);
+        }
+    };
+    // Everything with a physics body in the scene so far, by what it is.
+    var engine = scene.getPhysicsEngine();
+    var ground = scene.getMeshByName("ground");
+    track(ground && ((_a = ground.physicsImpostor) !== null && _a !== void 0 ? _a : engine === null || engine === void 0 ? void 0 : engine.getImpostorForPhysicsObject(ground)), "ground");
+    track(tank.physicsImpostor, "tank");
+    for (var _i = 0, _d = (_b = engine === null || engine === void 0 ? void 0 : engine.getImpostors()) !== null && _b !== void 0 ? _b : []; _i < _d.length; _i++) {
+        var impostor = _d[_i];
+        var name_1 = (_c = impostor.object.name) !== null && _c !== void 0 ? _c : "";
+        var material = name_1.startsWith("brick") ? "brick"
+            : name_1.startsWith("cone-") ? "cone"
+                : name_1.endsWith("-collider") || name_1 === "c#" ? "trophy"
+                    // Big props imported with the scene (the desk, the sword and symbol).
+                    : impostor.mass === 0 && impostor.object !== ground ? "solid"
+                        : null;
+        if (material) {
+            track(impostor, material);
+        }
+    }
+    return { track: track };
+}
+
+
+/***/ },
+
+/***/ "./src/scenes/audio/soundBoard.ts"
+/*!****************************************!*\
+  !*** ./src/scenes/audio/soundBoard.ts ***!
+  \****************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   SoundBoard: () => (/* binding */ SoundBoard)
+/* harmony export */ });
+/* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core */ "./node_modules/@babylonjs/core/index.js");
+/* harmony import */ var _core_math__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../core/math */ "./src/scenes/core/math.ts");
+/* harmony import */ var _soundMaterials__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./soundMaterials */ "./src/scenes/audio/soundMaterials.ts");
+
+
+
+/**
+ * Every sound in the game, synthesised with the Web Audio API instead of loaded from files: toy
+ * sounds built from a few oscillators and filtered noise. Each hit is shaped by how hard it was
+ * (louder, brighter and longer), quieter the further it is from the tank, and panned left or
+ * right with where it is on screen. Small random variations keep repeated hits from sounding
+ * identical.
+ *
+ * Everything goes through Babylon's master volume, so the mute shortcut (M) still works. Browsers
+ * only allow audio after the player interacts with the page, so nothing plays until the first
+ * key press or click.
+ */
+/** Sounds further away than this can't be heard. */
+var HEARING_DISTANCE = 190;
+/** At most this many impact sounds at once, and this many new ones per burst window. */
+var MAX_IMPACT_VOICES = 14;
+var MAX_IMPACTS_PER_BURST = 5;
+var BURST_WINDOW_SECONDS = 0.06;
+/** Slower impacts than this are silent (resting contacts, gentle nudges). */
+var MIN_IMPACT_SPEED = 1.5;
+/** Loose objects settle onto the ground after loading; their first bumps stay silent. */
+var SETTLE_SECONDS = 3;
+/** The tank can be stopped by the physics and by its own checks in the same moment: play one bump. */
+var TANK_BUMP_COOLDOWN_SECONDS = 0.3;
+var SoundBoard = /** @class */ (function () {
+    function SoundBoard(scene, tank, camera) {
+        var _this = this;
+        this.tank = tank;
+        this.camera = camera;
+        this.context = null;
+        this.bus = null;
+        /** Background sounds (the engine), turned down briefly whenever something else plays. */
+        this.ambience = null;
+        this.noise = null;
+        this.activeImpacts = 0;
+        this.burstStart = 0;
+        this.burstCount = 0;
+        this.listener = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3();
+        this.listenerRight = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(1, 0, 0);
+        this.onReady = [];
+        this.quietUntil = performance.now() + (SETTLE_SECONDS * 1000);
+        this.lastTankBump = 0;
+        var audioEngine = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Engine.audioEngine;
+        if (!audioEngine) {
+            return;
+        }
+        // We unlock audio ourselves on the first key press or click instead of showing Babylon's
+        // speaker button.
+        audioEngine.useCustomUnlockedButton = true;
+        // The context has to exist before Babylon can resume it.
+        var unlock = function () {
+            _this.ensureContext();
+            audioEngine.unlock();
+        };
+        window.addEventListener("keydown", unlock);
+        window.addEventListener("pointerdown", unlock);
+        var observer = scene.onBeforeRenderObservable.add(function () {
+            _this.listener.copyFrom(_this.tank.position);
+            _this.camera.getDirectionToRef(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Axis.X, _this.listenerRight);
+        });
+        scene.onDisposeObservable.addOnce(function () {
+            var _a;
+            window.removeEventListener("keydown", unlock);
+            window.removeEventListener("pointerdown", unlock);
+            scene.onBeforeRenderObservable.remove(observer);
+            (_a = _this.bus) === null || _a === void 0 ? void 0 : _a.disconnect();
+        });
+    }
+    /** Runs `callback` once audio is available (right away if it already is). */
+    SoundBoard.prototype.whenReady = function (callback) {
+        if (this.ensureContext()) {
+            callback();
+        }
+        else {
+            this.onReady.push(callback);
+        }
+    };
+    /** The audio context and the bus every sound connects to, once audio is unlocked. */
+    SoundBoard.prototype.getOutput = function () {
+        return this.ensureContext() && this.context && this.bus && this.ambience && this.noise
+            ? { context: this.context, bus: this.bus, ambience: this.ambience, noise: this.noise }
+            : null;
+    };
+    /** Dips the background sounds for a moment so a hit or shot stands out (`amount` 0 - 1). */
+    SoundBoard.prototype.duck = function (amount) {
+        var _a;
+        var context = this.context;
+        var gain = (_a = this.ambience) === null || _a === void 0 ? void 0 : _a.gain;
+        if (!context || !gain) {
+            return;
+        }
+        var time = context.currentTime;
+        gain.cancelScheduledValues(time);
+        gain.setTargetAtTime(Math.min(gain.value, 1 - (0.7 * (0,_core_math__WEBPACK_IMPORTED_MODULE_1__.clamp)(amount, 0, 1))), time, 0.01);
+        gain.setTargetAtTime(1, time + 0.12, 0.18);
+    };
+    SoundBoard.prototype.ensureContext = function () {
+        var _this = this;
+        if (this.context) {
+            return this.context.state === "running";
+        }
+        var audioEngine = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Engine.audioEngine;
+        var context = audioEngine === null || audioEngine === void 0 ? void 0 : audioEngine.audioContext;
+        if (!audioEngine || !context || !audioEngine.masterGain) {
+            return false;
+        }
+        this.context = context;
+        // A gentle compressor keeps a wall collapsing into many hits from clipping.
+        var compressor = context.createDynamicsCompressor();
+        compressor.threshold.value = -18;
+        compressor.knee.value = 12;
+        compressor.ratio.value = 4;
+        compressor.attack.value = 0.003;
+        compressor.release.value = 0.15;
+        this.bus = context.createGain();
+        this.bus.gain.value = 0.9;
+        this.bus.connect(compressor);
+        compressor.connect(audioEngine.masterGain);
+        this.ambience = context.createGain();
+        this.ambience.connect(this.bus);
+        this.noise = context.createBuffer(1, context.sampleRate, context.sampleRate);
+        var data = this.noise.getChannelData(0);
+        for (var i = 0; i < data.length; i++) {
+            data[i] = (Math.random() * 2) - 1;
+        }
+        var flush = function () {
+            if (context.state === "running") {
+                _this.onReady.splice(0).forEach(function (callback) { return callback(); });
+            }
+        };
+        context.addEventListener("statechange", flush);
+        flush();
+        return context.state === "running";
+    };
+    // ----- Sounds ---------------------------------------------------------------------------
+    /** The tank firing: a soft toy-cannon "thoomp" with a pop and a puff of air. */
+    SoundBoard.prototype.shot = function () {
+        var voice = this.createVoice(null, 1, 0.45);
+        if (!voice) {
+            return;
+        }
+        this.duck(1);
+        var pitch = vary(0.06);
+        this.tone(voice, { type: "sine", from: 165 * pitch, to: 46 * pitch, glide: 0.2, attack: 0.004, decay: 0.32, gain: 0.6 });
+        this.tone(voice, { type: "triangle", from: 640 * pitch, to: 230 * pitch, glide: 0.05, attack: 0.002, decay: 0.07, gain: 0.13 });
+        this.noiseBurst(voice, { filter: "bandpass", frequency: 1900, q: 0.8, attack: 0.001, decay: 0.06, gain: 0.32 });
+        this.noiseBurst(voice, { filter: "lowpass", frequency: 650, q: 0.5, attack: 0.006, decay: 0.2, gain: 0.3 });
+    };
+    /** A link target hit: a cheerful two-note chime. */
+    SoundBoard.prototype.chime = function (position) {
+        var _this = this;
+        var voice = this.createVoice(position, 1, 1.1);
+        if (!voice) {
+            return;
+        }
+        this.duck(0.8);
+        [[880, 0], [1318.5, 0.09], [1760, 0.18]].forEach(function (_a, i) {
+            var frequency = _a[0], delay = _a[1];
+            _this.tone(voice, { type: "triangle", from: frequency, attack: 0.004, decay: 0.55 - (i * 0.1), gain: 0.16, delay: delay });
+            _this.tone(voice, { type: "sine", from: frequency * 2, attack: 0.004, decay: 0.3, gain: 0.05, delay: delay });
+        });
+    };
+    /** The tank landing after a jump; `speed` is how fast it was falling. */
+    SoundBoard.prototype.land = function (speed) {
+        var strength = (0,_core_math__WEBPACK_IMPORTED_MODULE_1__.clamp)((speed - 4) / 22, 0, 1);
+        if (strength <= 0) {
+            return;
+        }
+        var voice = this.createVoice(null, 0.3 + (0.7 * strength), 0.4);
+        if (!voice) {
+            return;
+        }
+        this.duck(strength);
+        this.tone(voice, { type: "sine", from: 95, to: 42, glide: 0.18, attack: 0.003, decay: 0.3, gain: 0.7 });
+        this.noiseBurst(voice, { filter: "lowpass", frequency: 500, q: 0.7, attack: 0.002, decay: 0.16, gain: 0.35 });
+        this.clank(voice, 0.5);
+    };
+    /**
+     * Two bodies hitting each other at `speed` (along the contact normal), at `position`. The
+     * sound depends on what they're made of: wooden blocks clack (and thud on the ground), shots
+     * boing, cones tap, trophies clunk, and scenery answers with its own sound: trees knock and
+     * rustle, bushes rustle, boulders crack, signs knock and wobble, ramps thump.
+     */
+    SoundBoard.prototype.impact = function (a, b, speed, position) {
+        var has = function (material) { return a === material || b === material; };
+        var other = function (material) { return (a === material ? b : a); };
+        if (speed < MIN_IMPACT_SPEED || performance.now() < this.quietUntil || (has("tank") && other("tank") === "ground")) {
+            return;
+        }
+        if (has("tank")) {
+            var now = performance.now() / 1000;
+            if (now - this.lastTankBump < TANK_BUMP_COOLDOWN_SECONDS) {
+                return;
+            }
+            this.lastTankBump = now;
+        }
+        var strength = Math.pow((0,_core_math__WEBPACK_IMPORTED_MODULE_1__.clamp)((speed - MIN_IMPACT_SPEED) / 22, 0, 1), 0.7);
+        if (!this.allowImpact()) {
+            return;
+        }
+        // Leaves keep rustling for a while after the hit.
+        var rustles = has("trunk") || has("bush");
+        var voice = this.createVoice(position, 0.15 + (0.85 * strength), rustles ? 0.9 : 0.35, true);
+        if (!voice) {
+            return;
+        }
+        this.duck(strength * 0.8);
+        // Whatever moved into the scenery makes its own sound, and the scenery answers.
+        var _a = (0,_soundMaterials__WEBPACK_IMPORTED_MODULE_2__.isSurface)(a) ? [b, a] : [a, b], mover = _a[0], target = _a[1];
+        var surface = (0,_soundMaterials__WEBPACK_IMPORTED_MODULE_2__.isSurface)(target) ? target : null;
+        switch (mover) {
+            case "ball":
+                this.rubber(voice, strength);
+                break;
+            case "brick":
+                this.wood(voice, strength, surface !== null);
+                break;
+            case "cone":
+                this.plastic(voice, strength);
+                break;
+            case "trophy":
+                this.trophy(voice, strength);
+                break;
+            case "tank":
+                // The tank's tin body rattles on every hit.
+                this.clank(voice, strength * 0.5);
+                break;
+        }
+        if (surface && surface !== "ground") {
+            // (The ground has no sound of its own: each loose thing already sounds right on it.)
+            // A ball or a brick is lighter than the tank: the scenery answers more quietly.
+            this.surface(voice, surface, mover === "tank" ? strength : strength * 0.55);
+        }
+        else if (target !== mover) {
+            // Two loose things: the one that was hit sounds too (a shot hitting a brick, the tank
+            // shoving a cone).
+            switch (target) {
+                case "brick":
+                    this.wood(voice, strength * 0.7, false);
+                    break;
+                case "cone":
+                    this.plastic(voice, strength * 0.7);
+                    break;
+                case "trophy":
+                    this.trophy(voice, strength * 0.7);
+                    break;
+            }
+        }
+    };
+    /** The sound a piece of scenery makes when it's hit. */
+    SoundBoard.prototype.surface = function (voice, surface, strength) {
+        switch (surface) {
+            case "trunk":
+                this.trunk(voice, strength);
+                break;
+            case "bush":
+                this.bush(voice, strength);
+                break;
+            case "rock":
+                this.rock(voice, strength);
+                break;
+            case "post":
+                this.post(voice, strength);
+                break;
+            case "ramp":
+                this.ramp(voice, strength);
+                break;
+            case "ground":
+            case "solid":
+            case "static":
+                this.thud(voice, strength);
+                break;
+        }
+    };
+    // ----- Materials --------------------------------------------------------------------------
+    /** A wooden toy block: a few inharmonic partials that die away fast, plus a click. */
+    SoundBoard.prototype.wood = function (voice, strength, onGround) {
+        var _this = this;
+        var base = 430 * vary(0.18) * (1 + (strength * 0.15));
+        var length = 0.6 + (strength * 0.6);
+        [[1, 1, 0.1], [2.32, 0.45, 0.06], [4.25, 0.22, 0.035]].forEach(function (_a) {
+            var ratio = _a[0], gain = _a[1], decay = _a[2];
+            _this.tone(voice, { type: "sine", from: base * ratio, attack: 0.001, decay: decay * length, gain: gain * 0.45 * (onGround ? 0.6 : 1) });
+        });
+        this.noiseBurst(voice, { filter: "highpass", frequency: 2600, q: 0.7, attack: 0.0005, decay: 0.014, gain: 0.25 });
+        if (onGround) {
+            this.thud(voice, strength * 0.8);
+        }
+    };
+    /** A rubber ball: a soft, low "boing". */
+    SoundBoard.prototype.rubber = function (voice, strength) {
+        var pitch = vary(0.1);
+        this.tone(voice, { type: "sine", from: 210 * pitch, to: 135 * pitch, glide: 0.08, attack: 0.003, decay: 0.1 + (strength * 0.06), gain: 0.5 });
+        this.noiseBurst(voice, { filter: "lowpass", frequency: 900, q: 0.6, attack: 0.001, decay: 0.03, gain: 0.15 });
+    };
+    /** A hollow plastic cone: a short, bright tap. */
+    SoundBoard.prototype.plastic = function (voice, strength) {
+        var base = 820 * vary(0.12);
+        this.tone(voice, { type: "triangle", from: base, attack: 0.001, decay: 0.045 + (strength * 0.03), gain: 0.3 });
+        this.tone(voice, { type: "sine", from: base * 1.93, attack: 0.001, decay: 0.03, gain: 0.12 });
+        this.noiseBurst(voice, { filter: "bandpass", frequency: 3200, q: 1.2, attack: 0.0005, decay: 0.02, gain: 0.2 });
+    };
+    /** A heavy trophy on its plinth: a low clunk with a short ring. */
+    SoundBoard.prototype.trophy = function (voice, strength) {
+        var base = 290 * vary(0.08);
+        this.tone(voice, { type: "sine", from: base, attack: 0.002, decay: 0.12 + (strength * 0.08), gain: 0.4 });
+        this.tone(voice, { type: "sine", from: base * 2.71, attack: 0.002, decay: 0.08, gain: 0.14 });
+        this.thud(voice, strength);
+    };
+    /** A tree trunk: a deep wooden knock, and the leaves above shaking. */
+    SoundBoard.prototype.trunk = function (voice, strength) {
+        var base = 150 * vary(0.1);
+        this.tone(voice, { type: "sine", from: base, attack: 0.002, decay: 0.16 + (strength * 0.1), gain: 0.5 });
+        this.tone(voice, { type: "sine", from: base * 2.63, attack: 0.002, decay: 0.08, gain: 0.2 });
+        this.noiseBurst(voice, { filter: "bandpass", frequency: 900, q: 1.1, attack: 0.001, decay: 0.03, gain: 0.2 });
+        this.thud(voice, strength * 0.7);
+        this.rustle(voice, strength * 0.8, 0.06);
+    };
+    /** A bush: a soft, leafy rustle with a muffled bump. */
+    SoundBoard.prototype.bush = function (voice, strength) {
+        this.rustle(voice, strength * 1.3, 0);
+        this.tone(voice, { type: "sine", from: 110 * vary(0.1), to: 70, glide: 0.1, attack: 0.01, decay: 0.15, gain: 0.25 });
+    };
+    /** A boulder: a hard, gritty crack over a heavy thud. */
+    SoundBoard.prototype.rock = function (voice, strength) {
+        var base = 720 * vary(0.12);
+        this.tone(voice, { type: "triangle", from: base, attack: 0.0005, decay: 0.03, gain: 0.22 });
+        this.tone(voice, { type: "sine", from: base * 2.3, attack: 0.0005, decay: 0.02, gain: 0.1 });
+        this.noiseBurst(voice, { filter: "bandpass", frequency: 1600, q: 1, attack: 0.0005, decay: 0.05 + (strength * 0.03), gain: 0.35 });
+        this.thud(voice, strength * 1.2);
+    };
+    /** A wooden sign post: a hollow plank knock, then the sign wobbling with a smaller knock. */
+    SoundBoard.prototype.post = function (voice, strength) {
+        var _this = this;
+        var base = 240 * vary(0.1);
+        [[0, 1], [0.07, 0.35], [0.13, 0.15]].forEach(function (_a) {
+            var delay = _a[0], gain = _a[1];
+            _this.tone(voice, { type: "sine", from: base, attack: 0.001, decay: 0.12, gain: 0.45 * gain, delay: delay });
+            _this.tone(voice, { type: "sine", from: base * 2.55, attack: 0.001, decay: 0.06, gain: 0.2 * gain, delay: delay });
+            _this.tone(voice, { type: "sine", from: base * 4.8, attack: 0.001, decay: 0.035, gain: 0.1 * gain, delay: delay });
+        });
+        this.noiseBurst(voice, { filter: "highpass", frequency: 2200, q: 0.7, attack: 0.0005, decay: 0.015, gain: 0.2 });
+        this.thud(voice, strength * 0.5);
+    };
+    /** A ramp or platform: a hollow box thump. */
+    SoundBoard.prototype.ramp = function (voice, strength) {
+        var base = 130 * vary(0.08);
+        this.tone(voice, { type: "sine", from: base, attack: 0.002, decay: 0.2 + (strength * 0.08), gain: 0.45 });
+        this.tone(voice, { type: "triangle", from: base * 2.4, attack: 0.002, decay: 0.09, gain: 0.15 });
+        this.noiseBurst(voice, { filter: "lowpass", frequency: 700, q: 0.8, attack: 0.001, decay: 0.1, gain: 0.25 });
+    };
+    /** Leaves shaking: two soft swells of high, filtered noise. */
+    SoundBoard.prototype.rustle = function (voice, strength, delay) {
+        var gain = 0.08 + (0.14 * (0,_core_math__WEBPACK_IMPORTED_MODULE_1__.clamp)(strength, 0, 1));
+        this.noiseBurst(voice, { filter: "bandpass", frequency: 3800, q: 0.6, attack: 0.04, decay: 0.45, gain: gain, delay: delay });
+        this.noiseBurst(voice, { filter: "bandpass", frequency: 2600, q: 0.7, attack: 0.05, decay: 0.35, gain: gain * 0.7, delay: delay + 0.14 });
+    };
+    /** Something heavy meeting the ground: a low, short thump. */
+    SoundBoard.prototype.thud = function (voice, strength) {
+        this.tone(voice, { type: "sine", from: 120 * vary(0.1), to: 55, glide: 0.1, attack: 0.002, decay: 0.12 + (strength * 0.1), gain: 0.5 });
+        this.noiseBurst(voice, { filter: "lowpass", frequency: 380, q: 0.6, attack: 0.001, decay: 0.08, gain: 0.25 });
+    };
+    /** The tank's tin body rattling on a hit. */
+    SoundBoard.prototype.clank = function (voice, strength) {
+        var base = 340 * vary(0.1);
+        this.tone(voice, { type: "square", from: base, attack: 0.001, decay: 0.06 + (strength * 0.05), gain: 0.05 });
+        this.tone(voice, { type: "sine", from: base * 2.68, attack: 0.001, decay: 0.12, gain: 0.07 });
+    };
+    // ----- Building blocks --------------------------------------------------------------------
+    /**
+     * Output for one sound: gain (for distance) and stereo pan towards `position`, or centred and
+     * at full volume when there's no position (the tank's own sounds).
+     */
+    SoundBoard.prototype.createVoice = function (position, volume, length, isImpact) {
+        var _this = this;
+        if (isImpact === void 0) { isImpact = false; }
+        var output = this.getOutput();
+        if (!output) {
+            return null;
+        }
+        var context = output.context, bus = output.bus;
+        var pan = 0;
+        if (position) {
+            var dx = position.x - this.listener.x;
+            var dz = position.z - this.listener.z;
+            var distance = Math.hypot(dx, dz);
+            var falloff = Math.pow((0,_core_math__WEBPACK_IMPORTED_MODULE_1__.clamp)(1 - (distance / HEARING_DISTANCE), 0, 1), 1.6);
+            if (falloff <= 0.01) {
+                return null;
+            }
+            volume *= falloff;
+            pan = (0,_core_math__WEBPACK_IMPORTED_MODULE_1__.clamp)(((dx * this.listenerRight.x) + (dz * this.listenerRight.z)) / 45, -0.75, 0.75);
+        }
+        var gain = context.createGain();
+        gain.gain.value = volume;
+        if (pan !== 0 && typeof context.createStereoPanner === "function") {
+            var panner = context.createStereoPanner();
+            panner.pan.value = pan;
+            gain.connect(panner);
+            panner.connect(bus);
+        }
+        else {
+            gain.connect(bus);
+        }
+        if (isImpact) {
+            this.activeImpacts++;
+            setTimeout(function () {
+                _this.activeImpacts--;
+            }, (length + 0.6) * 1000);
+        }
+        setTimeout(function () { return gain.disconnect(); }, (length + 1) * 1000);
+        return { output: gain };
+    };
+    /** Limits how many impacts sound at once and how many start together (a collapsing wall). */
+    SoundBoard.prototype.allowImpact = function () {
+        var context = this.context;
+        if (!context || this.activeImpacts >= MAX_IMPACT_VOICES) {
+            return false;
+        }
+        var now = context.currentTime;
+        if (now - this.burstStart > BURST_WINDOW_SECONDS) {
+            this.burstStart = now;
+            this.burstCount = 0;
+        }
+        return ++this.burstCount <= MAX_IMPACTS_PER_BURST;
+    };
+    /** An oscillator with a quick attack and exponential decay, optionally gliding in pitch. */
+    SoundBoard.prototype.tone = function (voice, options) {
+        var _a, _b;
+        var context = this.context;
+        if (!context) {
+            return;
+        }
+        var start = context.currentTime + ((_a = options.delay) !== null && _a !== void 0 ? _a : 0);
+        var oscillator = context.createOscillator();
+        oscillator.type = options.type;
+        oscillator.frequency.setValueAtTime(options.from, start);
+        if (options.to !== undefined) {
+            oscillator.frequency.exponentialRampToValueAtTime(Math.max(1, options.to), start + ((_b = options.glide) !== null && _b !== void 0 ? _b : options.decay));
+        }
+        var envelope = this.envelope(start, options.attack, options.decay, options.gain);
+        oscillator.connect(envelope);
+        envelope.connect(voice.output);
+        oscillator.start(start);
+        oscillator.stop(start + options.attack + options.decay + 0.05);
+    };
+    /** A burst of filtered white noise with a quick attack and exponential decay. */
+    SoundBoard.prototype.noiseBurst = function (voice, options) {
+        var _a;
+        var context = this.context;
+        if (!context || !this.noise) {
+            return;
+        }
+        var start = context.currentTime + ((_a = options.delay) !== null && _a !== void 0 ? _a : 0);
+        var source = context.createBufferSource();
+        source.buffer = this.noise;
+        // Start somewhere random in the buffer so bursts don't repeat exactly.
+        var offset = Math.random() * (this.noise.duration - 0.5);
+        var filter = context.createBiquadFilter();
+        filter.type = options.filter;
+        filter.frequency.value = options.frequency * vary(0.1);
+        filter.Q.value = options.q;
+        var envelope = this.envelope(start, options.attack, options.decay, options.gain);
+        source.connect(filter);
+        filter.connect(envelope);
+        envelope.connect(voice.output);
+        source.start(start, offset);
+        source.stop(start + options.attack + options.decay + 0.05);
+    };
+    SoundBoard.prototype.envelope = function (start, attack, decay, peak) {
+        var gain = this.context.createGain();
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, peak), start + attack);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + attack + decay);
+        return gain;
+    };
+    return SoundBoard;
+}());
+
+/** A random factor around 1 (e.g. 0.1 gives 0.9 - 1.1). */
+function vary(amount) {
+    return 1 + (((Math.random() * 2) - 1) * amount);
+}
+
+
+/***/ },
+
+/***/ "./src/scenes/audio/soundMaterials.ts"
+/*!********************************************!*\
+  !*** ./src/scenes/audio/soundMaterials.ts ***!
+  \********************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   getSoundMaterial: () => (/* binding */ getSoundMaterial),
+/* harmony export */   isSurface: () => (/* binding */ isSurface),
+/* harmony export */   setSoundMaterial: () => (/* binding */ setSoundMaterial)
+/* harmony export */ });
+/**
+ * What each physics body sounds like when something hits it. Bodies register here when they're
+ * created (see staticBodies.ts and impactSounds.ts); collision sounds look them up.
+ */
+var SURFACES = new Set(["ground", "trunk", "bush", "rock", "post", "ramp", "solid", "static"]);
+function isSurface(material) {
+    return SURFACES.has(material);
+}
+var materials = new WeakMap();
+function setSoundMaterial(body, material) {
+    materials.set(body, material);
+}
+function getSoundMaterial(body) {
+    return materials.get(body);
+}
+
+
+/***/ },
+
 /***/ "./src/scenes/core/constants.ts"
 /*!**************************************!*\
   !*** ./src/scenes/core/constants.ts ***!
@@ -503,6 +1210,8 @@ function applyCommonSettings(generator) {
 /* harmony export */   addStaticBox: () => (/* binding */ addStaticBox),
 /* harmony export */   addStaticSphere: () => (/* binding */ addStaticSphere)
 /* harmony export */ });
+/* harmony import */ var _audio_soundMaterials__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../audio/soundMaterials */ "./src/scenes/audio/soundMaterials.ts");
+
 function getCannon(scene) {
     var _a;
     var plugin = (_a = scene.getPhysicsEngine()) === null || _a === void 0 ? void 0 : _a.getPhysicsPlugin();
@@ -512,6 +1221,7 @@ function getCannon(scene) {
     return { CANNON: plugin.BJSCANNON, world: plugin.world };
 }
 function addBody(scene, shape, center, options) {
+    var _a;
     var cannon = getCannon(scene);
     if (!cannon) {
         return false;
@@ -530,6 +1240,7 @@ function addBody(scene, shape, center, options) {
         body.collisionFilterMask = options.mask;
     }
     cannon.world.addBody(body);
+    (0,_audio_soundMaterials__WEBPACK_IMPORTED_MODULE_0__.setSoundMaterial)(body, (_a = options.sound) !== null && _a !== void 0 ? _a : "static");
     scene.onDisposeObservable.addOnce(function () { return cannon.world.removeBody(body); });
     return true;
 }
@@ -960,26 +1671,28 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ });
 /* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core */ "./node_modules/@babylonjs/core/index.js");
 /* harmony import */ var _babylonjs_core_node__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @babylonjs/core/node */ "./node_modules/@babylonjs/core/node.js");
-/* harmony import */ var _core_performance__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./core/performance */ "./src/scenes/core/performance.ts");
-/* harmony import */ var _core_physics__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./core/physics */ "./src/scenes/core/physics.ts");
-/* harmony import */ var _core_shadows__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./core/shadows */ "./src/scenes/core/shadows.ts");
-/* harmony import */ var _tank_movement__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./tank/movement */ "./src/scenes/tank/movement.ts");
-/* harmony import */ var _tank_shooting__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./tank/shooting */ "./src/scenes/tank/shooting.ts");
-/* harmony import */ var _tank_tankTrail__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./tank/tankTrail */ "./src/scenes/tank/tankTrail.ts");
-/* harmony import */ var _tank_toyTank__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./tank/toyTank */ "./src/scenes/tank/toyTank.ts");
-/* harmony import */ var _ui_controlsOverlay__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./ui/controlsOverlay */ "./src/scenes/ui/controlsOverlay.ts");
-/* harmony import */ var _ui_fpsCounter__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./ui/fpsCounter */ "./src/scenes/ui/fpsCounter.ts");
-/* harmony import */ var _world_aiTrophies__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./world/aiTrophies */ "./src/scenes/world/aiTrophies.ts");
-/* harmony import */ var _world_bricks__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ./world/bricks */ "./src/scenes/world/bricks.ts");
-/* harmony import */ var _world_clouds__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ./world/clouds */ "./src/scenes/world/clouds.ts");
-/* harmony import */ var _world_fruitFactory__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ./world/fruitFactory */ "./src/scenes/world/fruitFactory.ts");
-/* harmony import */ var _world_fruitFactorySigns__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ./world/fruitFactorySigns */ "./src/scenes/world/fruitFactorySigns.ts");
-/* harmony import */ var _world_ground__WEBPACK_IMPORTED_MODULE_16__ = __webpack_require__(/*! ./world/ground */ "./src/scenes/world/ground.ts");
-/* harmony import */ var _world_landmarks__WEBPACK_IMPORTED_MODULE_17__ = __webpack_require__(/*! ./world/landmarks */ "./src/scenes/world/landmarks.ts");
-/* harmony import */ var _world_mascots__WEBPACK_IMPORTED_MODULE_18__ = __webpack_require__(/*! ./world/mascots */ "./src/scenes/world/mascots.ts");
-/* harmony import */ var _world_playground__WEBPACK_IMPORTED_MODULE_19__ = __webpack_require__(/*! ./world/playground */ "./src/scenes/world/playground.ts");
-/* harmony import */ var _world_trees__WEBPACK_IMPORTED_MODULE_20__ = __webpack_require__(/*! ./world/trees */ "./src/scenes/world/trees.ts");
-/* harmony import */ var _world_waypointSigns__WEBPACK_IMPORTED_MODULE_21__ = __webpack_require__(/*! ./world/waypointSigns */ "./src/scenes/world/waypointSigns.ts");
+/* harmony import */ var _audio_impactSounds__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./audio/impactSounds */ "./src/scenes/audio/impactSounds.ts");
+/* harmony import */ var _audio_soundBoard__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./audio/soundBoard */ "./src/scenes/audio/soundBoard.ts");
+/* harmony import */ var _core_performance__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./core/performance */ "./src/scenes/core/performance.ts");
+/* harmony import */ var _core_physics__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./core/physics */ "./src/scenes/core/physics.ts");
+/* harmony import */ var _core_shadows__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./core/shadows */ "./src/scenes/core/shadows.ts");
+/* harmony import */ var _tank_movement__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./tank/movement */ "./src/scenes/tank/movement.ts");
+/* harmony import */ var _tank_shooting__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./tank/shooting */ "./src/scenes/tank/shooting.ts");
+/* harmony import */ var _tank_tankTrail__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./tank/tankTrail */ "./src/scenes/tank/tankTrail.ts");
+/* harmony import */ var _tank_toyTank__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./tank/toyTank */ "./src/scenes/tank/toyTank.ts");
+/* harmony import */ var _ui_controlsOverlay__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./ui/controlsOverlay */ "./src/scenes/ui/controlsOverlay.ts");
+/* harmony import */ var _ui_fpsCounter__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ./ui/fpsCounter */ "./src/scenes/ui/fpsCounter.ts");
+/* harmony import */ var _world_aiTrophies__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ./world/aiTrophies */ "./src/scenes/world/aiTrophies.ts");
+/* harmony import */ var _world_bricks__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ./world/bricks */ "./src/scenes/world/bricks.ts");
+/* harmony import */ var _world_clouds__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ./world/clouds */ "./src/scenes/world/clouds.ts");
+/* harmony import */ var _world_fruitFactory__WEBPACK_IMPORTED_MODULE_16__ = __webpack_require__(/*! ./world/fruitFactory */ "./src/scenes/world/fruitFactory.ts");
+/* harmony import */ var _world_fruitFactorySigns__WEBPACK_IMPORTED_MODULE_17__ = __webpack_require__(/*! ./world/fruitFactorySigns */ "./src/scenes/world/fruitFactorySigns.ts");
+/* harmony import */ var _world_ground__WEBPACK_IMPORTED_MODULE_18__ = __webpack_require__(/*! ./world/ground */ "./src/scenes/world/ground.ts");
+/* harmony import */ var _world_landmarks__WEBPACK_IMPORTED_MODULE_19__ = __webpack_require__(/*! ./world/landmarks */ "./src/scenes/world/landmarks.ts");
+/* harmony import */ var _world_mascots__WEBPACK_IMPORTED_MODULE_20__ = __webpack_require__(/*! ./world/mascots */ "./src/scenes/world/mascots.ts");
+/* harmony import */ var _world_playground__WEBPACK_IMPORTED_MODULE_21__ = __webpack_require__(/*! ./world/playground */ "./src/scenes/world/playground.ts");
+/* harmony import */ var _world_trees__WEBPACK_IMPORTED_MODULE_22__ = __webpack_require__(/*! ./world/trees */ "./src/scenes/world/trees.ts");
+/* harmony import */ var _world_waypointSigns__WEBPACK_IMPORTED_MODULE_23__ = __webpack_require__(/*! ./world/waypointSigns */ "./src/scenes/world/waypointSigns.ts");
 var __extends = (undefined && undefined.__extends) || (function () {
     var extendStatics = function (d, b) {
         extendStatics = Object.setPrototypeOf ||
@@ -995,6 +1708,8 @@ var __extends = (undefined && undefined.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
+
+
 
 
 
@@ -1042,15 +1757,15 @@ var Play = /** @class */ (function (_super) {
         this.findSceneObjects();
         this.loadScreenTexture();
         console.log("%c Very sly of you, but there is nothing to see here ;)", "color: #CE718F");
-        (0,_core_physics__WEBPACK_IMPORTED_MODULE_3__.enablePhysics)(this.scene);
-        (0,_core_physics__WEBPACK_IMPORTED_MODULE_3__.createTankBody)(this.scene, this.tank);
-        (0,_ui_fpsCounter__WEBPACK_IMPORTED_MODULE_10__.attachFpsCounter)(this.scene);
+        (0,_core_physics__WEBPACK_IMPORTED_MODULE_5__.enablePhysics)(this.scene);
+        (0,_core_physics__WEBPACK_IMPORTED_MODULE_5__.createTankBody)(this.scene, this.tank);
+        (0,_ui_fpsCounter__WEBPACK_IMPORTED_MODULE_12__.attachFpsCounter)(this.scene);
         this.buildWorld();
         this.initializeTank();
         // Last, once every mesh and physics body exists.
-        (0,_core_performance__WEBPACK_IMPORTED_MODULE_2__.optimizeScene)(this.scene, this.tank);
-        (0,_core_physics__WEBPACK_IMPORTED_MODULE_3__.prepareLooseBodies)(this.scene, this.tank);
-        var controls = new _ui_controlsOverlay__WEBPACK_IMPORTED_MODULE_9__.ControlOverlay(this.scene);
+        (0,_core_performance__WEBPACK_IMPORTED_MODULE_4__.optimizeScene)(this.scene, this.tank);
+        (0,_core_physics__WEBPACK_IMPORTED_MODULE_5__.prepareLooseBodies)(this.scene, this.tank);
+        var controls = new _ui_controlsOverlay__WEBPACK_IMPORTED_MODULE_11__.ControlOverlay(this.scene);
         void controls.show();
         this.onDisposeObservable.addOnce(function () { return controls.dispose(); });
     };
@@ -1079,23 +1794,22 @@ var Play = /** @class */ (function (_super) {
     Play.prototype.buildWorld = function () {
         var _this = this;
         var scene = this.scene;
-        var brickSound = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Sound("brick", "assets/sounds/brick.mp3", scene, null, { loop: false, volume: 0.5 });
         this.createToyTankModel();
-        (0,_tank_tankTrail__WEBPACK_IMPORTED_MODULE_7__.createTankTrail)(scene, this.tank);
-        (0,_world_trees__WEBPACK_IMPORTED_MODULE_20__.instantiateTrees)({ scene: scene });
-        (0,_world_landmarks__WEBPACK_IMPORTED_MODULE_17__.restyleLandmarks)(scene);
-        (0,_world_fruitFactory__WEBPACK_IMPORTED_MODULE_14__.restyleFruitFactory)(scene);
-        (0,_world_fruitFactorySigns__WEBPACK_IMPORTED_MODULE_15__.createFruitFactorySigns)(scene);
-        (0,_world_mascots__WEBPACK_IMPORTED_MODULE_18__.restyleMascots)(scene);
-        tryTo("AI trophies", function () { return (0,_world_aiTrophies__WEBPACK_IMPORTED_MODULE_11__.createAiTrophies)(scene); });
-        (0,_world_waypointSigns__WEBPACK_IMPORTED_MODULE_21__.createWaypointSigns)(scene);
-        tryTo("Playground", function () { return (0,_world_playground__WEBPACK_IMPORTED_MODULE_19__.createPlayground)(scene); });
-        (0,_world_bricks__WEBPACK_IMPORTED_MODULE_12__.createBrickBuilds)({ scene: scene, tank: this.tank, brickSound: brickSound });
+        (0,_tank_tankTrail__WEBPACK_IMPORTED_MODULE_9__.createTankTrail)(scene, this.tank);
+        (0,_world_trees__WEBPACK_IMPORTED_MODULE_22__.instantiateTrees)({ scene: scene });
+        (0,_world_landmarks__WEBPACK_IMPORTED_MODULE_19__.restyleLandmarks)(scene);
+        (0,_world_fruitFactory__WEBPACK_IMPORTED_MODULE_16__.restyleFruitFactory)(scene);
+        (0,_world_fruitFactorySigns__WEBPACK_IMPORTED_MODULE_17__.createFruitFactorySigns)(scene);
+        (0,_world_mascots__WEBPACK_IMPORTED_MODULE_20__.restyleMascots)(scene);
+        tryTo("AI trophies", function () { return (0,_world_aiTrophies__WEBPACK_IMPORTED_MODULE_13__.createAiTrophies)(scene); });
+        (0,_world_waypointSigns__WEBPACK_IMPORTED_MODULE_23__.createWaypointSigns)(scene);
+        tryTo("Playground", function () { return (0,_world_playground__WEBPACK_IMPORTED_MODULE_21__.createPlayground)(scene); });
+        (0,_world_bricks__WEBPACK_IMPORTED_MODULE_14__.createBrickBuilds)({ scene: scene, tank: this.tank });
         // After the bricks: walls measure the ground height with a ray, and decorations avoid them.
-        (0,_world_ground__WEBPACK_IMPORTED_MODULE_16__.decorateGround)(scene, _world_trees__WEBPACK_IMPORTED_MODULE_20__.TREE_POSITIONS);
-        tryTo("Clouds", function () { return (0,_world_clouds__WEBPACK_IMPORTED_MODULE_13__.createClouds)(scene, _this.tank, _this.camera); });
+        (0,_world_ground__WEBPACK_IMPORTED_MODULE_18__.decorateGround)(scene, _world_trees__WEBPACK_IMPORTED_MODULE_22__.TREE_POSITIONS);
+        tryTo("Clouds", function () { return (0,_world_clouds__WEBPACK_IMPORTED_MODULE_15__.createClouds)(scene, _this.tank, _this.camera); });
         // After everything else, so every mesh is considered as a shadow caster.
-        tryTo("Shadows", function () { return (0,_core_shadows__WEBPACK_IMPORTED_MODULE_4__.initializeShadows)(scene, { camera: _this.camera, focus: function () { return _this.tank.position; } }); });
+        tryTo("Shadows", function () { return (0,_core_shadows__WEBPACK_IMPORTED_MODULE_6__.initializeShadows)(scene, { camera: _this.camera, focus: function () { return _this.tank.position; } }); });
     };
     /**
      * Swaps the imported tank model for the toy tank built in code. Add `?tank=classic` to the URL
@@ -1107,7 +1821,7 @@ var Play = /** @class */ (function (_super) {
             return;
         }
         try {
-            this.toyTank = (0,_tank_toyTank__WEBPACK_IMPORTED_MODULE_8__.createToyTank)(this.scene, this.tank);
+            this.toyTank = (0,_tank_toyTank__WEBPACK_IMPORTED_MODULE_10__.createToyTank)(this.scene, this.tank);
             (_a = this.scene.getMeshByName("tank")) === null || _a === void 0 ? void 0 : _a.setEnabled(false);
         }
         catch (error) {
@@ -1116,20 +1830,22 @@ var Play = /** @class */ (function (_super) {
             this.toyTank = null;
         }
     };
+    /** Driving, shooting and all the sounds (synthesised, see audio/). After the world is built. */
     Play.prototype.initializeTank = function () {
         var _this = this;
         var _a;
+        var sounds = new _audio_soundBoard__WEBPACK_IMPORTED_MODULE_3__.SoundBoard(this.scene, this.tank, this.camera);
         var context = {
             scene: this.scene,
             tank: this.tank,
             camera: this.camera,
-            tankSound: new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Sound("tank", "assets/sounds/splash.mp3", this.scene, null, { loop: false, volume: 1 }),
-            bullet: new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Sound("music", "assets/sounds/bullet.wav", this.scene, null, { loop: false, volume: 0.5 }),
+            sounds: sounds,
+            impacts: (0,_audio_impactSounds__WEBPACK_IMPORTED_MODULE_2__.createImpactSounds)(this.scene, sounds, this.tank),
             onShoot: this.toyTank ? function () { var _a; return (_a = _this.toyTank) === null || _a === void 0 ? void 0 : _a.fire(); } : undefined,
             shotOrigin: (_a = this.toyTank) === null || _a === void 0 ? void 0 : _a.muzzle,
         };
-        (0,_tank_movement__WEBPACK_IMPORTED_MODULE_5__.initializeTankMovement)(context, 0.07);
-        void (0,_tank_shooting__WEBPACK_IMPORTED_MODULE_6__.initializeShooting)(context, new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, 0, 1));
+        (0,_tank_movement__WEBPACK_IMPORTED_MODULE_7__.initializeTankMovement)(context, 0.07);
+        void (0,_tank_shooting__WEBPACK_IMPORTED_MODULE_8__.initializeShooting)(context, new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, 0, 1));
     };
     return Play;
 }(_babylonjs_core_node__WEBPACK_IMPORTED_MODULE_1__.Node));
@@ -1216,7 +1932,9 @@ var MAX_TILT = 0.5;
 var GROUNDED_TILT_RATE = 14;
 var AIR_PITCH_RATE = 6;
 var AIR_ROLL_RATE = 3;
-function createGroundContact(tank, model) {
+function createGroundContact(tank, model, 
+/** Called when the tank lands after being in the air, with how fast it was falling. */
+onLand) {
     var baseY = tank.position.y;
     var heights = new Array(FOOTPRINT.length).fill(0);
     var elevation = 0;
@@ -1273,6 +1991,9 @@ function createGroundContact(tank, model) {
             // On the surface: move with it, keeping the speed it gives (so the lip of a ramp launches
             // the tank and it stays glued to a downhill slope). A landing never pushes it back up.
             var surfaceSpeed = (support - elevation) / deltaSeconds;
+            if (!grounded) {
+                onLand === null || onLand === void 0 ? void 0 : onLand(-verticalSpeed);
+            }
             verticalSpeed = grounded ? Math.min(MAX_LAUNCH_SPEED, surfaceSpeed) : Math.min(0, surfaceSpeed);
             elevation = support;
             grounded = true;
@@ -1306,7 +2027,7 @@ function createGroundContact(tank, model) {
         }
         return false;
     };
-    return { update: update, isBlocked: isBlocked };
+    return { update: update, isBlocked: isBlocked, isAirborne: function () { return !grounded; } };
 }
 
 
@@ -1323,7 +2044,9 @@ function createGroundContact(tank, model) {
 /* harmony export */ });
 /* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core */ "./node_modules/@babylonjs/core/index.js");
 /* harmony import */ var _core_math__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../core/math */ "./src/scenes/core/math.ts");
-/* harmony import */ var _groundContact__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./groundContact */ "./src/scenes/tank/groundContact.ts");
+/* harmony import */ var _audio_engineSound__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../audio/engineSound */ "./src/scenes/audio/engineSound.ts");
+/* harmony import */ var _groundContact__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./groundContact */ "./src/scenes/tank/groundContact.ts");
+
 
 
 
@@ -1360,7 +2083,10 @@ function initializeTankMovement(_this, rotationSpeed) {
     var cameraFollowSharpness = 6;
     var tankCollisionRadius = getHorizontalRadius(_this.tank) * 0.55;
     // Ramps, platforms and the tank's tilt (see groundContact.ts).
-    var groundContact = (0,_groundContact__WEBPACK_IMPORTED_MODULE_2__.createGroundContact)(_this.tank, _this.scene.getTransformNodeByName("toy-tank-root"));
+    var groundContact = (0,_groundContact__WEBPACK_IMPORTED_MODULE_3__.createGroundContact)(_this.tank, _this.scene.getTransformNodeByName("toy-tank-root"), function (fallSpeed) {
+        _this.sounds.land(fallSpeed);
+    });
+    var engineSound = (0,_audio_engineSound__WEBPACK_IMPORTED_MODULE_2__.createEngineSound)(_this.sounds);
     var currentTurnSpeed = 0;
     var currentMoveSpeed = 0;
     _this.camera.lockedTarget = null;
@@ -1384,14 +2110,12 @@ function initializeTankMovement(_this, rotationSpeed) {
     _this.scene.actionManager = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.ActionManager(_this.scene);
     _this.scene.actionManager.registerAction(new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.ExecuteCodeAction(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.ActionManager.OnKeyDownTrigger, handleKeyEvent));
     _this.scene.actionManager.registerAction(new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.ExecuteCodeAction(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.ActionManager.OnKeyUpTrigger, handleKeyEvent));
-    // Engine sound: replayed every 40 physics frames while driving. (The tread prints and dust are
-    // in tankTrail.ts.)
-    var engineSoundTick = 0;
-    var updateEngineSound = function () {
-        if (++engineSoundTick >= 40) {
-            engineSoundTick = 0;
-            _this.tankSound.play();
-        }
+    // These stops don't go through the physics engine, so they play their bump sound here (at
+    // the front, or back when reversing, of the tank).
+    var bumpPosition = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.Zero();
+    var bump = function (material) {
+        forwardDirection.scaleToRef(Math.sign(currentMoveSpeed) * 7, bumpPosition).addInPlace(_this.tank.position);
+        _this.sounds.impact("tank", material, Math.abs(currentMoveSpeed), bumpPosition);
     };
     var applyMovement = function (mesh, moveInput, deltaSeconds) {
         var physicsImpostor = mesh.physicsImpostor;
@@ -1410,10 +2134,12 @@ function initializeTankMovement(_this, rotationSpeed) {
         nextPosition.y = baseTankY;
         nextPosition.addInPlace(forwardDirection.scale(currentMoveSpeed * deltaSeconds));
         if (collidesWithTree(nextPosition)) {
+            bump("trunk");
             currentMoveSpeed = 0;
         }
         // The back of a ramp or a platform's side is a wall: stop instead of driving into it.
         if (currentMoveSpeed !== 0 && groundContact.isBlocked(nextPosition.x, nextPosition.z, yaw, currentMoveSpeed > 0 ? 1 : -1)) {
+            bump("ramp");
             currentMoveSpeed = 0;
         }
         // The tank is moved by the physics engine using this velocity (rather than by setting its
@@ -1432,16 +2158,14 @@ function initializeTankMovement(_this, rotationSpeed) {
         var deltaSeconds = Math.min(engine.getDeltaTime() / 1000, maxDeltaSeconds);
         var moveInput = (inputMap["w"] ? 1 : 0) - (inputMap["s"] ? 1 : 0);
         var turnInput = (inputMap["d"] ? 1 : 0) - (inputMap["a"] ? 1 : 0);
-        var currentForwardSpeed = applyMovement(_this.tank, moveInput, deltaSeconds);
-        if (moveInput !== 0 && Math.abs(currentForwardSpeed) > 0.5) {
-            updateEngineSound();
-        }
+        applyMovement(_this.tank, moveInput, deltaSeconds);
         var desiredTurnSpeed = turnInput * maxTurnSpeed;
         currentTurnSpeed = moveToward(currentTurnSpeed, desiredTurnSpeed, turnAcceleration * deltaSeconds);
         if (currentTurnSpeed !== 0) {
             _this.tank.rotate(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Axis.Y, currentTurnSpeed * deltaSeconds, _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Space.WORLD);
         }
         groundContact.update(deltaSeconds, (0,_core_math__WEBPACK_IMPORTED_MODULE_1__.getYaw)(_this.tank), currentMoveSpeed);
+        engineSound.update(currentMoveSpeed, currentTurnSpeed, groundContact.isAirborne());
         var rotationQuaternion = _this.tank.rotationQuaternion;
         if (rotationQuaternion) {
             _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Quaternion.RotationYawPitchRollToRef((0,_core_math__WEBPACK_IMPORTED_MODULE_1__.getYaw)(_this.tank), 0, 0, uprightRotation);
@@ -1505,9 +2229,8 @@ function initializeTankMovement(_this, rotationSpeed) {
 /* harmony import */ var _core_math__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../core/math */ "./src/scenes/core/math.ts");
 /* harmony import */ var _ui_style__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../ui/style */ "./src/scenes/ui/style.ts");
 /* harmony import */ var _ui_targetHud__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../ui/targetHud */ "./src/scenes/ui/targetHud.ts");
-/* harmony import */ var _world_bricks__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../world/bricks */ "./src/scenes/world/bricks.ts");
-/* harmony import */ var _world_playground__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../world/playground */ "./src/scenes/world/playground.ts");
-/* harmony import */ var _toyTarget__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./toyTarget */ "./src/scenes/tank/toyTarget.ts");
+/* harmony import */ var _world_playground__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../world/playground */ "./src/scenes/world/playground.ts");
+/* harmony import */ var _toyTarget__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./toyTarget */ "./src/scenes/tank/toyTarget.ts");
 var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -1544,16 +2267,6 @@ var __generator = (undefined && undefined.__generator) || function (thisArg, bod
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-var __spreadArray = (undefined && undefined.__spreadArray) || function (to, from, pack) {
-    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
-        if (ar || !(i in from)) {
-            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
-            ar[i] = from[i];
-        }
-    }
-    return to.concat(ar || Array.prototype.slice.call(from));
-};
-
 
 
 
@@ -1653,7 +2366,7 @@ function initializeShooting(_this, forward) {
                         var _a;
                         var toyTarget = null;
                         try {
-                            toyTarget = (0,_toyTarget__WEBPACK_IMPORTED_MODULE_6__.createToyTarget)(_this.scene, target.mesh, (_a = targetMarks[target.label]) !== null && _a !== void 0 ? _a : "");
+                            toyTarget = (0,_toyTarget__WEBPACK_IMPORTED_MODULE_5__.createToyTarget)(_this.scene, target.mesh, (_a = targetMarks[target.label]) !== null && _a !== void 0 ? _a : "");
                         }
                         catch (error) {
                             console.error("Toy target creation failed, keeping the original", error);
@@ -1804,6 +2517,7 @@ function initializeShooting(_this, forward) {
                                 if ((0,_core_math__WEBPACK_IMPORTED_MODULE_1__.segmentDistanceSquared)(activeShot.previousPosition, shotPosition, target.mesh.absolutePosition) <= target.hitRadiusSquared) {
                                     didHit = true;
                                     (_a = toyTargets.get(target.mesh)) === null || _a === void 0 ? void 0 : _a.hit();
+                                    _this.sounds.chime(target.mesh.absolutePosition);
                                     window.open(target.url, "_blank", "noopener,noreferrer");
                                     currentObjectiveText = "Direct hit! Opening ".concat(target.label, " in a new tab.");
                                     currentMood = "hit";
@@ -1838,7 +2552,7 @@ function initializeShooting(_this, forward) {
                         }
                         canShoot = false;
                         shotCooldownUntil = performance.now() + shotCooldownMs;
-                        _this.bullet.play();
+                        _this.sounds.shot();
                         (_a = _this.onShoot) === null || _a === void 0 ? void 0 : _a.call(_this);
                         _this.tank.getDirectionToRef(forward, shotDirection);
                         shotDirection.normalize();
@@ -1850,8 +2564,8 @@ function initializeShooting(_this, forward) {
                         shotSpawnPosition.y += shotHeightOffset;
                         shotBall.position.copyFrom(shotSpawnPosition);
                         shotBall.physicsImpostor = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.PhysicsImpostor(shotBall, _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.PhysicsImpostor.SphereImpostor, SHOT_PHYSICS, _this.scene);
-                        (0,_world_playground__WEBPACK_IMPORTED_MODULE_5__.collideWithRamps)(shotBall.physicsImpostor);
-                        shotBall.physicsImpostor.registerOnPhysicsCollide(__spreadArray([], (0,_world_bricks__WEBPACK_IMPORTED_MODULE_4__.getBrickImpostors)(), true), _world_bricks__WEBPACK_IMPORTED_MODULE_4__.playBrickSound);
+                        (0,_world_playground__WEBPACK_IMPORTED_MODULE_4__.collideWithRamps)(shotBall.physicsImpostor);
+                        _this.impacts.track(shotBall.physicsImpostor, "ball");
                         // Shots inherit the tank's motion, so firing while driving still goes where you aim.
                         var tankVelocity = (_b = _this.tank.physicsImpostor) === null || _b === void 0 ? void 0 : _b.getLinearVelocity();
                         if (tankVelocity) {
@@ -4922,9 +5636,7 @@ function paintVertices(mesh, color) {
 (__unused_webpack_module, __webpack_exports__, __webpack_require__) {
 
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   createBrickBuilds: () => (/* binding */ createBrickBuilds),
-/* harmony export */   getBrickImpostors: () => (/* binding */ getBrickImpostors),
-/* harmony export */   playBrickSound: () => (/* binding */ playBrickSound)
+/* harmony export */   createBrickBuilds: () => (/* binding */ createBrickBuilds)
 /* harmony export */ });
 /* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core */ "./node_modules/@babylonjs/core/index.js");
 /* harmony import */ var _core_toyStyle__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../core/toyStyle */ "./src/scenes/core/toyStyle.ts");
@@ -4947,11 +5659,9 @@ var BRICK_BUILDS = [
 ];
 /** Builds every brick wall, pyramid and tower in BRICK_BUILDS. */
 function createBrickBuilds(context) {
-    brickSound = context.brickSound;
     brickImpostors.length = 0;
     context.scene.onDisposeObservable.addOnce(function () {
         brickImpostors.length = 0;
-        brickSound = null;
     });
     for (var _i = 0, BRICK_BUILDS_1 = BRICK_BUILDS; _i < BRICK_BUILDS_1.length; _i++) {
         var build = BRICK_BUILDS_1[_i];
@@ -5012,27 +5722,8 @@ function keepBricksCalm(scene, tank) {
 var BRICK_PHYSICS = { mass: 2, friction: 0.8, restitution: 0.1 };
 var BRICK_LINEAR_DAMPING = 0.1;
 var BRICK_ANGULAR_DAMPING = 0.2;
-/** Every brick's physics body, so shots can tell when they hit one. */
+/** Every brick's physics body (see keepBricksCalm). Their sounds are in audio/impactSounds.ts. */
 var brickImpostors = [];
-var brickSound = null;
-function getBrickImpostors() {
-    return brickImpostors;
-}
-/**
- * Plays the knock sound. Driving into a wall or a shot hitting one makes many bricks collide in
- * the same moment, and they all share one sound, so it's throttled to avoid restarting it many
- * times in a row.
- */
-var brickSoundCooldownMs = 150;
-var lastBrickSoundTime = 0;
-function playBrickSound() {
-    var now = performance.now();
-    if (now - lastBrickSoundTime < brickSoundCooldownMs) {
-        return;
-    }
-    lastBrickSoundTime = now;
-    brickSound === null || brickSound === void 0 ? void 0 : brickSound.play();
-}
 /**
  * Set up a wall of bricks centered at (x, z) and rotated around its own center.
  * @param y fallback ground height used if no ground is found below the wall.
@@ -5047,7 +5738,6 @@ function instantiateBricks(_this, x, y, z, numColumnsPerRow, rotationY) {
     var brickHeight = brickLength * 0.5 * brickScaleFactor;
     var groundY = getGroundHeight(x, y, z);
     var initialY = groundY + brickHeight / 2;
-    var tankImpostor = _this.tank.physicsImpostor;
     // One hidden template per colour; the visible bricks are instances of these.
     var brickTemplates = createBrickTemplates(_this, brickLength, brickHeight, brickDepth);
     var colorOffset = Math.abs(Math.round(x + z)) % BRICK_COLORS.length;
@@ -5094,9 +5784,6 @@ function instantiateBricks(_this, x, y, z, numColumnsPerRow, rotationY) {
     function positionBrick(brick, x, y, z) {
         brick.position.set(x, y, z);
         var impostor = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.PhysicsImpostor(brick, _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.PhysicsImpostor.BoxImpostor, BRICK_PHYSICS, _this.scene);
-        if (tankImpostor) {
-            impostor.registerOnPhysicsCollide(tankImpostor, playBrickSound);
-        }
         brickImpostors.push(impostor);
         var body = impostor.physicsBody;
         if (body) {
@@ -6019,7 +6706,7 @@ function createTitleSign(scene) {
         var post = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("ff-title-post-".concat(side), 1.1, postTop - _core_constants__WEBPACK_IMPORTED_MODULE_3__.GROUND_Y, 1.1, 0.35, scene);
         post.material = materials.post;
         post.position.set(x, _core_constants__WEBPACK_IMPORTED_MODULE_3__.GROUND_Y + ((postTop - _core_constants__WEBPACK_IMPORTED_MODULE_3__.GROUND_Y) / 2), boardZ - 0.9);
-        (0,_core_staticBodies__WEBPACK_IMPORTED_MODULE_1__.addStaticBox)(scene, post.position, 1.3, postTop - _core_constants__WEBPACK_IMPORTED_MODULE_3__.GROUND_Y, 1.3);
+        (0,_core_staticBodies__WEBPACK_IMPORTED_MODULE_1__.addStaticBox)(scene, post.position, 1.3, postTop - _core_constants__WEBPACK_IMPORTED_MODULE_3__.GROUND_Y, 1.3, { sound: "post" });
     }
     // Marquee bulbs round the edge of the board's front.
     var bulbMaterial = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.StandardMaterial("ff-title-bulb", scene);
@@ -6174,7 +6861,7 @@ function createInfoStand(scene) {
     // Solid, so the tank bumps into it.
     root.computeWorldMatrix(true);
     var center = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.TransformCoordinates(new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, 4, legZ / 2), root.getWorldMatrix());
-    (0,_core_staticBodies__WEBPACK_IMPORTED_MODULE_1__.addStaticBox)(scene, center, panelWidth + 1.4, 8, legZ + 3, { rotation: _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Quaternion.RotationYawPitchRoll(_core_constants__WEBPACK_IMPORTED_MODULE_3__.FACE_CAMERA_YAW, 0, 0) });
+    (0,_core_staticBodies__WEBPACK_IMPORTED_MODULE_1__.addStaticBox)(scene, center, panelWidth + 1.4, 8, legZ + 3, { rotation: _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Quaternion.RotationYawPitchRoll(_core_constants__WEBPACK_IMPORTED_MODULE_3__.FACE_CAMERA_YAW, 0, 0), sound: "solid" });
 }
 /** The panel's face: title, description, a "Free on Google Play" pill and a few drawn fruits. */
 function createInfoMaterial(scene, panelWidth, panelHeight) {
@@ -6500,7 +7187,7 @@ function scatterDecorations(scene, treePositions) {
             puff.isPickable = false;
         }
         // A simple solid sphere so the tank bumps into the bush instead of driving through it.
-        (0,_core_staticBodies__WEBPACK_IMPORTED_MODULE_3__.addStaticSphere)(scene, new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(spot.x, _core_constants__WEBPACK_IMPORTED_MODULE_5__.GROUND_Y + 2, spot.y), 3.5);
+        (0,_core_staticBodies__WEBPACK_IMPORTED_MODULE_3__.addStaticSphere)(scene, new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(spot.x, _core_constants__WEBPACK_IMPORTED_MODULE_5__.GROUND_Y + 2, spot.y), 3.5, { sound: "bush" });
         blocked.push({ minX: spot.x - 4, maxX: spot.x + 4, minZ: spot.y - 4, maxZ: spot.y + 4 });
     }
     // ---- Boulders: big solid rocks to steer around.
@@ -6517,7 +7204,7 @@ function scatterDecorations(scene, treePositions) {
         boulder.rotation.y = random() * Math.PI * 2;
         boulder.position.set(spot.x, _core_constants__WEBPACK_IMPORTED_MODULE_5__.GROUND_Y + (size * 0.45), spot.y);
         boulder.isPickable = false;
-        (0,_core_staticBodies__WEBPACK_IMPORTED_MODULE_3__.addStaticSphere)(scene, boulder.position, size);
+        (0,_core_staticBodies__WEBPACK_IMPORTED_MODULE_3__.addStaticSphere)(scene, boulder.position, size, { sound: "rock" });
         var margin = size + 1;
         blocked.push({ minX: spot.x - margin, maxX: spot.x + margin, minZ: spot.y - margin, maxZ: spot.y + margin });
     }
@@ -6768,7 +7455,7 @@ function restylePodium(scene) {
             mesh.isPickable = false;
         });
         // Solid step (replacing the old three-step physics body below).
-        (0,_core_staticBodies__WEBPACK_IMPORTED_MODULE_2__.addStaticBox)(scene, center, size.x, size.y, size.z);
+        (0,_core_staticBodies__WEBPACK_IMPORTED_MODULE_2__.addStaticBox)(scene, center, size.x, size.y, size.z, { sound: "solid" });
     }
     // Hide the old blocks (the logos stay parented to it). Its physics body is replaced by the
     // per-step boxes above, which follow the steps' shapes more closely. The scene loader doesn't
@@ -7254,7 +7941,7 @@ function createPlatform(scene, platform, materials) {
     (0,_core_staticBodies__WEBPACK_IMPORTED_MODULE_2__.addStaticBox)(scene, new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(platform.x, _core_constants__WEBPACK_IMPORTED_MODULE_3__.GROUND_Y + (platform.height / 2), platform.z), platform.width, platform.height, platform.length, __assign({ rotation: _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Quaternion.RotationYawPitchRoll(platform.yaw, 0, 0) }, LOOSE_OBJECTS_ONLY));
 }
 /** Ramps and platforms collide with loose objects but let the tank through (it rides on the height map). */
-var LOOSE_OBJECTS_ONLY = { group: RAMP_COLLISION_GROUP, mask: DEFAULT_COLLISION_GROUP };
+var LOOSE_OBJECTS_ONLY = { group: RAMP_COLLISION_GROUP, mask: DEFAULT_COLLISION_GROUP, sound: "ramp" };
 /**
  * Toy traffic cones: navy base, orange cone with a cream band. Light and loose, so the tank and
  * shots send them flying.
@@ -7919,7 +8606,7 @@ function instantiateTree(templates, position, index, scene) {
     trunk.computeWorldMatrix(true);
     var trunkBox = trunk.getBoundingInfo().boundingBox;
     var trunkSize = trunkBox.maximumWorld.subtract(trunkBox.minimumWorld);
-    (0,_core_staticBodies__WEBPACK_IMPORTED_MODULE_2__.addStaticBox)(scene, trunkBox.centerWorld, trunkSize.x, trunkSize.y, trunkSize.z);
+    (0,_core_staticBodies__WEBPACK_IMPORTED_MODULE_2__.addStaticBox)(scene, trunkBox.centerWorld, trunkSize.x, trunkSize.y, trunkSize.z, { sound: "trunk" });
     return canopy;
 }
 /**
@@ -8097,6 +8784,7 @@ function addSignCollider(scene, root, localCenter, width, height, depth) {
     root.computeWorldMatrix(true);
     (0,_core_staticBodies__WEBPACK_IMPORTED_MODULE_1__.addStaticBox)(scene, _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.TransformCoordinates(localCenter, root.getWorldMatrix()), width * SCALE, height * SCALE, depth * SCALE, {
         rotation: _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Quaternion.RotationYawPitchRoll(root.rotation.y, 0, 0),
+        sound: "post",
     });
 }
 /**
@@ -8217,4 +8905,4 @@ function addBullseye(scene, id, parent, y, materials) {
 /***/ }
 
 }]);
-//# sourceMappingURL=src_scenes_tools_ts.04ca02e9516280e67a21.js.map
+//# sourceMappingURL=src_scenes_tools_ts.43f17f2e4ea1ea53b6f0.js.map

@@ -2,6 +2,7 @@ import * as BABYLON from "@babylonjs/core";
 
 import { getYaw } from "../core/math";
 import type { TankContext } from "./context";
+import { createEngineSound } from "../audio/engineSound";
 import { createGroundContact } from "./groundContact";
 
 /**
@@ -37,7 +38,10 @@ export function initializeTankMovement(_this: TankContext, rotationSpeed: number
     const cameraFollowSharpness = 6;
     const tankCollisionRadius = getHorizontalRadius(_this.tank) * 0.55;
     // Ramps, platforms and the tank's tilt (see groundContact.ts).
-    const groundContact = createGroundContact(_this.tank, _this.scene.getTransformNodeByName("toy-tank-root"));
+    const groundContact = createGroundContact(_this.tank, _this.scene.getTransformNodeByName("toy-tank-root"), (fallSpeed) => {
+        _this.sounds.land(fallSpeed);
+    });
+    const engineSound = createEngineSound(_this.sounds);
     let currentTurnSpeed = 0;
     let currentMoveSpeed = 0;
 
@@ -67,14 +71,12 @@ export function initializeTankMovement(_this: TankContext, rotationSpeed: number
     _this.scene.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnKeyDownTrigger, handleKeyEvent));
     _this.scene.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnKeyUpTrigger, handleKeyEvent));
 
-    // Engine sound: replayed every 40 physics frames while driving. (The tread prints and dust are
-    // in tankTrail.ts.)
-    let engineSoundTick = 0;
-    const updateEngineSound = () => {
-        if (++engineSoundTick >= 40) {
-            engineSoundTick = 0;
-            _this.tankSound.play();
-        }
+    // These stops don't go through the physics engine, so they play their bump sound here (at
+    // the front, or back when reversing, of the tank).
+    const bumpPosition = BABYLON.Vector3.Zero();
+    const bump = (material: "trunk" | "ramp") => {
+        forwardDirection.scaleToRef(Math.sign(currentMoveSpeed) * 7, bumpPosition).addInPlace(_this.tank.position);
+        _this.sounds.impact("tank", material, Math.abs(currentMoveSpeed), bumpPosition);
     };
 
     const applyMovement = (mesh: BABYLON.AbstractMesh, moveInput: number, deltaSeconds: number): number => {
@@ -97,10 +99,12 @@ export function initializeTankMovement(_this: TankContext, rotationSpeed: number
         nextPosition.y = baseTankY;
         nextPosition.addInPlace(forwardDirection.scale(currentMoveSpeed * deltaSeconds));
         if (collidesWithTree(nextPosition)) {
+            bump("trunk");
             currentMoveSpeed = 0;
         }
         // The back of a ramp or a platform's side is a wall: stop instead of driving into it.
         if (currentMoveSpeed !== 0 && groundContact.isBlocked(nextPosition.x, nextPosition.z, yaw, currentMoveSpeed > 0 ? 1 : -1)) {
+            bump("ramp");
             currentMoveSpeed = 0;
         }
 
@@ -122,11 +126,8 @@ export function initializeTankMovement(_this: TankContext, rotationSpeed: number
         const deltaSeconds = Math.min(engine.getDeltaTime() / 1000, maxDeltaSeconds);
         const moveInput = (inputMap["w"] ? 1 : 0) - (inputMap["s"] ? 1 : 0);
         const turnInput = (inputMap["d"] ? 1 : 0) - (inputMap["a"] ? 1 : 0);
-        const currentForwardSpeed = applyMovement(_this.tank, moveInput, deltaSeconds);
+        applyMovement(_this.tank, moveInput, deltaSeconds);
 
-        if (moveInput !== 0 && Math.abs(currentForwardSpeed) > 0.5) {
-            updateEngineSound();
-        }
 
         const desiredTurnSpeed = turnInput * maxTurnSpeed;
         currentTurnSpeed = moveToward(currentTurnSpeed, desiredTurnSpeed, turnAcceleration * deltaSeconds);
@@ -135,6 +136,7 @@ export function initializeTankMovement(_this: TankContext, rotationSpeed: number
         }
 
         groundContact.update(deltaSeconds, getYaw(_this.tank), currentMoveSpeed);
+        engineSound.update(currentMoveSpeed, currentTurnSpeed, groundContact.isAirborne());
 
         const rotationQuaternion = _this.tank.rotationQuaternion;
         if (rotationQuaternion) {

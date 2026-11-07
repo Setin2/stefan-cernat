@@ -244,7 +244,7 @@ function instantiateTree(templates: TreeTemplates, position: BABYLON.Vector3, in
     trunk.computeWorldMatrix(true);
     const trunkBox = trunk.getBoundingInfo().boundingBox;
     const trunkSize = trunkBox.maximumWorld.subtract(trunkBox.minimumWorld);
-    addStaticBox(scene, trunkBox.centerWorld, trunkSize.x, trunkSize.y, trunkSize.z);
+    addStaticBox(scene, trunkBox.centerWorld, trunkSize.x, trunkSize.y, trunkSize.z, { sound: "trunk" });
 
     return canopy;
 }

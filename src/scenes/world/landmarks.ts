@@ -119,7 +119,7 @@ function restylePodium(scene: BABYLON.Scene): void {
         });
 
         // Solid step (replacing the old three-step physics body below).
-        addStaticBox(scene, center, size.x, size.y, size.z);
+        addStaticBox(scene, center, size.x, size.y, size.z, { sound: "solid" });
     }
 
     // Hide the old blocks (the logos stay parented to it). Its physics body is replaced by the

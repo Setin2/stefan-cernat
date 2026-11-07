@@ -5,7 +5,6 @@ import { createRoundedBox, createTemplate, createToyMaterial } from "../core/toy
 type BrickContext = {
     scene: BABYLON.Scene;
     tank: BABYLON.AbstractMesh;
-    brickSound: BABYLON.Sound;
 };
 
 /** Earthy toy-block colours (brick red, mustard, teal, slate blue, sand); neighbours differ. */
@@ -27,11 +26,9 @@ const BRICK_BUILDS: { x: number; z: number; rows: number[]; rotationY: number }[
 
 /** Builds every brick wall, pyramid and tower in BRICK_BUILDS. */
 export function createBrickBuilds(context: BrickContext): void {
-    brickSound = context.brickSound;
     brickImpostors.length = 0;
     context.scene.onDisposeObservable.addOnce(() => {
         brickImpostors.length = 0;
-        brickSound = null;
     });
     for (const build of BRICK_BUILDS) {
         instantiateBricks(context, build.x, 8, build.z, build.rows, build.rotationY);
@@ -102,29 +99,8 @@ const BRICK_PHYSICS = { mass: 2, friction: 0.8, restitution: 0.1 };
 const BRICK_LINEAR_DAMPING = 0.1;
 const BRICK_ANGULAR_DAMPING = 0.2;
 
-/** Every brick's physics body, so shots can tell when they hit one. */
+/** Every brick's physics body (see keepBricksCalm). Their sounds are in audio/impactSounds.ts. */
 const brickImpostors: BABYLON.PhysicsImpostor[] = [];
-let brickSound: BABYLON.Sound | null = null;
-
-export function getBrickImpostors(): readonly BABYLON.PhysicsImpostor[] {
-    return brickImpostors;
-}
-
-/**
- * Plays the knock sound. Driving into a wall or a shot hitting one makes many bricks collide in
- * the same moment, and they all share one sound, so it's throttled to avoid restarting it many
- * times in a row.
- */
-const brickSoundCooldownMs = 150;
-let lastBrickSoundTime = 0;
-export function playBrickSound(): void {
-    const now = performance.now();
-    if (now - lastBrickSoundTime < brickSoundCooldownMs) {
-        return;
-    }
-    lastBrickSoundTime = now;
-    brickSound?.play();
-}
 
 /**
  * Set up a wall of bricks centered at (x, z) and rotated around its own center.
@@ -145,7 +121,6 @@ function instantiateBricks(
     const brickHeight = brickLength * 0.5 * brickScaleFactor;
     const groundY = getGroundHeight(x, y, z);
     const initialY = groundY + brickHeight / 2;
-    const tankImpostor = _this.tank.physicsImpostor;
 
     // One hidden template per colour; the visible bricks are instances of these.
     const brickTemplates = createBrickTemplates(_this, brickLength, brickHeight, brickDepth);
@@ -206,9 +181,6 @@ function instantiateBricks(
     function positionBrick(brick: BABYLON.Mesh | BABYLON.InstancedMesh, x: number, y: number, z: number): void {
         brick.position.set(x, y, z);
         const impostor = new BABYLON.PhysicsImpostor(brick, BABYLON.PhysicsImpostor.BoxImpostor, BRICK_PHYSICS, _this.scene);
-        if (tankImpostor) {
-            impostor.registerOnPhysicsCollide(tankImpostor, playBrickSound);
-        }
         brickImpostors.push(impostor);
 
         const body = impostor.physicsBody as { linearDamping: number; angularDamping: number; sleep: () => void } | null;

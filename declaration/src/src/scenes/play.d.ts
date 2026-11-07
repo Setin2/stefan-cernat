@@ -29,5 +29,6 @@ export default class Play extends Node {
      * to get the original model back for comparison.
      */
     private createToyTankModel;
+    /** Driving, shooting and all the sounds (synthesised, see audio/). After the world is built. */
     private initializeTank;
 }

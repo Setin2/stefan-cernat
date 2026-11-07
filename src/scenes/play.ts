@@ -1,6 +1,8 @@
 import * as BABYLON from "@babylonjs/core";
 import { Node } from "@babylonjs/core/node";
 
+import { createImpactSounds } from "./audio/impactSounds";
+import { SoundBoard } from "./audio/soundBoard";
 import { optimizeScene } from "./core/performance";
 import { createTankBody, enablePhysics, prepareLooseBodies } from "./core/physics";
 import { initializeShadows } from "./core/shadows";
@@ -93,7 +95,6 @@ export default class Play extends Node {
     /** Restyles the imported scene and adds everything built in code. Order matters where noted. */
     private buildWorld(): void {
         const scene = this.scene;
-        const brickSound = new BABYLON.Sound("brick", "assets/sounds/brick.mp3", scene, null, { loop: false, volume: 0.5 });
 
         this.createToyTankModel();
         createTankTrail(scene, this.tank);
@@ -105,7 +106,7 @@ export default class Play extends Node {
         tryTo("AI trophies", () => createAiTrophies(scene));
         createWaypointSigns(scene);
         tryTo("Playground", () => createPlayground(scene));
-        createBrickBuilds({ scene, tank: this.tank, brickSound });
+        createBrickBuilds({ scene, tank: this.tank });
         // After the bricks: walls measure the ground height with a ray, and decorations avoid them.
         decorateGround(scene, TREE_POSITIONS);
         tryTo("Clouds", () => createClouds(scene, this.tank, this.camera));
@@ -132,13 +133,15 @@ export default class Play extends Node {
         }
     }
 
+    /** Driving, shooting and all the sounds (synthesised, see audio/). After the world is built. */
     private initializeTank(): void {
+        const sounds = new SoundBoard(this.scene, this.tank, this.camera);
         const context = {
             scene: this.scene,
             tank: this.tank,
             camera: this.camera,
-            tankSound: new BABYLON.Sound("tank", "assets/sounds/splash.mp3", this.scene, null, { loop: false, volume: 1 }),
-            bullet: new BABYLON.Sound("music", "assets/sounds/bullet.wav", this.scene, null, { loop: false, volume: 0.5 }),
+            sounds,
+            impacts: createImpactSounds(this.scene, sounds, this.tank),
             onShoot: this.toyTank ? () => this.toyTank?.fire() : undefined,
             shotOrigin: this.toyTank?.muzzle,
         };

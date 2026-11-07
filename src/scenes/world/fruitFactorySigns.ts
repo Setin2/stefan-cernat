@@ -96,7 +96,7 @@ function createTitleSign(scene: BABYLON.Scene): void {
         const post = createRoundedBox(`ff-title-post-${side}`, 1.1, postTop - GROUND_Y, 1.1, 0.35, scene);
         post.material = materials.post;
         post.position.set(x, GROUND_Y + ((postTop - GROUND_Y) / 2), boardZ - 0.9);
-        addStaticBox(scene, post.position, 1.3, postTop - GROUND_Y, 1.3);
+        addStaticBox(scene, post.position, 1.3, postTop - GROUND_Y, 1.3, { sound: "post" });
     }
 
     // Marquee bulbs round the edge of the board's front.
@@ -263,7 +263,7 @@ function createInfoStand(scene: BABYLON.Scene): void {
     // Solid, so the tank bumps into it.
     root.computeWorldMatrix(true);
     const center = BABYLON.Vector3.TransformCoordinates(new BABYLON.Vector3(0, 4, legZ / 2), root.getWorldMatrix());
-    addStaticBox(scene, center, panelWidth + 1.4, 8, legZ + 3, { rotation: BABYLON.Quaternion.RotationYawPitchRoll(FACE_CAMERA_YAW, 0, 0) });
+    addStaticBox(scene, center, panelWidth + 1.4, 8, legZ + 3, { rotation: BABYLON.Quaternion.RotationYawPitchRoll(FACE_CAMERA_YAW, 0, 0), sound: "solid" });
 }
 
 /** The panel's face: title, description, a "Free on Google Play" pill and a few drawn fruits. */

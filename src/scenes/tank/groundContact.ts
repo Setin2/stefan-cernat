@@ -51,9 +51,16 @@ export type GroundContact = {
      * (direction 1) or backwards (-1).
      */
     isBlocked: (x: number, z: number, yaw: number, direction: 1 | -1) => boolean;
+    /** Whether the tank is in the air (off a ramp, or falling off an edge). */
+    isAirborne: () => boolean;
 };
 
-export function createGroundContact(tank: BABYLON.AbstractMesh, model: BABYLON.TransformNode | null): GroundContact {
+export function createGroundContact(
+    tank: BABYLON.AbstractMesh,
+    model: BABYLON.TransformNode | null,
+    /** Called when the tank lands after being in the air, with how fast it was falling. */
+    onLand?: (fallSpeed: number) => void,
+): GroundContact {
     const baseY = tank.position.y;
     const heights = new Array<number>(FOOTPRINT.length).fill(0);
     let elevation = 0;
@@ -114,6 +121,9 @@ export function createGroundContact(tank: BABYLON.AbstractMesh, model: BABYLON.T
             // On the surface: move with it, keeping the speed it gives (so the lip of a ramp launches
             // the tank and it stays glued to a downhill slope). A landing never pushes it back up.
             const surfaceSpeed = (support - elevation) / deltaSeconds;
+            if (!grounded) {
+                onLand?.(-verticalSpeed);
+            }
             verticalSpeed = grounded ? Math.min(MAX_LAUNCH_SPEED, surfaceSpeed) : Math.min(0, surfaceSpeed);
             elevation = support;
             grounded = true;
@@ -148,5 +158,5 @@ export function createGroundContact(tank: BABYLON.AbstractMesh, model: BABYLON.T
         return false;
     };
 
-    return { update, isBlocked };
+    return { update, isBlocked, isAirborne: () => !grounded };
 }

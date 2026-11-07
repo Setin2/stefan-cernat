@@ -248,7 +248,7 @@ function createPlatform(scene: BABYLON.Scene, platform: Platform, materials: Ram
 }
 
 /** Ramps and platforms collide with loose objects but let the tank through (it rides on the height map). */
-const LOOSE_OBJECTS_ONLY = { group: RAMP_COLLISION_GROUP, mask: DEFAULT_COLLISION_GROUP };
+const LOOSE_OBJECTS_ONLY = { group: RAMP_COLLISION_GROUP, mask: DEFAULT_COLLISION_GROUP, sound: "ramp" as const };
 
 /**
  * Toy traffic cones: navy base, orange cone with a cream band. Light and loose, so the tank and

@@ -165,7 +165,7 @@ function scatterDecorations(scene: BABYLON.Scene, treePositions: BABYLON.Vector3
         }
 
         // A simple solid sphere so the tank bumps into the bush instead of driving through it.
-        addStaticSphere(scene, new BABYLON.Vector3(spot.x, GROUND_Y + 2, spot.y), 3.5);
+        addStaticSphere(scene, new BABYLON.Vector3(spot.x, GROUND_Y + 2, spot.y), 3.5, { sound: "bush" });
         blocked.push({ minX: spot.x - 4, maxX: spot.x + 4, minZ: spot.y - 4, maxZ: spot.y + 4 });
     }
 
@@ -184,7 +184,7 @@ function scatterDecorations(scene: BABYLON.Scene, treePositions: BABYLON.Vector3
         boulder.position.set(spot.x, GROUND_Y + (size * 0.45), spot.y);
         boulder.isPickable = false;
 
-        addStaticSphere(scene, boulder.position, size);
+        addStaticSphere(scene, boulder.position, size, { sound: "rock" });
         const margin = size + 1;
         blocked.push({ minX: spot.x - margin, maxX: spot.x + margin, minZ: spot.y - margin, maxZ: spot.y + margin });
     }
