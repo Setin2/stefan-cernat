@@ -30,6 +30,8 @@ const NO_CAST = ["ball", "splatter", "ffdescription", "monitor", "ground", "road
 
 /** Meshes thinner than this (world units) lie flat on the ground and only receive. */
 const MIN_CASTER_HEIGHT = 0.3;
+/** Meshes smaller than this in every direction don't cast (their shadow would be a speck). */
+const MIN_CASTER_SIZE = 1.3;
 
 export type ShadowOptions = {
     camera: BABYLON.Camera;
@@ -51,7 +53,10 @@ export function initializeShadows(scene: BABYLON.Scene, options: ShadowOptions):
             return false;
         }
         const box = mesh.getBoundingInfo().boundingBox;
-        return box.maximumWorld.y - box.minimumWorld.y >= MIN_CASTER_HEIGHT;
+        const size = box.maximumWorld.subtract(box.minimumWorld);
+        // Flat things only receive; tiny things (pebbles, blossoms, rivets, cleats) would cost a
+        // draw in the shadow map every frame for a shadow a few pixels wide.
+        return size.y >= MIN_CASTER_HEIGHT && Math.max(size.x, size.y, size.z) >= MIN_CASTER_SIZE;
     };
 
     const register = (mesh: BABYLON.AbstractMesh) => {

@@ -141,6 +141,8 @@ function createPrints(scene: BABYLON.Scene) {
     mesh.thinInstanceSetBuffer("color", colors, 4, false);
 
     let next = 0;
+    /** Time the newest print expires; nothing to update after that. */
+    let lastExpiry = -1;
     const rotation = new BABYLON.Quaternion();
     const position = new BABYLON.Vector3();
     const scaling = BABYLON.Vector3.One();
@@ -162,9 +164,14 @@ function createPrints(scene: BABYLON.Scene) {
                 next = (next + 1) % MAX_PRINTS;
             }
             matricesDirty = true;
+            lastExpiry = time + PRINT_LIFETIME;
         },
         /** Fades prints out at the end of their life and hides expired ones. */
         update(time: number): void {
+            // All prints have faded: skip the loop and the buffer upload (one last pass hides them).
+            if (time > lastExpiry + 1) {
+                return;
+            }
             for (let i = 0; i < MAX_PRINTS; i++) {
                 const age = time - born[i];
                 const alpha = age < 0 || age > PRINT_LIFETIME ? 0 : Math.min(1, (PRINT_LIFETIME - age) / PRINT_FADE) * 0.8;

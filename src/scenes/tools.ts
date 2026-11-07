@@ -588,8 +588,10 @@ export let motionBlurPostProcessRef: Nullable<MotionBlurPostProcess> = null;
 export async function configurePostProcesses(scene: Scene, rootUrl: Nullable<string> = null): Promise<void> {
     if (rootUrl === null || !scene.metadata?.postProcesses) { return; }
 
-    // Load  post-processes configuration
-    const data = scene.metadata.postProcesses;
+    // Load  post-processes configuration. SSAO is left out on purpose: it re-renders the whole
+    // scene into a depth/normal buffer and adds five full-screen passes every frame, for a darkening
+    // that is barely visible now that the scene has real shadows.
+    const data = { ...scene.metadata.postProcesses, ssao: undefined };
 
     const [ssaoModule, ssrModule, defaultPipelineModule, colorCurvesModule, colorGradingModule, motionBlurModule] = await Promise.all([
         data.ssao && !ssao2RenderingPipelineRef ? import("@babylonjs/core/PostProcesses/RenderPipeline/Pipelines/ssao2RenderingPipeline") : Promise.resolve(null),

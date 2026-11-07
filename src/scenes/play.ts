@@ -252,6 +252,24 @@ export default class Play extends Node {
             return;
         }
 
+        // Performance: resting bodies (bricks, trophies, spent shots) fall asleep and stop being
+        // simulated until something hits them, and the broadphase sorts bodies along an axis
+        // instead of testing every pair against every other. The tank never sleeps, since it's
+        // moved by setting its velocity.
+        const cannonPlugin = plugin as unknown as { world?: { allowSleep: boolean; broadphase: unknown }; BJSCANNON?: { SAPBroadphase?: new (world: unknown) => unknown } };
+        const world = cannonPlugin.world;
+        if (world) {
+            world.allowSleep = true;
+            const SAPBroadphase = cannonPlugin.BJSCANNON?.SAPBroadphase;
+            if (SAPBroadphase) {
+                world.broadphase = new SAPBroadphase(world);
+            }
+        }
+        const tankBody = this.tank.physicsImpostor?.physicsBody as { allowSleep?: boolean } | undefined;
+        if (tankBody) {
+            tankBody.allowSleep = false;
+        }
+
         const maxSubStepSeconds = 1 / 120;
         const executeStep = plugin.executeStep.bind(plugin);
         plugin.executeStep = (delta, impostors) => {
