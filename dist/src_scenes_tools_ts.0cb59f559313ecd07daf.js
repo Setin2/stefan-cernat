@@ -211,7 +211,7 @@ function buildClaude(scene, id) {
     var rays = lengths.map(function (length, i) {
         var angle = ((i / lengths.length) * Math.PI * 2) + 0.13 + (Math.sin(i * 2.3) * 0.05);
         var outline = taperedCapsule(length, 0.13, 0.25);
-        var ray = extrudeOutline("".concat(id, "-ray-").concat(i), rotate2d(outline, angle), 0.55, 0.1, scene);
+        var ray = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.extrudeOutline)("".concat(id, "-ray-").concat(i), rotate2d(outline, angle), 0.55, 0.1, scene);
         return ray;
     });
     var spark = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Mesh.MergeMeshes(rays, true, true);
@@ -268,7 +268,7 @@ function buildGemini(scene, id) {
         var s = Math.sin(t);
         outline.push([radius * Math.sign(c) * Math.pow(Math.abs(c), power), radius * Math.sign(s) * Math.pow(Math.abs(s), power)]);
     }
-    var star = extrudeOutline("".concat(id, "-star"), outline, 0.6, 0.12, scene);
+    var star = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.extrudeOutline)("".concat(id, "-star"), outline, 0.6, 0.12, scene);
     var stops = ["#4796E3", "#9177C7", "#CA6673"].map(function (hex) { return _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.FromHexString(hex).toLinearSpace(); });
     paintVertices(star, function (x, y) {
         var t = clampUnit((((x * 0.45) + (y * 0.9)) / (radius * 1.35) + 1) / 2);
@@ -323,7 +323,7 @@ function buildDeepSeek(scene, id) {
         var belly_1 = s < 0 ? 0.82 : 1;
         body.push([-0.35 + (1.45 * c), -0.35 + (0.95 * s * taper * belly_1)]);
     }
-    var bodyMesh = extrudeOutline("".concat(id, "-body"), body, 0.75, 0.16, scene);
+    var bodyMesh = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.extrudeOutline)("".concat(id, "-body"), body, 0.75, 0.16, scene);
     // Tail: curls up from the back of the body, ending in two flukes.
     var tailPath = [];
     for (var i = 0; i <= 16; i++) {
@@ -340,7 +340,7 @@ function buildDeepSeek(scene, id) {
     }, scene);
     tail.scaling.z = 1.35;
     var flukes = [-1, 1].map(function (side) {
-        var fluke = extrudeOutline("".concat(id, "-fluke-").concat(side), rotate2d(ellipse(0.5, 0.2, 24), side * 0.75), 0.4, 0.08, scene);
+        var fluke = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.extrudeOutline)("".concat(id, "-fluke-").concat(side), rotate2d(ellipse(0.5, 0.2, 24), side * 0.75), 0.4, 0.08, scene);
         fluke.position.set(1.45 + (side * 0.33), 0.92, 0);
         return fluke;
     });
@@ -362,7 +362,7 @@ function buildDeepSeek(scene, id) {
     pupil.material = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "".concat(id, "-pupil-material"), "#1E2A4A", { roughness: 0.3, clearCoat: 0.8 });
     meshes.push(eyeWhite, pupil);
     // Lighter belly stripe.
-    var belly = extrudeOutline("".concat(id, "-belly"), ellipse(0.9, 0.2, 32).map(function (_a) {
+    var belly = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.extrudeOutline)("".concat(id, "-belly"), ellipse(0.9, 0.2, 32).map(function (_a) {
         var x = _a[0], y = _a[1];
         return [x - 0.45, y - 0.85];
     }), 0.2, 0.05, scene);
@@ -403,11 +403,11 @@ function buildHuggingFace(scene, id) {
         var t = Math.PI + ((i / 24) * Math.PI);
         smile.push([0.85 * Math.cos(t), 0.62 * Math.sin(t)]);
     }
-    var mouth = extrudeOutline("".concat(id, "-mouth"), smile, 0.3, 0.06, scene);
+    var mouth = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.extrudeOutline)("".concat(id, "-mouth"), smile, 0.3, 0.06, scene);
     mouth.position.set(0, 0.05, -0.74);
     mouth.material = dark;
     meshes.push(mouth);
-    var tongue = extrudeOutline("".concat(id, "-tongue"), ellipse(0.38, 0.17, 24), 0.12, 0.04, scene);
+    var tongue = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.extrudeOutline)("".concat(id, "-tongue"), ellipse(0.38, 0.17, 24), 0.12, 0.04, scene);
     tongue.position.set(0, -0.38, -0.86);
     tongue.material = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "".concat(id, "-tongue-material"), "#FF6B4A", { roughness: 0.4, clearCoat: 0.5 });
     meshes.push(tongue);
@@ -472,94 +472,6 @@ function rotate2d(points, angle) {
 }
 function clampUnit(value) {
     return Math.max(0, Math.min(1, value));
-}
-/**
- * Extrudes a 2D outline (in X/Y, any winding) into a slab `depth` thick, centred on z = 0 with its
- * front facing -Z, and a rounded bevel of size `bevel` on both edges. The outline must be visible
- * in full from its centroid (true for all the shapes here), so the caps can be triangle fans.
- */
-function extrudeOutline(name, outline, depth, bevel, scene) {
-    var count = outline.length;
-    var cx = 0;
-    var cy = 0;
-    for (var _i = 0, outline_1 = outline; _i < outline_1.length; _i++) {
-        var _a = outline_1[_i], x = _a[0], y = _a[1];
-        cx += x;
-        cy += y;
-    }
-    cx /= count;
-    cy /= count;
-    // Outward 2D normal at each vertex (average of the two edge normals).
-    var outward = outline.map(function (point, i) {
-        var _a = outline[(i + count - 1) % count], px = _a[0], py = _a[1];
-        var _b = outline[(i + 1) % count], nx = _b[0], ny = _b[1];
-        var ox = ny - py;
-        var oy = -(nx - px);
-        var length = Math.hypot(ox, oy) || 1;
-        ox /= length;
-        oy /= length;
-        if ((ox * (point[0] - cx)) + (oy * (point[1] - cy)) < 0) {
-            ox = -ox;
-            oy = -oy;
-        }
-        return [ox, oy];
-    });
-    var positions = [];
-    var normals = [];
-    var indices = [];
-    var front = -depth / 2;
-    var back = depth / 2;
-    // Rings from front to back: inset front edge, outer front edge, outer back edge, inset back edge.
-    var rings = [
-        { z: front, inset: bevel, nz: -0.8 },
-        { z: front + bevel, inset: 0, nz: -0.25 },
-        { z: back - bevel, inset: 0, nz: 0.25 },
-        { z: back, inset: bevel, nz: 0.8 },
-    ];
-    var ringStart = rings.map(function (ring) {
-        var start = positions.length / 3;
-        outline.forEach(function (_a, i) {
-            var x = _a[0], y = _a[1];
-            var _b = outward[i], ox = _b[0], oy = _b[1];
-            positions.push(x - (ox * ring.inset), y - (oy * ring.inset), ring.z);
-            var planar = Math.sqrt(1 - (ring.nz * ring.nz));
-            normals.push(ox * planar, oy * planar, ring.nz);
-        });
-        return start;
-    });
-    for (var r = 0; r < rings.length - 1; r++) {
-        for (var i = 0; i < count; i++) {
-            var j = (i + 1) % count;
-            var a = ringStart[r] + i;
-            var b = ringStart[r] + j;
-            var c = ringStart[r + 1] + i;
-            var d = ringStart[r + 1] + j;
-            (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.pushOrientedTriangle)(indices, positions, normals, a, b, c);
-            (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.pushOrientedTriangle)(indices, positions, normals, b, d, c);
-        }
-    }
-    // Flat caps.
-    for (var _b = 0, _c = [[0, front, -1], [3, back, 1]]; _b < _c.length; _b++) {
-        var _d = _c[_b], ringIndex = _d[0], z = _d[1], nz = _d[2];
-        var center = positions.length / 3;
-        positions.push(cx, cy, z);
-        normals.push(0, 0, nz);
-        var start = positions.length / 3;
-        for (var i = 0; i < count; i++) {
-            var source = (ringStart[ringIndex] + i) * 3;
-            positions.push(positions[source], positions[source + 1], z);
-            normals.push(0, 0, nz);
-        }
-        for (var i = 0; i < count; i++) {
-            (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.pushOrientedTriangle)(indices, positions, normals, center, start + i, start + ((i + 1) % count));
-        }
-    }
-    // Planar UVs, so these can be merged with other meshes (merging needs matching attributes).
-    var uvs = [];
-    for (var i = 0; i < positions.length; i += 3) {
-        uvs.push(positions[i], positions[i + 1]);
-    }
-    return (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.buildMesh)(name, positions, normals, indices, scene, uvs);
 }
 /** Sets per-vertex colours from each vertex's x/y position. */
 function paintVertices(mesh, color) {
@@ -1627,7 +1539,6 @@ var PALETTE = {
     edgePebbles: ["#9C9282", "#B3A893"],
     signPlate: "#344B63",
     signRim: "#E8DCC6",
-    signLetters: "#F4EBDD",
 };
 function restyleLandmarks(scene) {
     try {
@@ -2024,31 +1935,8 @@ function createSlabMesh(name, outline, bottomY, topY, bevel, scene) {
  * plate, and the 3D letters get a glossy cream plastic finish.
  */
 function restyleSigns(scene) {
-    var letters = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-sign-letters", PALETTE.signLetters, { roughness: 0.4, clearCoat: 0.6 });
     var plate = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-sign-plate", PALETTE.signPlate, { roughness: 0.5, clearCoat: 0.35 });
     var rim = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-sign-rim", PALETTE.signRim, { roughness: 0.5, clearCoat: 0.3 });
-    // 3D text: how far to lift the letters so they stand clear of the plate.
-    var textSigns = [
-        { name: "target_text", lift: 0.6 },
-        { name: "projects_sign", lift: 0 },
-    ];
-    for (var _i = 0, textSigns_1 = textSigns; _i < textSigns_1.length; _i++) {
-        var _a = textSigns_1[_i], name_2 = _a.name, lift = _a.lift;
-        var mesh = scene.getMeshByName(name_2);
-        if (!mesh) {
-            continue;
-        }
-        mesh.position.y += lift;
-        mesh.material = letters;
-        mesh.computeWorldMatrix(true);
-        var box = mesh.getBoundingInfo().boundingBox;
-        var scaling = mesh.scaling;
-        var width = (box.maximum.x - box.minimum.x) * Math.abs(scaling.x);
-        var depth = (box.maximum.z - box.minimum.z) * Math.abs(scaling.z);
-        var center = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.TransformCoordinates(box.center, mesh.getWorldMatrix());
-        var yaw = mesh.rotationQuaternion ? mesh.rotationQuaternion.toEulerAngles().y : mesh.rotation.y;
-        createSignPlate(scene, "sign-plate-".concat(name_2), center.x, center.z, yaw, width + 4, depth + 4, plate, rim);
-    }
     // The description is a flat textured plane lying on the ground.
     var description = scene.getMeshByName("ffdescription");
     if (description) {
@@ -2189,7 +2077,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _fruitFactory__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./fruitFactory */ "./src/scenes/fruitFactory.ts");
 /* harmony import */ var _mascots__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./mascots */ "./src/scenes/mascots.ts");
 /* harmony import */ var _aiTrophies__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./aiTrophies */ "./src/scenes/aiTrophies.ts");
-/* harmony import */ var _shadows__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ./shadows */ "./src/scenes/shadows.ts");
+/* harmony import */ var _waypointSigns__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ./waypointSigns */ "./src/scenes/waypointSigns.ts");
+/* harmony import */ var _shadows__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ./shadows */ "./src/scenes/shadows.ts");
 var __extends = (undefined && undefined.__extends) || (function () {
     var extendStatics = function (d, b) {
         extendStatics = Object.setPrototypeOf ||
@@ -2241,6 +2130,7 @@ var __generator = (undefined && undefined.__generator) || function (thisArg, bod
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+
 
 
 
@@ -2332,6 +2222,7 @@ var Play = /** @class */ (function (_super) {
         catch (error) {
             console.error("AI trophies failed", error);
         }
+        (0,_waypointSigns__WEBPACK_IMPORTED_MODULE_12__.createWaypointSigns)(this.scene);
         (0,_bricks__WEBPACK_IMPORTED_MODULE_4__.instantiateBricks)({ scene: this.scene, tank: this.tank, brickSound: this.brickSound }, -5, 8, -30, 3, [6, 6, 4, 2], 0);
         // Center and angle match where this wall has always been placed (it was previously
         // built at (130, -50) and then rotated 300 rad around the world origin).
@@ -2382,7 +2273,7 @@ var Play = /** @class */ (function (_super) {
      */
     Play.prototype.initializeShadows = function () {
         var _this = this;
-        (0,_shadows__WEBPACK_IMPORTED_MODULE_12__.initializeShadows)(this.scene, {
+        (0,_shadows__WEBPACK_IMPORTED_MODULE_13__.initializeShadows)(this.scene, {
             camera: this.camera,
             focus: function () { return _this.tank.position; },
         });
@@ -2501,7 +2392,8 @@ var Play = /** @class */ (function (_super) {
         this.scene.skipPointerMovePicking = true;
         this.scene.skipPointerDownPicking = true;
         this.scene.skipPointerUpPicking = true;
-        this.scene.freezeMaterials();
+        // Materials are not frozen: frozen materials bind the light and shadow data only once, so
+        // the shadow map (which follows the camera) would never show up on them.
         this.getEngine().enableOfflineSupport = false;
         this.scene.blockMaterialDirtyMechanism = true;
         this.scene.collisionsEnabled = false;
@@ -2852,8 +2744,10 @@ function applyCommonSettings(generator) {
     generator.filteringQuality = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.ShadowGenerator.QUALITY_MEDIUM;
     generator.bias = 0.001;
     generator.normalBias = 0.02;
-    // Keep some sunlight in the shadows so the plain ground material doesn't go too dark.
-    generator.setDarkness(0.3);
+    // Full shadow from the sun: shaded areas still get the sky and fill light (and the toy
+    // materials their reflections), so they read as soft blue shade, not black. Any lighter and
+    // the shadows all but disappear, since the sun is only part of the ground's light.
+    generator.setDarkness(0);
 }
 
 
@@ -4404,6 +4298,7 @@ function configurePostProcesses(scene_3) {
 /* harmony export */   createRoundedBox: () => (/* binding */ createRoundedBox),
 /* harmony export */   createTemplate: () => (/* binding */ createTemplate),
 /* harmony export */   createToyMaterial: () => (/* binding */ createToyMaterial),
+/* harmony export */   extrudeOutline: () => (/* binding */ extrudeOutline),
 /* harmony export */   pushOrientedTriangle: () => (/* binding */ pushOrientedTriangle)
 /* harmony export */ });
 /* unused harmony export getToyEnvironment */
@@ -4698,6 +4593,94 @@ function addThinInstances(mesh, matrices) {
     mesh.thinInstanceAdd(matrices, true);
     mesh.thinInstanceRefreshBoundingInfo(false);
     mesh.isPickable = false;
+}
+/**
+ * Extrudes a 2D outline (in X/Y, any winding) into a slab `depth` thick, centred on z = 0 with its
+ * front facing -Z, and a rounded bevel of size `bevel` on both edges. The outline must be visible
+ * in full from its centroid (true for all the shapes here), so the caps can be triangle fans.
+ */
+function extrudeOutline(name, outline, depth, bevel, scene) {
+    var count = outline.length;
+    var cx = 0;
+    var cy = 0;
+    for (var _i = 0, outline_1 = outline; _i < outline_1.length; _i++) {
+        var _a = outline_1[_i], x = _a[0], y = _a[1];
+        cx += x;
+        cy += y;
+    }
+    cx /= count;
+    cy /= count;
+    // Outward 2D normal at each vertex (average of the two edge normals).
+    var outward = outline.map(function (point, i) {
+        var _a = outline[(i + count - 1) % count], px = _a[0], py = _a[1];
+        var _b = outline[(i + 1) % count], nx = _b[0], ny = _b[1];
+        var ox = ny - py;
+        var oy = -(nx - px);
+        var length = Math.hypot(ox, oy) || 1;
+        ox /= length;
+        oy /= length;
+        if ((ox * (point[0] - cx)) + (oy * (point[1] - cy)) < 0) {
+            ox = -ox;
+            oy = -oy;
+        }
+        return [ox, oy];
+    });
+    var positions = [];
+    var normals = [];
+    var indices = [];
+    var front = -depth / 2;
+    var back = depth / 2;
+    // Rings from front to back: inset front edge, outer front edge, outer back edge, inset back edge.
+    var rings = [
+        { z: front, inset: bevel, nz: -0.8 },
+        { z: front + bevel, inset: 0, nz: -0.25 },
+        { z: back - bevel, inset: 0, nz: 0.25 },
+        { z: back, inset: bevel, nz: 0.8 },
+    ];
+    var ringStart = rings.map(function (ring) {
+        var start = positions.length / 3;
+        outline.forEach(function (_a, i) {
+            var x = _a[0], y = _a[1];
+            var _b = outward[i], ox = _b[0], oy = _b[1];
+            positions.push(x - (ox * ring.inset), y - (oy * ring.inset), ring.z);
+            var planar = Math.sqrt(1 - (ring.nz * ring.nz));
+            normals.push(ox * planar, oy * planar, ring.nz);
+        });
+        return start;
+    });
+    for (var r = 0; r < rings.length - 1; r++) {
+        for (var i = 0; i < count; i++) {
+            var j = (i + 1) % count;
+            var a = ringStart[r] + i;
+            var b = ringStart[r] + j;
+            var c = ringStart[r + 1] + i;
+            var d = ringStart[r + 1] + j;
+            pushOrientedTriangle(indices, positions, normals, a, b, c);
+            pushOrientedTriangle(indices, positions, normals, b, d, c);
+        }
+    }
+    // Flat caps.
+    for (var _b = 0, _c = [[0, front, -1], [3, back, 1]]; _b < _c.length; _b++) {
+        var _d = _c[_b], ringIndex = _d[0], z = _d[1], nz = _d[2];
+        var center = positions.length / 3;
+        positions.push(cx, cy, z);
+        normals.push(0, 0, nz);
+        var start = positions.length / 3;
+        for (var i = 0; i < count; i++) {
+            var source = (ringStart[ringIndex] + i) * 3;
+            positions.push(positions[source], positions[source + 1], z);
+            normals.push(0, 0, nz);
+        }
+        for (var i = 0; i < count; i++) {
+            pushOrientedTriangle(indices, positions, normals, center, start + i, start + ((i + 1) % count));
+        }
+    }
+    // Planar UVs, so these can be merged with other meshes (merging needs matching attributes).
+    var uvs = [];
+    for (var i = 0; i < positions.length; i += 3) {
+        uvs.push(positions[i], positions[i + 1]);
+    }
+    return buildMesh(name, positions, normals, indices, scene, uvs);
 }
 
 
@@ -5682,7 +5665,264 @@ function createPetalTexture(scene) {
 }
 
 
+/***/ },
+
+/***/ "./src/scenes/waypointSigns.ts"
+/*!*************************************!*\
+  !*** ./src/scenes/waypointSigns.ts ***!
+  \*************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   createWaypointSigns: () => (/* binding */ createWaypointSigns)
+/* harmony export */ });
+/* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core */ "./node_modules/@babylonjs/core/index.js");
+/* harmony import */ var _toyStyle__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./toyStyle */ "./src/scenes/toyStyle.ts");
+
+
+var GROUND_Y = -0.5;
+var SCALE = 1.3;
+/**
+ * Turns local -Z (the boards' front) towards the camera, which looks along (0.8, -0.6) in x/z.
+ * Local +X then points to the right of the screen.
+ */
+var FACE_CAMERA_YAW = Math.atan2(0.8, -0.6);
+var PALETTE = {
+    board: "#F4EBDD",
+    rim: "#344B63",
+    letters: "#344B63",
+    post: "#8B6A50",
+    base: "#E8DCC6",
+    cap: "#E8869F",
+    gold: "#C9A35B",
+};
+/** Where the bullseye-topped "TARGET PRACTICE" sign stands: beside the podium, not in front of it. */
+var TARGET_SIGN_POSITION = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector2(55, 2);
+function createWaypointSigns(scene) {
+    var _a;
+    var projectsText = scene.getMeshByName("projects_sign");
+    var targetText = scene.getMeshByName("target_text");
+    var signposts = [];
+    if (projectsText) {
+        projectsText.computeWorldMatrix(true);
+        var center = projectsText.getBoundingInfo().boundingBox.centerWorld;
+        // The crossroads near the start: projects (the Fruit Factory) to the right on screen,
+        // the targets on the podium to the left.
+        signposts.push({
+            id: "sign-crossroads",
+            x: center.x,
+            z: center.z,
+            postHeight: 9.5,
+            boards: [
+                { label: "PROJECTS", direction: 1, y: 7.8, length: 11, height: 2.6 },
+                { label: "TARGETS", direction: -1, y: 4.9, length: 10, height: 2.6 },
+            ],
+        });
+    }
+    if (targetText) {
+        signposts.push({
+            id: "sign-targets",
+            x: TARGET_SIGN_POSITION.x,
+            z: TARGET_SIGN_POSITION.y,
+            postHeight: 8,
+            bullseye: true,
+            boards: [
+                { label: "TARGET\nPRACTICE", direction: -1, y: 5.6, length: 11, height: 4 },
+            ],
+        });
+    }
+    var materials = {
+        board: (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-signpost-board", PALETTE.board, { roughness: 0.45, clearCoat: 0.5 }),
+        rim: (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-signpost-rim", PALETTE.rim, { roughness: 0.45, clearCoat: 0.4 }),
+        post: (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-signpost-post", PALETTE.post, { roughness: 0.55, clearCoat: 0.3 }),
+        base: (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-signpost-base", PALETTE.base, { roughness: 0.5, clearCoat: 0.3 }),
+        cap: (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-signpost-cap", PALETTE.cap, { roughness: 0.35, clearCoat: 0.6 }),
+        gold: (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-signpost-gold", PALETTE.gold, { roughness: 0.25, metallic: 0.6, clearCoat: 0.6 }),
+    };
+    // Each new signpost replaces its text on the ground (which stays if the signpost fails).
+    var replaces = { "sign-crossroads": projectsText, "sign-targets": targetText };
+    for (var _i = 0, signposts_1 = signposts; _i < signposts_1.length; _i++) {
+        var signpost = signposts_1[_i];
+        try {
+            createSignpost(scene, signpost, materials);
+            (_a = replaces[signpost.id]) === null || _a === void 0 ? void 0 : _a.setEnabled(false);
+        }
+        catch (error) {
+            console.error("Signpost \"".concat(signpost.id, "\" failed, keeping the original text"), error);
+        }
+    }
+}
+function createSignpost(scene, signpost, materials) {
+    var id = signpost.id;
+    var root = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.TransformNode(id, scene);
+    root.position.set(signpost.x, GROUND_Y, signpost.z);
+    root.rotation.y = FACE_CAMERA_YAW;
+    root.scaling.setAll(SCALE);
+    var add = function (mesh, material) {
+        mesh.material = material;
+        mesh.parent = root;
+        mesh.isPickable = false;
+        return mesh;
+    };
+    // Sand base with a bevelled top, and the post.
+    add((0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRoundedBox)("".concat(id, "-base"), 2.8, 0.7, 2.8, 0.25, scene), materials.base).position.y = 0.35;
+    var post = add((0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRoundedBox)("".concat(id, "-post"), 0.9, signpost.postHeight, 0.9, 0.3, scene), materials.post);
+    post.position.y = 0.6 + (signpost.postHeight / 2);
+    var top = 0.6 + signpost.postHeight;
+    if (signpost.bullseye) {
+        addBullseye(scene, "".concat(id, "-bullseye"), root, top + 1.15, materials);
+    }
+    else {
+        var cap = add(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateSphere("".concat(id, "-cap"), { diameter: 1.3, segments: 16 }, scene), materials.cap);
+        cap.position.y = top + 0.2;
+    }
+    signpost.boards.forEach(function (board, index) {
+        createBoard(scene, "".concat(id, "-board-").concat(index), board, root, materials);
+        // Solid box around the board and its rim.
+        var center = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(board.direction * ((board.length / 2) - 1.1), board.y, -0.65);
+        addStaticBox(scene, "".concat(id, "-board-").concat(index, "-collider"), root, center, board.length + 0.6, board.height + 0.6, 0.8);
+    });
+    if (signpost.bullseye) {
+        addStaticBox(scene, "".concat(id, "-bullseye-collider"), root, new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, top + 1.15, -0.4), 2.5, 2.5, 1);
+    }
+    // Static collider around the post so the tank bumps into it instead of driving through.
+    // (Created without a parent: Babylon skips physics bodies for parented meshes.)
+    var height = (signpost.postHeight + 0.6) * SCALE;
+    var collider = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder("".concat(id, "-collider"), { diameter: 1.4 * SCALE, height: height, tessellation: 12 }, scene);
+    collider.position.set(signpost.x, GROUND_Y + (height / 2), signpost.z);
+    collider.isVisible = false;
+    collider.isPickable = false;
+    collider.physicsImpostor = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.PhysicsImpostor(collider, _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.PhysicsImpostor.CylinderImpostor, { mass: 0, restitution: 0 }, scene);
+}
+/**
+ * Invisible static box in the signpost's (scaled, rotated) space, so the tank hits the boards.
+ * It is created without a parent, as Babylon skips physics bodies for parented meshes.
+ */
+function addStaticBox(scene, name, root, localCenter, width, height, depth) {
+    root.computeWorldMatrix(true);
+    var box = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateBox(name, { width: width * SCALE, height: height * SCALE, depth: depth * SCALE }, scene);
+    box.position.copyFrom(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.TransformCoordinates(localCenter, root.getWorldMatrix()));
+    box.rotation.y = root.rotation.y;
+    box.isVisible = false;
+    box.isPickable = false;
+    box.physicsImpostor = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.PhysicsImpostor(box, _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.PhysicsImpostor.BoxImpostor, { mass: 0, restitution: 0 }, scene);
+}
+/**
+ * An arrow-shaped board (a pentagon pointing along `direction`) mounted in front of the post, its
+ * tail end over the post, with a navy rim, the label and two gold bolts.
+ */
+function createBoard(scene, id, board, parent, materials) {
+    var length = board.length, height = board.height, direction = board.direction;
+    var tip = height * 0.55;
+    var node = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.TransformNode(id, scene);
+    node.parent = parent;
+    // The tail end sits on the post; the board reaches out towards the arrow's tip.
+    node.position.set(direction * ((length / 2) - 1.1), board.y, -0.75);
+    var arrow = function (l, h, t) { return [
+        [-l / 2, -h / 2],
+        [(l / 2) - t, -h / 2],
+        [l / 2, 0],
+        [(l / 2) - t, h / 2],
+        [-l / 2, h / 2],
+    ].map(function (_a) {
+        var x = _a[0], y = _a[1];
+        return [x * direction, y];
+    }); };
+    var front = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.extrudeOutline)("".concat(id, "-face"), arrow(length, height, tip), 0.5, 0.12, scene);
+    front.material = materials.board;
+    front.parent = node;
+    var rim = (0,_toyStyle__WEBPACK_IMPORTED_MODULE_1__.extrudeOutline)("".concat(id, "-rim"), arrow(length + 0.6, height + 0.6, tip + 0.3), 0.4, 0.1, scene);
+    rim.material = materials.rim;
+    rim.parent = node;
+    rim.position.z = 0.2;
+    // Label over the rectangular part of the board.
+    var bodyLength = length - tip;
+    var bodyCenter = -direction * (tip / 2);
+    var label = createLabel(scene, "".concat(id, "-label"), board.label, bodyLength - 1.6, height * 0.8);
+    if (label) {
+        label.parent = node;
+        label.position.set(bodyCenter + (direction * 0.15), 0, -0.27);
+    }
+    // Two bolts near the tail, where the board is "screwed" to the post.
+    for (var _i = 0, _a = [-1, 1]; _i < _a.length; _i++) {
+        var side = _a[_i];
+        var bolt = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateSphere("".concat(id, "-bolt-").concat(side), { diameter: 0.34, segments: 8 }, scene);
+        bolt.scaling.z = 0.45;
+        bolt.material = materials.gold;
+        bolt.parent = node;
+        bolt.position.set(-direction * ((length / 2) - 0.45), side * height * 0.3, -0.27);
+    }
+    for (var _b = 0, _c = node.getChildMeshes(); _b < _c.length; _b++) {
+        var mesh = _c[_b];
+        mesh.isPickable = false;
+    }
+}
+/** Flat plane with the label in navy letters on a transparent background, sized to fit. */
+function createLabel(scene, name, text, width, height) {
+    var textureWidth = 1024;
+    var textureHeight = Math.max(64, Math.round((textureWidth * height) / width));
+    var texture;
+    try {
+        texture = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.DynamicTexture("".concat(name, "-texture"), { width: textureWidth, height: textureHeight }, scene, true);
+    }
+    catch (_a) {
+        return null;
+    }
+    texture.hasAlpha = true;
+    var context = texture.getContext();
+    context.clearRect(0, 0, textureWidth, textureHeight);
+    context.fillStyle = PALETTE.letters;
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    var lines = text.split("\n");
+    var font = function (size) { return "900 ".concat(size, "px \"Arial Rounded MT Bold\", \"Nunito\", \"Trebuchet MS\", Arial, sans-serif"); };
+    // Largest size that fits both the height (all lines) and the width (longest line).
+    var size = (textureHeight / lines.length) * 0.82;
+    context.font = font(size);
+    var widest = Math.max.apply(Math, lines.map(function (line) { return context.measureText(line).width; }));
+    if (widest > textureWidth * 0.96) {
+        size *= (textureWidth * 0.96) / widest;
+        context.font = font(size);
+    }
+    var lineHeight = textureHeight / lines.length;
+    lines.forEach(function (line, i) { return context.fillText(line, textureWidth / 2, (lineHeight * (i + 0.5)) + (size * 0.04)); });
+    texture.update();
+    var material = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.StandardMaterial("".concat(name, "-material"), scene);
+    material.diffuseTexture = texture;
+    material.useAlphaFromDiffuseTexture = true;
+    material.specularColor = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3(0.1, 0.1, 0.1);
+    material.emissiveColor = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3(0.15, 0.15, 0.18);
+    var plane = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreatePlane(name, { width: width, height: height }, scene);
+    plane.material = material;
+    plane.isPickable = false;
+    return plane;
+}
+/** A small target on top of the post: rings stepping out towards the camera. */
+function addBullseye(scene, id, parent, y, materials) {
+    var node = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.TransformNode(id, scene);
+    node.parent = parent;
+    node.position.set(0, y, -0.2);
+    // Cylinders stand along Y; tip them so their faces point at the camera (-Z).
+    node.rotation.x = -Math.PI / 2;
+    var rings = [
+        { radius: 1.25, material: materials.rim, top: 0.2 },
+        { radius: 1.05, material: materials.board, top: 0.3 },
+        { radius: 0.75, material: materials.cap, top: 0.38 },
+        { radius: 0.46, material: materials.board, top: 0.46 },
+        { radius: 0.22, material: materials.gold, top: 0.56 },
+    ];
+    rings.forEach(function (ring, i) {
+        var height = ring.top + 0.2;
+        var disc = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder("".concat(id, "-ring-").concat(i), { diameter: ring.radius * 2, height: height, tessellation: 40 }, scene);
+        disc.material = ring.material;
+        disc.parent = node;
+        disc.position.y = ring.top - (height / 2);
+        disc.isPickable = false;
+    });
+}
+
+
 /***/ }
 
 }]);
-//# sourceMappingURL=src_scenes_tools_ts.787f6fc25167244f246f.js.map
+//# sourceMappingURL=src_scenes_tools_ts.0cb59f559313ecd07daf.js.map

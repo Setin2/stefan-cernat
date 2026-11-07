@@ -149,6 +149,8 @@ function applyCommonSettings(generator: BABYLON.ShadowGenerator): void {
     generator.filteringQuality = BABYLON.ShadowGenerator.QUALITY_MEDIUM;
     generator.bias = 0.001;
     generator.normalBias = 0.02;
-    // Keep some sunlight in the shadows so the plain ground material doesn't go too dark.
-    generator.setDarkness(0.3);
+    // Full shadow from the sun: shaded areas still get the sky and fill light (and the toy
+    // materials their reflections), so they read as soft blue shade, not black. Any lighter and
+    // the shadows all but disappear, since the sun is only part of the ground's light.
+    generator.setDarkness(0);
 }

@@ -24,7 +24,6 @@ const PALETTE = {
     edgePebbles: ["#9C9282", "#B3A893"],
     signPlate: "#344B63",
     signRim: "#E8DCC6",
-    signLetters: "#F4EBDD",
 };
 
 export function restyleLandmarks(scene: BABYLON.Scene): void {
@@ -471,34 +470,8 @@ function createSlabMesh(name: string, outline: BABYLON.Vector2[], bottomY: numbe
  * plate, and the 3D letters get a glossy cream plastic finish.
  */
 function restyleSigns(scene: BABYLON.Scene): void {
-    const letters = createToyMaterial(scene, "toy-sign-letters", PALETTE.signLetters, { roughness: 0.4, clearCoat: 0.6 });
     const plate = createToyMaterial(scene, "toy-sign-plate", PALETTE.signPlate, { roughness: 0.5, clearCoat: 0.35 });
     const rim = createToyMaterial(scene, "toy-sign-rim", PALETTE.signRim, { roughness: 0.5, clearCoat: 0.3 });
-
-    // 3D text: how far to lift the letters so they stand clear of the plate.
-    const textSigns: { name: string; lift: number }[] = [
-        { name: "target_text", lift: 0.6 },
-        { name: "projects_sign", lift: 0 },
-    ];
-
-    for (const { name, lift } of textSigns) {
-        const mesh = scene.getMeshByName(name);
-        if (!mesh) {
-            continue;
-        }
-
-        mesh.position.y += lift;
-        mesh.material = letters;
-        mesh.computeWorldMatrix(true);
-
-        const box = mesh.getBoundingInfo().boundingBox;
-        const scaling = mesh.scaling;
-        const width = (box.maximum.x - box.minimum.x) * Math.abs(scaling.x);
-        const depth = (box.maximum.z - box.minimum.z) * Math.abs(scaling.z);
-        const center = BABYLON.Vector3.TransformCoordinates(box.center, mesh.getWorldMatrix());
-        const yaw = mesh.rotationQuaternion ? mesh.rotationQuaternion.toEulerAngles().y : mesh.rotation.y;
-        createSignPlate(scene, `sign-plate-${name}`, center.x, center.z, yaw, width + 4, depth + 4, plate, rim);
-    }
 
     // The description is a flat textured plane lying on the ground.
     const description = scene.getMeshByName("ffdescription");

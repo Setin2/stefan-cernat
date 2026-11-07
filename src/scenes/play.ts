@@ -12,6 +12,7 @@ import { decorateGround } from "./ground";
 import { restyleFruitFactory } from "./fruitFactory";
 import { restyleMascots } from "./mascots";
 import { createAiTrophies } from "./aiTrophies";
+import { createWaypointSigns } from "./waypointSigns";
 import { initializeShadows } from "./shadows";
 
 export default class Play extends Node {
@@ -100,6 +101,7 @@ export default class Play extends Node {
         } catch (error) {
             console.error("AI trophies failed", error);
         }
+        createWaypointSigns(this.scene);
         instantiateBricks({ scene: this.scene, tank: this.tank, brickSound: this.brickSound }, -5, 8, -30, 3, [6, 6, 4, 2], 0);
         // Center and angle match where this wall has always been placed (it was previously
         // built at (130, -50) and then rotated 300 rad around the world origin).
@@ -275,7 +277,8 @@ export default class Play extends Node {
         this.scene.skipPointerMovePicking = true;
         this.scene.skipPointerDownPicking = true;
         this.scene.skipPointerUpPicking = true;
-        this.scene.freezeMaterials();
+        // Materials are not frozen: frozen materials bind the light and shadow data only once, so
+        // the shadow map (which follows the camera) would never show up on them.
         this.getEngine().enableOfflineSupport = false;
         this.scene.blockMaterialDirtyMechanism = true;
         this.scene.collisionsEnabled = false;

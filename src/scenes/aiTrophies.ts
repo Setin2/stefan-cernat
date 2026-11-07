@@ -1,6 +1,6 @@
 import * as BABYLON from "@babylonjs/core";
 
-import { createLumpyBall, createRandom, createRoundedBox, createToyMaterial, pushOrientedTriangle, buildMesh } from "./toyStyle";
+import { createLumpyBall, createRandom, createRoundedBox, createToyMaterial, extrudeOutline } from "./toyStyle";
 
 /**
  * Toy trophies with the logos of the AI assistants used while building the site, in place of the
@@ -502,97 +502,6 @@ function rotate2d(points: [number, number][], angle: number): [number, number][]
 
 function clampUnit(value: number): number {
     return Math.max(0, Math.min(1, value));
-}
-
-/**
- * Extrudes a 2D outline (in X/Y, any winding) into a slab `depth` thick, centred on z = 0 with its
- * front facing -Z, and a rounded bevel of size `bevel` on both edges. The outline must be visible
- * in full from its centroid (true for all the shapes here), so the caps can be triangle fans.
- */
-function extrudeOutline(name: string, outline: [number, number][], depth: number, bevel: number, scene: BABYLON.Scene): BABYLON.Mesh {
-    const count = outline.length;
-    let cx = 0;
-    let cy = 0;
-    for (const [x, y] of outline) {
-        cx += x;
-        cy += y;
-    }
-    cx /= count;
-    cy /= count;
-
-    // Outward 2D normal at each vertex (average of the two edge normals).
-    const outward = outline.map((point, i) => {
-        const [px, py] = outline[(i + count - 1) % count];
-        const [nx, ny] = outline[(i + 1) % count];
-        let ox = ny - py;
-        let oy = -(nx - px);
-        const length = Math.hypot(ox, oy) || 1;
-        ox /= length;
-        oy /= length;
-        if ((ox * (point[0] - cx)) + (oy * (point[1] - cy)) < 0) {
-            ox = -ox;
-            oy = -oy;
-        }
-        return [ox, oy];
-    });
-
-    const positions: number[] = [];
-    const normals: number[] = [];
-    const indices: number[] = [];
-    const front = -depth / 2;
-    const back = depth / 2;
-
-    // Rings from front to back: inset front edge, outer front edge, outer back edge, inset back edge.
-    const rings: { z: number; inset: number; nz: number }[] = [
-        { z: front, inset: bevel, nz: -0.8 },
-        { z: front + bevel, inset: 0, nz: -0.25 },
-        { z: back - bevel, inset: 0, nz: 0.25 },
-        { z: back, inset: bevel, nz: 0.8 },
-    ];
-    const ringStart = rings.map((ring) => {
-        const start = positions.length / 3;
-        outline.forEach(([x, y], i) => {
-            const [ox, oy] = outward[i];
-            positions.push(x - (ox * ring.inset), y - (oy * ring.inset), ring.z);
-            const planar = Math.sqrt(1 - (ring.nz * ring.nz));
-            normals.push(ox * planar, oy * planar, ring.nz);
-        });
-        return start;
-    });
-    for (let r = 0; r < rings.length - 1; r++) {
-        for (let i = 0; i < count; i++) {
-            const j = (i + 1) % count;
-            const a = ringStart[r] + i;
-            const b = ringStart[r] + j;
-            const c = ringStart[r + 1] + i;
-            const d = ringStart[r + 1] + j;
-            pushOrientedTriangle(indices, positions, normals, a, b, c);
-            pushOrientedTriangle(indices, positions, normals, b, d, c);
-        }
-    }
-
-    // Flat caps.
-    for (const [ringIndex, z, nz] of [[0, front, -1], [3, back, 1]] as const) {
-        const center = positions.length / 3;
-        positions.push(cx, cy, z);
-        normals.push(0, 0, nz);
-        const start = positions.length / 3;
-        for (let i = 0; i < count; i++) {
-            const source = (ringStart[ringIndex] + i) * 3;
-            positions.push(positions[source], positions[source + 1], z);
-            normals.push(0, 0, nz);
-        }
-        for (let i = 0; i < count; i++) {
-            pushOrientedTriangle(indices, positions, normals, center, start + i, start + ((i + 1) % count));
-        }
-    }
-
-    // Planar UVs, so these can be merged with other meshes (merging needs matching attributes).
-    const uvs: number[] = [];
-    for (let i = 0; i < positions.length; i += 3) {
-        uvs.push(positions[i], positions[i + 1]);
-    }
-    return buildMesh(name, positions, normals, indices, scene, uvs);
 }
 
 /** Sets per-vertex colours from each vertex's x/y position. */
