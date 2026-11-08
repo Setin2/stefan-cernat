@@ -262,7 +262,7 @@ var SoundBoard = /** @class */ (function () {
     }
     /** Runs `callback` once audio is available (right away if it already is). */
     SoundBoard.prototype.whenReady = function (callback) {
-        if (this.ensureContext()) {
+        if (this.isRunning()) {
             callback();
         }
         else {
@@ -271,7 +271,7 @@ var SoundBoard = /** @class */ (function () {
     };
     /** The audio context and the bus every sound connects to, once audio is unlocked. */
     SoundBoard.prototype.getOutput = function () {
-        return this.ensureContext() && this.context && this.bus && this.ambience && this.noise
+        return this.isRunning() && this.context && this.bus && this.ambience && this.noise
             ? { context: this.context, bus: this.bus, ambience: this.ambience, noise: this.noise }
             : null;
     };
@@ -287,6 +287,14 @@ var SoundBoard = /** @class */ (function () {
         gain.cancelScheduledValues(time);
         gain.setTargetAtTime(Math.min(gain.value, 1 - (0.7 * (0,_core_math__WEBPACK_IMPORTED_MODULE_1__.clamp)(amount, 0, 1))), time, 0.01);
         gain.setTargetAtTime(1, time + 0.12, 0.18);
+    };
+    /**
+     * Whether audio can play. Never creates the audio context itself: browsers only allow that
+     * after the player interacts with the page (and warn otherwise), so only `unlock` does.
+     */
+    SoundBoard.prototype.isRunning = function () {
+        var _a;
+        return ((_a = this.context) === null || _a === void 0 ? void 0 : _a.state) === "running";
     };
     SoundBoard.prototype.ensureContext = function () {
         var _this = this;
@@ -9021,4 +9029,4 @@ function addBullseye(scene, id, parent, y, materials) {
 /***/ }
 
 }]);
-//# sourceMappingURL=src_scenes_tools_ts.168a031db51343805a13.js.map
+//# sourceMappingURL=src_scenes_tools_ts.296b66ad1879f924d951.js.map

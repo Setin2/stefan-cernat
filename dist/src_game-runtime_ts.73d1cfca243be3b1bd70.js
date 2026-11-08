@@ -10,6 +10,7 @@
 
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   configureEngine: () => (/* binding */ configureEngine),
+/* harmony export */   hideDeprecatedRendererInfo: () => (/* binding */ hideDeprecatedRendererInfo),
 /* harmony export */   projectConfiguration: () => (/* binding */ projectConfiguration)
 /* harmony export */ });
 var projectConfiguration = {
@@ -23,6 +24,31 @@ var projectConfiguration = {
 function configureEngine(engine) {
     if (projectConfiguration.compressedTextures.supportedFormats.length) {
         engine.setTextureFormatToUse(projectConfiguration.compressedTextures.supportedFormats);
+    }
+}
+/**
+ * Babylon asks for the WEBGL_debug_renderer_info extension at startup to read the GPU's name,
+ * which Firefox deprecates (with a console warning) because its standard RENDERER and VENDOR
+ * parameters now give the same information. In Firefox the extension is hidden from the page, so
+ * Babylon falls back to those parameters. Other browsers are left alone.
+ */
+function hideDeprecatedRendererInfo() {
+    if (!navigator.userAgent.includes("Firefox")) {
+        return;
+    }
+    var _loop_1 = function (context) {
+        var prototype = context === null || context === void 0 ? void 0 : context.prototype;
+        if (!prototype) {
+            return "continue";
+        }
+        var getExtension = prototype.getExtension;
+        prototype.getExtension = function (name) {
+            return name === "WEBGL_debug_renderer_info" ? null : getExtension.call(this, name);
+        };
+    };
+    for (var _i = 0, _a = [window.WebGLRenderingContext, window.WebGL2RenderingContext]; _i < _a.length; _i++) {
+        var context = _a[_i];
+        _loop_1(context);
     }
 }
 
@@ -113,6 +139,7 @@ var GameRuntime = /** @class */ (function () {
         this.statusTitle = document.getElementById("statusTitle");
         this.statusMessage = document.getElementById("statusMessage");
         this.statusRetryButton = document.getElementById("statusRetryButton");
+        (0,_engine_config__WEBPACK_IMPORTED_MODULE_1__.hideDeprecatedRendererInfo)();
         this.engine = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Engine(canvas, true);
         (0,_engine_config__WEBPACK_IMPORTED_MODULE_1__.configureEngine)(this.engine);
         this.scene = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Scene(this.engine);
@@ -352,4 +379,4 @@ function withTimeout(task) {
 /***/ }
 
 }]);
-//# sourceMappingURL=src_game-runtime_ts.c8f6872b0d6b18c6465e.js.map
+//# sourceMappingURL=src_game-runtime_ts.73d1cfca243be3b1bd70.js.map

@@ -1,6 +1,6 @@
 import { BabylonFileLoaderConfiguration, Engine, Scene } from "@babylonjs/core";
 
-import { configureEngine } from "./engine-config";
+import { configureEngine, hideDeprecatedRendererInfo } from "./engine-config";
 import { warmUpShaders } from "./scenes/core/warmUp";
 
 export class GameRuntime {
@@ -30,6 +30,7 @@ export class GameRuntime {
         this.statusMessage = document.getElementById("statusMessage");
         this.statusRetryButton = document.getElementById("statusRetryButton") as HTMLButtonElement | null;
 
+        hideDeprecatedRendererInfo();
         this.engine = new Engine(canvas, true);
         configureEngine(this.engine);
         this.scene = new Scene(this.engine);

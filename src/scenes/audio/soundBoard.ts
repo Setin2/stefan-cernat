@@ -75,7 +75,7 @@ export class SoundBoard {
 
     /** Runs `callback` once audio is available (right away if it already is). */
     public whenReady(callback: () => void): void {
-        if (this.ensureContext()) {
+        if (this.isRunning()) {
             callback();
         } else {
             this.onReady.push(callback);
@@ -84,7 +84,7 @@ export class SoundBoard {
 
     /** The audio context and the bus every sound connects to, once audio is unlocked. */
     public getOutput(): { context: AudioContext; bus: GainNode; ambience: GainNode; noise: AudioBuffer } | null {
-        return this.ensureContext() && this.context && this.bus && this.ambience && this.noise
+        return this.isRunning() && this.context && this.bus && this.ambience && this.noise
             ? { context: this.context, bus: this.bus, ambience: this.ambience, noise: this.noise }
             : null;
     }
@@ -100,6 +100,14 @@ export class SoundBoard {
         gain.cancelScheduledValues(time);
         gain.setTargetAtTime(Math.min(gain.value, 1 - (0.7 * clamp(amount, 0, 1))), time, 0.01);
         gain.setTargetAtTime(1, time + 0.12, 0.18);
+    }
+
+    /**
+     * Whether audio can play. Never creates the audio context itself: browsers only allow that
+     * after the player interacts with the page (and warn otherwise), so only `unlock` does.
+     */
+    private isRunning(): boolean {
+        return this.context?.state === "running";
     }
 
     private ensureContext(): boolean {
