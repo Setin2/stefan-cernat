@@ -26,7 +26,8 @@ import { restyleMascots } from "./world/mascots";
 import { createPlayground } from "./world/playground";
 import { instantiateTrees, TREE_POSITIONS } from "./world/trees";
 import { createWaypointSigns } from "./world/waypointSigns";
-import { createWorkCorner } from "./world/workCorner";
+import { createTradingGame } from "./world/tradingGame";
+import { createWorkCorner, type WorkCorner } from "./world/workCorner";
 
 /**
  * The game's entry point: the Babylon.js Editor attaches this script to the scene (see
@@ -42,6 +43,7 @@ export default class Play extends Node {
     private camera!: BABYLON.FreeCamera;
     private tank!: BABYLON.AbstractMesh;
     private toyTank: ToyTank | null = null;
+    private workCorner: WorkCorner | null = null;
 
     // @ts-ignore Babylon attaches script classes without calling Node's public constructor shape.
     protected constructor() {}
@@ -110,7 +112,9 @@ export default class Play extends Node {
         restyleMascots(scene);
         tryTo("AI trophies", () => createAiTrophies(scene));
         tryTo("C# trophy", () => createCodeTrophy(scene));
-        tryTo("Work corner", () => createWorkCorner(scene));
+        tryTo("Work corner", () => {
+            this.workCorner = createWorkCorner(scene);
+        });
         createWaypointSigns(scene);
         tryTo("Playground", () => createPlayground(scene));
         createBrickBuilds({ scene, tank: this.tank });
@@ -140,7 +144,7 @@ export default class Play extends Node {
         }
     }
 
-    /** Driving, shooting and all the sounds (synthesised, see audio/). After the world is built. */
+    /** Driving, shooting, the work corner's minigame and all the sounds (synthesised, see audio/). After the world is built. */
     private initializeTank(): void {
         const sounds = new SoundBoard(this.scene, this.tank, this.camera);
         const context = {
@@ -154,6 +158,9 @@ export default class Play extends Node {
         };
         initializeTankMovement(context, 0.07);
         registerLoadingTask(initializeShooting(context, new BABYLON.Vector3(0, 0, 1)));
+        if (this.workCorner) {
+            registerLoadingTask(createTradingGame(context, this.workCorner).catch((error) => console.error("Trading game failed", error)));
+        }
     }
 }
 

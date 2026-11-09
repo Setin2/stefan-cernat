@@ -1,5 +1,6 @@
 import * as BABYLON from "@babylonjs/core";
 
+import { getSoundMaterial } from "../audio/soundMaterials";
 import { addStaticBox } from "../core/staticBodies";
 import { createRoundedBox, createToyMaterial } from "../core/toyStyle";
 import { GROUND_Y, FACE_CAMERA_YAW } from "../core/constants";
@@ -15,7 +16,9 @@ import { createInfoStand, drawInfoText, roundRect } from "./infoStand";
  * - a "quantum core" sculpture: a glowing sphere with a precessing state arrow and two orbiting
  *   rings, on a plinth;
  * - a toy trading board: candlesticks trending up, a gold trend line and a scrolling ticker strip;
- * - a briefcase stamped CONFIDENTIAL with a padlock, which can be pushed around.
+ * - a briefcase stamped CONFIDENTIAL with a padlock, which can be pushed around;
+ * - BUY and SELL buttons in front of the board, for the Quantum Trader minigame (see
+ *   tradingGame.ts), which also uses the board as its screen and the core as its signal light.
  *
  * Laid out in a frame facing the camera: local x runs to the right on screen and local -z towards
  * the camera.
@@ -55,7 +58,27 @@ type Frame = {
     toWorld: (x: number, y: number, z: number) => BABYLON.Vector3;
 };
 
-export function createWorkCorner(scene: BABYLON.Scene): void {
+/** A "signal" shown by the quantum core: which way it expects the market to go next. */
+export type CoreSignal = "up" | "down" | "none";
+
+export type TradeButton = {
+    /** World position of the button's face. */
+    position: BABYLON.Vector3;
+    /** Fires when a shot hits the button. */
+    onHit: BABYLON.Observable<void>;
+    /** Plays the press animation. */
+    press: () => void;
+};
+
+/** What the minigame uses. */
+export type WorkCorner = {
+    center: BABYLON.Vector3;
+    setSignal: (signal: CoreSignal) => void;
+    board: TradingBoard;
+    buttons: { buy: TradeButton; sell: TradeButton };
+};
+
+export function createWorkCorner(scene: BABYLON.Scene): WorkCorner | null {
     const yaw = FACE_CAMERA_YAW;
     const right = new BABYLON.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
     const away = new BABYLON.Vector3(Math.sin(yaw), 0, Math.cos(yaw));
@@ -69,11 +92,31 @@ export function createWorkCorner(scene: BABYLON.Scene): void {
     };
     const materials = createMaterials(scene);
     const animations: ((dt: number) => void)[] = [];
+    let setSignal: ((signal: CoreSignal) => void) | null = null;
+    let board: TradingBoard | null = null;
+    let buttons: { buy: ReturnType<typeof createTradeButton>; sell: ReturnType<typeof createTradeButton> } | null = null;
 
     const parts: [string, () => void][] = [
         ["info stand", () => createWorkInfoStand(scene, frame)],
-        ["quantum core", () => animations.push(createQuantumCore(scene, frame, materials))],
-        ["trading board", () => animations.push(createTradingBoard(scene, frame, materials))],
+        ["quantum core", () => {
+            const core = createQuantumCore(scene, frame, materials);
+            animations.push(core.animate);
+            setSignal = core.setSignal;
+        }],
+        ["trading board", () => {
+            board = createTradingBoard(scene, frame, materials);
+            animations.push(board.animate);
+        }],
+        ["trade buttons", () => {
+            buttons = {
+                buy: createTradeButton(scene, frame, materials, "buy", 16, -8),
+                sell: createTradeButton(scene, frame, materials, "sell", 30, -8),
+            };
+            animations.push((dt) => {
+                buttons?.buy.animate(dt);
+                buttons?.sell.animate(dt);
+            });
+        }],
         ["briefcase", () => createBriefcase(scene, frame, materials)],
     ];
     for (const [name, build] of parts) {
@@ -95,6 +138,11 @@ export function createWorkCorner(scene: BABYLON.Scene): void {
             animate(dt);
         }
     });
+
+    if (!setSignal || !board || !buttons) {
+        return null;
+    }
+    return { center, setSignal, board, buttons };
 }
 
 function createMaterials(scene: BABYLON.Scene) {
@@ -270,7 +318,12 @@ function drawCandles(context: CanvasRenderingContext2D, x: number, y: number): v
 // ==================================================================== Quantum core
 
 /** Returns its animation step. */
-function createQuantumCore(scene: BABYLON.Scene, frame: Frame, materials: Materials): (dt: number) => void {
+/** The core's colours for each signal: its own pale blue, or mint / pink for up / down. */
+const SIGNAL_COLORS: Record<CoreSignal, string> = { none: PALETTE.core, up: PALETTE.mint, down: PALETTE.pink };
+/** Where the state arrow leans for each signal (0 = straight up). */
+const SIGNAL_TILT: Record<CoreSignal, number> = { none: -0.6, up: -0.15, down: Math.PI - 0.15 };
+
+function createQuantumCore(scene: BABYLON.Scene, frame: Frame, materials: Materials): { animate: (dt: number) => void; setSignal: (signal: CoreSignal) => void } {
     const root = createAnchor(scene, "work-quantum-core", frame, 2, 5, 1.5);
 
     attach(createRoundedBox("work-core-plinth", 6, 1.6, 6, 0.4, scene), root, materials.navy).position.y = 0.8;
@@ -313,16 +366,33 @@ function createQuantumCore(scene: BABYLON.Scene, frame: Frame, materials: Materi
 
     addCollider(scene, root, new BABYLON.Vector3(0, 5.5, 0), 6.6, 11, 6.6);
 
+    // The minigame's signal: the core lights up in the signal's colour, the arrow swings up or
+    // down, and the rings spin faster.
+    const material = materials.core;
+    const targetColor = BABYLON.Color3.FromHexString(PALETTE.core).toLinearSpace();
+    let signal: CoreSignal = "none";
+    let tilt = SIGNAL_TILT.none;
     let time = 0;
-    return (dt) => {
+    const animate = (dt: number) => {
         time += dt;
-        precession.rotation.y += dt * 0.9;
+        const excited = signal !== "none";
+        precession.rotation.y += dt * (excited ? 2.4 : 0.9);
+        tilt += (SIGNAL_TILT[signal] - tilt) * Math.min(1, dt * 6);
         // A gentle nod, so it doesn't look like a plain turntable.
-        arrow.rotation.z = -0.6 + (Math.sin(time * 0.8) * 0.2);
+        arrow.rotation.z = tilt + (Math.sin(time * 0.8) * (excited ? 0.06 : 0.2));
         for (const ring of rings) {
-            ring.spinner.rotation.y += dt * ring.speed;
+            ring.spinner.rotation.y += dt * ring.speed * (excited ? 3 : 1);
         }
+        const blend = Math.min(1, dt * 8);
+        BABYLON.Color3.LerpToRef(material.albedoColor, targetColor, blend, material.albedoColor);
+        const glow = excited ? 0.55 + (Math.sin(time * 9) * 0.15) : 0.35;
+        BABYLON.Color3.LerpToRef(material.emissiveColor, targetColor.scale(glow), blend, material.emissiveColor);
     };
+    const setSignal = (next: CoreSignal) => {
+        signal = next;
+        BABYLON.Color3.FromHexString(SIGNAL_COLORS[next]).toLinearSpaceToRef(targetColor);
+    };
+    return { animate, setSignal };
 }
 
 // ==================================================================== Trading board
@@ -339,10 +409,21 @@ const CANDLES: [number, number, number, number][] = [
     [4.4, 6.4, 4.2, 6.8],
 ];
 
-const TICKER_TEXT = "QUANTUM-INSPIRED ALGORITHMS   ▲   FINANCIAL TRADING   ▲   OPTIMISATION   ▲   SOFTWARE ENGINEERING   ▲   ";
+export const TICKER_TEXT = "QUANTUM-INSPIRED ALGORITHMS   ▲   FINANCIAL TRADING   ▲   OPTIMISATION   ▲   SOFTWARE ENGINEERING   ▲   ";
 
-/** Returns its animation step (the ticker scrolling). */
-function createTradingBoard(scene: BABYLON.Scene, frame: Frame, materials: Materials): (dt: number) => void {
+/** The board, as the minigame uses it. */
+export type TradingBoard = {
+    animate: (dt: number) => void;
+    /** Shows the screen (for the minigame) instead of the 3D chart, or the other way round. */
+    showScreen: (show: boolean) => void;
+    /** Canvas covering the chart area; call `updateScreen` after drawing on it. */
+    screen: CanvasRenderingContext2D;
+    screenSize: { width: number; height: number };
+    updateScreen: () => void;
+    setTicker: (text: string) => void;
+};
+
+function createTradingBoard(scene: BABYLON.Scene, frame: Frame, materials: Materials): TradingBoard {
     const root = createAnchor(scene, "work-trading-board", frame, 23, 3, 1.25);
     const width = 16;
     const height = 10.5;
@@ -367,7 +448,8 @@ function createTradingBoard(scene: BABYLON.Scene, frame: Frame, materials: Mater
         line.position.set(0, chartBottom + (i * 2.2), front - 0.05);
         return line;
     });
-    mergeInto("work-board-grid", grid, root, materials.navyLight);
+    const decor: BABYLON.Mesh[] = [];
+    decor.push(...mergeInto("work-board-grid", grid, root, materials.navyLight));
 
     const ups: BABYLON.Mesh[] = [];
     const downs: BABYLON.Mesh[] = [];
@@ -382,9 +464,9 @@ function createTradingBoard(scene: BABYLON.Scene, frame: Frame, materials: Mater
         wick.position.set(x, chartBottom + ((low + high) / 2), front - 0.3);
         wicks.push(wick);
     });
-    mergeInto("work-candles-up", ups, root, materials.mint);
-    mergeInto("work-candles-down", downs, root, materials.pink);
-    mergeInto("work-wicks", wicks, root, materials.cream);
+    decor.push(...mergeInto("work-candles-up", ups, root, materials.mint));
+    decor.push(...mergeInto("work-candles-down", downs, root, materials.pink));
+    decor.push(...mergeInto("work-wicks", wicks, root, materials.cream));
 
     // Trend line through the candles' closes, ending in an arrowhead past the last one.
     const path = CANDLES.map(([, close], i) => new BABYLON.Vector3(chartLeft + (i * pitch), chartBottom + close + 0.9, front - 1));
@@ -397,30 +479,60 @@ function createTradingBoard(scene: BABYLON.Scene, frame: Frame, materials: Mater
     const head = BABYLON.MeshBuilder.CreateCylinder("work-trend-head", { diameterTop: 0, diameterBottom: 0.9, height: 1, tessellation: 12 }, scene);
     head.position.copyFrom(headBase.add(direction.scale(0.5)));
     head.rotation.z = -Math.atan2(direction.x, direction.y);
-    mergeInto("work-trend-line", [line, head], root, materials.gold);
+    decor.push(...mergeInto("work-trend-line", [line, head], root, materials.gold));
 
     // Ticker strip along the bottom of the board, scrolling sideways.
     const ticker = createTicker(scene, width - 1.6, 1.2);
     ticker.mesh.parent = root;
     ticker.mesh.position.set(0, 4.35, front - 0.03);
 
+    // The minigame's screen over the chart area (between the ticker and the top of the board).
+    const screenWidth = width - 1.6;
+    const screenHeight = (centerY + (height / 2) - 0.7) - 5.1;
+    const screenPixels = { width: 1024, height: Math.round((1024 * screenHeight) / screenWidth) };
+    const screenTexture = new BABYLON.DynamicTexture("work-screen-texture", screenPixels, scene, true);
+    const screenMaterial = new BABYLON.StandardMaterial("work-screen-material", scene);
+    screenMaterial.disableLighting = true;
+    screenMaterial.emissiveTexture = screenTexture;
+    screenMaterial.diffuseColor = BABYLON.Color3.Black();
+    const screen = BABYLON.MeshBuilder.CreatePlane("work-screen", { width: screenWidth, height: screenHeight }, scene);
+    screen.material = screenMaterial;
+    screen.parent = root;
+    screen.isPickable = false;
+    screen.position.set(0, 5.1 + (screenHeight / 2), front - 0.04);
+    screen.setEnabled(false);
+
     addCollider(scene, root, new BABYLON.Vector3(0, (centerY + (height / 2) + 0.6) / 2, 0.3), width + 1.4, centerY + (height / 2) + 0.6, 2.4, "post");
 
-    return (dt) => {
-        ticker.texture.uOffset = (ticker.texture.uOffset + (dt * 0.045)) % 1;
+    return {
+        animate: (dt) => {
+            ticker.texture.uOffset = (ticker.texture.uOffset + (dt * 0.045)) % 1;
+        },
+        showScreen: (show) => {
+            screen.setEnabled(show);
+            for (const mesh of decor) {
+                mesh.setEnabled(!show);
+            }
+        },
+        screen: screenTexture.getContext() as CanvasRenderingContext2D,
+        screenSize: screenPixels,
+        updateScreen: () => screenTexture.update(),
+        setTicker: ticker.setText,
     };
 }
 
 /** Merges meshes (built in the parent's frame) into one under `parent`. */
-function mergeInto(name: string, meshes: BABYLON.Mesh[], parent: BABYLON.Node, material: BABYLON.Material): void {
+function mergeInto(name: string, meshes: BABYLON.Mesh[], parent: BABYLON.Node, material: BABYLON.Material): BABYLON.Mesh[] {
     const merged = BABYLON.Mesh.MergeMeshes(meshes, true, true);
-    if (merged) {
-        merged.name = name;
-        attach(merged, parent, material);
+    if (!merged) {
+        return [];
     }
+    merged.name = name;
+    attach(merged, parent, material);
+    return [merged];
 }
 
-function createTicker(scene: BABYLON.Scene, width: number, height: number): { mesh: BABYLON.Mesh; texture: BABYLON.DynamicTexture } {
+function createTicker(scene: BABYLON.Scene, width: number, height: number): { mesh: BABYLON.Mesh; texture: BABYLON.DynamicTexture; setText: (text: string) => void } {
     const textureWidth = 4096;
     const textureHeight = 128;
     const texture = new BABYLON.DynamicTexture("work-ticker-texture", { width: textureWidth, height: textureHeight }, scene, true);
@@ -428,6 +540,7 @@ function createTicker(scene: BABYLON.Scene, width: number, height: number): { me
     // Same aspect ratio as the strip, so the letters aren't stretched.
     texture.uScale = (width / height) / (textureWidth / textureHeight);
     const context = texture.getContext() as CanvasRenderingContext2D;
+    let text = TICKER_TEXT;
     const draw = () => {
         context.fillStyle = PALETTE.navyDeep;
         context.fillRect(0, 0, textureWidth, textureHeight);
@@ -435,13 +548,13 @@ function createTicker(scene: BABYLON.Scene, width: number, height: number): { me
         context.textBaseline = "middle";
         // Whole copies of the text across the width (squeezed or stretched a little to fit), so
         // it tiles seamlessly as it scrolls.
-        const textWidth = context.measureText(TICKER_TEXT).width;
+        const textWidth = context.measureText(text).width;
         const copies = Math.max(1, Math.round(textureWidth / textWidth));
         const step = textureWidth / copies;
         for (let i = 0; i < copies; i++) {
             context.setTransform(step / textWidth, 0, 0, 1, i * step, 0);
             let x = 0;
-            for (const word of TICKER_TEXT.split(/(\u25B2)/)) {
+            for (const word of text.split(/(\u25B2)/)) {
                 context.fillStyle = word === "\u25B2" ? PALETTE.mint : PALETTE.cream;
                 context.fillText(word, x, (textureHeight / 2) + 4);
                 x += context.measureText(word).width;
@@ -462,7 +575,119 @@ function createTicker(scene: BABYLON.Scene, width: number, height: number): { me
     const mesh = BABYLON.MeshBuilder.CreatePlane("work-ticker", { width, height }, scene);
     mesh.material = material;
     mesh.isPickable = false;
-    return { mesh, texture };
+    const setText = (next: string) => {
+        if (next !== text) {
+            text = next;
+            draw();
+        }
+    };
+    return { mesh, texture, setText };
+}
+
+// ==================================================================== Trade buttons
+
+const BUTTON_STYLE = {
+    buy: { label: "BUY", arrow: "\u25B2", color: PALETTE.mint },
+    sell: { label: "SELL", arrow: "\u25BC", color: PALETTE.pink },
+};
+
+/**
+ * A big round arcade button on a post, facing the camera, for the minigame: shoot it to press it.
+ * Built at (x, z) in the corner's frame.
+ */
+function createTradeButton(scene: BABYLON.Scene, frame: Frame, materials: Materials, kind: "buy" | "sell", x: number, z: number): TradeButton & { animate: (dt: number) => void } {
+    const style = BUTTON_STYLE[kind];
+    const id = `work-button-${kind}`;
+    const root = createAnchor(scene, id, frame, x, z, 1.2);
+    const discY = 6.2;
+
+    attach(createRoundedBox(`${id}-base`, 2.8, 0.6, 2.8, 0.25, scene), root, materials.sand).position.y = 0.3;
+    const post = attach(createRoundedBox(`${id}-post`, 0.8, discY, 0.8, 0.3, scene), root, materials.wood);
+    post.position.set(0, (discY / 2) + 0.3, 0.6);
+
+    // Cylinders stand along Y; tip them so their faces point at the camera (-Z).
+    const holder = new BABYLON.TransformNode(`${id}-holder`, scene);
+    holder.parent = root;
+    holder.position.set(0, discY, 0);
+    holder.rotation.x = -Math.PI / 2;
+    const rim = attach(BABYLON.MeshBuilder.CreateCylinder(`${id}-rim`, { diameter: 5, height: 0.8, tessellation: 40 }, scene), holder, materials.navy);
+    rim.position.y = 0.1;
+
+    // The cap is what moves in when the button is pressed.
+    const cap = new BABYLON.TransformNode(`${id}-cap`, scene);
+    cap.parent = holder;
+    const face = attach(BABYLON.MeshBuilder.CreateCylinder(`${id}-face`, { diameter: 4.1, height: 0.7, tessellation: 40 }, scene), cap, kind === "buy" ? materials.mint : materials.pink, true);
+    face.position.y = 0.6;
+    const label = createButtonLabel(scene, `${id}-label`, style.arrow, style.label);
+    label.parent = cap;
+    label.position.y = 0.97;
+    label.rotation.x = Math.PI / 2;
+    label.metadata = { keepUnfrozen: true };
+
+    const onHit = new BABYLON.Observable<void>();
+    root.computeWorldMatrix(true);
+    const scale = root.scaling.x;
+    const position = BABYLON.Vector3.TransformCoordinates(new BABYLON.Vector3(0, discY, -0.5), root.getWorldMatrix());
+    const rotation = BABYLON.Quaternion.RotationYawPitchRoll(root.rotation.y, 0, 0);
+    // Only shots press it; the tank driving into it just bumps.
+    addStaticBox(scene, position, 5 * scale, 5 * scale, 1.6 * scale, {
+        rotation,
+        sound: "post",
+        onHit: (body) => {
+            if (getSoundMaterial(body) === "ball") {
+                onHit.notifyObservers();
+            }
+        },
+    });
+    addStaticBox(scene, BABYLON.Vector3.TransformCoordinates(new BABYLON.Vector3(0, discY / 2, 0.6), root.getWorldMatrix()), 1.2 * scale, discY * scale, 1.2 * scale, { rotation, sound: "post" });
+
+    let pressed = 0;
+    return {
+        position,
+        onHit,
+        press: () => {
+            pressed = 1;
+        },
+        animate: (dt) => {
+            if (pressed <= 0 && cap.position.y === 0) {
+                return;
+            }
+            pressed = Math.max(0, pressed - (dt * 3));
+            // In fast, back out slowly.
+            cap.position.y = -0.45 * Math.sin(Math.min(1, pressed) * Math.PI * 0.5);
+        },
+    };
+}
+
+function createButtonLabel(scene: BABYLON.Scene, name: string, arrow: string, text: string): BABYLON.Mesh {
+    const size = 256;
+    const texture = new BABYLON.DynamicTexture(`${name}-texture`, { width: size, height: size }, scene, true);
+    texture.hasAlpha = true;
+    const context = texture.getContext() as CanvasRenderingContext2D;
+    const draw = () => {
+        context.clearRect(0, 0, size, size);
+        context.fillStyle = PALETTE.navyDeep;
+        context.textAlign = "center";
+        context.textBaseline = "middle";
+        context.font = `900 54px ${FONT}`;
+        context.fillText(arrow, size / 2, size * 0.32);
+        context.font = `900 ${text.length > 3 ? 70 : 80}px ${FONT}`;
+        context.fillText(text, size / 2, size * 0.64);
+        texture.update();
+    };
+    draw();
+    if ("fonts" in document) {
+        void document.fonts.load("900 40px Nunito").then(draw).catch(() => undefined);
+    }
+    const material = new BABYLON.StandardMaterial(`${name}-material`, scene);
+    material.diffuseTexture = texture;
+    material.useAlphaFromDiffuseTexture = true;
+    material.specularColor = new BABYLON.Color3(0.1, 0.1, 0.1);
+    material.emissiveColor = new BABYLON.Color3(0.3, 0.3, 0.3);
+    const plane = BABYLON.MeshBuilder.CreatePlane(name, { size: 3.4 }, scene);
+    plane.material = material;
+    plane.isPickable = false;
+    return plane;
 }
 
 // ==================================================================== Briefcase
@@ -471,7 +696,7 @@ function createTicker(scene: BABYLON.Scene, width: number, height: number): { me
 function createBriefcase(scene: BABYLON.Scene, frame: Frame, materials: Materials): void {
     const size = { width: 5, height: 3.8, depth: 1.6 };
     const collider = BABYLON.MeshBuilder.CreateBox("work-briefcase-collider", size, scene);
-    collider.position.copyFrom(frame.toWorld(12, (size.height / 2) + 0.05, -5));
+    collider.position.copyFrom(frame.toWorld(-4, (size.height / 2) + 0.05, -9));
     collider.rotation.y = frame.yaw - 0.35;
     collider.isVisible = false;
     collider.isPickable = false;

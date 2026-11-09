@@ -37,8 +37,8 @@ const CANOPY_PIVOT_Y = 6;
 export const TREE_POSITIONS = [
     new BABYLON.Vector3(78.3985, 5.1848, -11.2018),
     new BABYLON.Vector3(47.5043, 5.1848, -36.9549),
-    // Moved west, out of the way of the path to the work corner.
-    new BABYLON.Vector3(-74, 5.1848, -46),
+    // Out west, where it doesn't stand between the camera and the work corner.
+    new BABYLON.Vector3(-126, 5.1848, -70),
     // Behind the work corner, as a backdrop (it used to hide the corner from the start).
     new BABYLON.Vector3(-6, 5.1848, -97),
     new BABYLON.Vector3(57.1332, 5.1848, 77.0256),

@@ -180,6 +180,44 @@ export class SoundBoard {
         });
     }
 
+    /**
+     * The trading minigame: "buy" and "sell" are short arcade blips (rising and falling), "profit"
+     * a cash-register bell, "loss" a sad slide down, "start" and "end" little fanfares.
+     */
+    public trade(kind: "buy" | "sell" | "profit" | "loss" | "start" | "end", position: BABYLON.Vector3): void {
+        const voice = this.createVoice(position, 1, 1.2);
+        if (!voice) {
+            return;
+        }
+        this.duck(0.7);
+        switch (kind) {
+            case "buy":
+                this.tone(voice, { type: "square", from: 523, to: 784, glide: 0.08, attack: 0.003, decay: 0.16, gain: 0.07 });
+                this.tone(voice, { type: "triangle", from: 1046, attack: 0.003, decay: 0.2, gain: 0.08, delay: 0.08 });
+                break;
+            case "sell":
+                this.tone(voice, { type: "square", from: 784, to: 523, glide: 0.08, attack: 0.003, decay: 0.16, gain: 0.07 });
+                this.tone(voice, { type: "triangle", from: 392, attack: 0.003, decay: 0.2, gain: 0.08, delay: 0.08 });
+                break;
+            case "profit":
+                this.noiseBurst(voice, { filter: "highpass", frequency: 3000, q: 0.7, attack: 0.001, decay: 0.05, gain: 0.2 });
+                [[1568, 0.05], [2093, 0.12]].forEach(([frequency, delay]) => {
+                    this.tone(voice, { type: "sine", from: frequency, attack: 0.002, decay: 0.7, gain: 0.12, delay });
+                    this.tone(voice, { type: "triangle", from: frequency * 1.5, attack: 0.002, decay: 0.3, gain: 0.04, delay });
+                });
+                break;
+            case "loss":
+                this.tone(voice, { type: "triangle", from: 330, to: 196, glide: 0.45, attack: 0.01, decay: 0.55, gain: 0.14 });
+                break;
+            case "start":
+            case "end":
+                (kind === "start" ? [[523, 0], [659, 0.1], [784, 0.2], [1046, 0.3]] : [[1046, 0], [784, 0.12], [880, 0.24], [1046, 0.36]]).forEach(([frequency, delay]) => {
+                    this.tone(voice, { type: "triangle", from: frequency, attack: 0.004, decay: 0.35, gain: 0.12, delay });
+                });
+                break;
+        }
+    }
+
     /** The tank landing after a jump; `speed` is how fast it was falling. */
     public land(speed: number): void {
         const strength = clamp((speed - 4) / 22, 0, 1);

@@ -362,6 +362,46 @@ var SoundBoard = /** @class */ (function () {
             _this.tone(voice, { type: "sine", from: frequency * 2, attack: 0.004, decay: 0.3, gain: 0.05, delay: delay });
         });
     };
+    /**
+     * The trading minigame: "buy" and "sell" are short arcade blips (rising and falling), "profit"
+     * a cash-register bell, "loss" a sad slide down, "start" and "end" little fanfares.
+     */
+    SoundBoard.prototype.trade = function (kind, position) {
+        var _this = this;
+        var voice = this.createVoice(position, 1, 1.2);
+        if (!voice) {
+            return;
+        }
+        this.duck(0.7);
+        switch (kind) {
+            case "buy":
+                this.tone(voice, { type: "square", from: 523, to: 784, glide: 0.08, attack: 0.003, decay: 0.16, gain: 0.07 });
+                this.tone(voice, { type: "triangle", from: 1046, attack: 0.003, decay: 0.2, gain: 0.08, delay: 0.08 });
+                break;
+            case "sell":
+                this.tone(voice, { type: "square", from: 784, to: 523, glide: 0.08, attack: 0.003, decay: 0.16, gain: 0.07 });
+                this.tone(voice, { type: "triangle", from: 392, attack: 0.003, decay: 0.2, gain: 0.08, delay: 0.08 });
+                break;
+            case "profit":
+                this.noiseBurst(voice, { filter: "highpass", frequency: 3000, q: 0.7, attack: 0.001, decay: 0.05, gain: 0.2 });
+                [[1568, 0.05], [2093, 0.12]].forEach(function (_a) {
+                    var frequency = _a[0], delay = _a[1];
+                    _this.tone(voice, { type: "sine", from: frequency, attack: 0.002, decay: 0.7, gain: 0.12, delay: delay });
+                    _this.tone(voice, { type: "triangle", from: frequency * 1.5, attack: 0.002, decay: 0.3, gain: 0.04, delay: delay });
+                });
+                break;
+            case "loss":
+                this.tone(voice, { type: "triangle", from: 330, to: 196, glide: 0.45, attack: 0.01, decay: 0.55, gain: 0.14 });
+                break;
+            case "start":
+            case "end":
+                (kind === "start" ? [[523, 0], [659, 0.1], [784, 0.2], [1046, 0.3]] : [[1046, 0], [784, 0.12], [880, 0.24], [1046, 0.36]]).forEach(function (_a) {
+                    var frequency = _a[0], delay = _a[1];
+                    _this.tone(voice, { type: "triangle", from: frequency, attack: 0.004, decay: 0.35, gain: 0.12, delay: delay });
+                });
+                break;
+        }
+    };
     /** The tank landing after a jump; `speed` is how fast it was falling. */
     SoundBoard.prototype.land = function (speed) {
         var strength = (0,_core_math__WEBPACK_IMPORTED_MODULE_1__.clamp)((speed - 4) / 22, 0, 1);
@@ -1338,6 +1378,10 @@ function addBody(scene, shape, center, options) {
     }
     cannon.world.addBody(body);
     (0,_audio_soundMaterials__WEBPACK_IMPORTED_MODULE_0__.setSoundMaterial)(body, (_a = options.sound) !== null && _a !== void 0 ? _a : "static");
+    var onHit = options.onHit;
+    if (onHit) {
+        body.addEventListener("collide", function (event) { return onHit(event.body); });
+    }
     scene.onDisposeObservable.addOnce(function () { return cannon.world.removeBody(body); });
     return true;
 }
@@ -1793,7 +1837,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _world_playground__WEBPACK_IMPORTED_MODULE_24__ = __webpack_require__(/*! ./world/playground */ "./src/scenes/world/playground.ts");
 /* harmony import */ var _world_trees__WEBPACK_IMPORTED_MODULE_25__ = __webpack_require__(/*! ./world/trees */ "./src/scenes/world/trees.ts");
 /* harmony import */ var _world_waypointSigns__WEBPACK_IMPORTED_MODULE_26__ = __webpack_require__(/*! ./world/waypointSigns */ "./src/scenes/world/waypointSigns.ts");
-/* harmony import */ var _world_workCorner__WEBPACK_IMPORTED_MODULE_27__ = __webpack_require__(/*! ./world/workCorner */ "./src/scenes/world/workCorner.ts");
+/* harmony import */ var _world_tradingGame__WEBPACK_IMPORTED_MODULE_27__ = __webpack_require__(/*! ./world/tradingGame */ "./src/scenes/world/tradingGame.ts");
+/* harmony import */ var _world_workCorner__WEBPACK_IMPORTED_MODULE_28__ = __webpack_require__(/*! ./world/workCorner */ "./src/scenes/world/workCorner.ts");
 var __extends = (undefined && undefined.__extends) || (function () {
     var extendStatics = function (d, b) {
         extendStatics = Object.setPrototypeOf ||
@@ -1837,6 +1882,7 @@ var __extends = (undefined && undefined.__extends) || (function () {
 
 
 
+
 /**
  * The game's entry point: the Babylon.js Editor attaches this script to the scene (see
  * scripts-map.ts), and onInitialize builds everything on top of the imported scene.
@@ -1852,6 +1898,7 @@ var Play = /** @class */ (function (_super) {
     function Play() {
         var _this = this;
         _this.toyTank = null;
+        _this.workCorner = null;
         return _this;
     }
     /**
@@ -1909,7 +1956,9 @@ var Play = /** @class */ (function (_super) {
         (0,_world_mascots__WEBPACK_IMPORTED_MODULE_23__.restyleMascots)(scene);
         tryTo("AI trophies", function () { return (0,_world_aiTrophies__WEBPACK_IMPORTED_MODULE_15__.createAiTrophies)(scene); });
         tryTo("C# trophy", function () { return (0,_world_codeTrophy__WEBPACK_IMPORTED_MODULE_18__.createCodeTrophy)(scene); });
-        tryTo("Work corner", function () { return (0,_world_workCorner__WEBPACK_IMPORTED_MODULE_27__.createWorkCorner)(scene); });
+        tryTo("Work corner", function () {
+            _this.workCorner = (0,_world_workCorner__WEBPACK_IMPORTED_MODULE_28__.createWorkCorner)(scene);
+        });
         (0,_world_waypointSigns__WEBPACK_IMPORTED_MODULE_26__.createWaypointSigns)(scene);
         tryTo("Playground", function () { return (0,_world_playground__WEBPACK_IMPORTED_MODULE_24__.createPlayground)(scene); });
         (0,_world_bricks__WEBPACK_IMPORTED_MODULE_16__.createBrickBuilds)({ scene: scene, tank: this.tank });
@@ -1938,7 +1987,7 @@ var Play = /** @class */ (function (_super) {
             this.toyTank = null;
         }
     };
-    /** Driving, shooting and all the sounds (synthesised, see audio/). After the world is built. */
+    /** Driving, shooting, the work corner's minigame and all the sounds (synthesised, see audio/). After the world is built. */
     Play.prototype.initializeTank = function () {
         var _this = this;
         var _a;
@@ -1954,6 +2003,9 @@ var Play = /** @class */ (function (_super) {
         };
         (0,_tank_movement__WEBPACK_IMPORTED_MODULE_9__.initializeTankMovement)(context, 0.07);
         (0,_core_warmUp__WEBPACK_IMPORTED_MODULE_8__.registerLoadingTask)((0,_tank_shooting__WEBPACK_IMPORTED_MODULE_10__.initializeShooting)(context, new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, 0, 1)));
+        if (this.workCorner) {
+            (0,_core_warmUp__WEBPACK_IMPORTED_MODULE_8__.registerLoadingTask)((0,_world_tradingGame__WEBPACK_IMPORTED_MODULE_27__.createTradingGame)(context, this.workCorner).catch(function (error) { return console.error("Trading game failed", error); }));
+        }
     };
     return Play;
 }(_babylonjs_core_node__WEBPACK_IMPORTED_MODULE_1__.Node));
@@ -5262,6 +5314,82 @@ function createTargetLabel(gui, ui, mesh, label) {
     ui.addControl(container);
     container.linkWithMesh(mesh);
     return container;
+}
+
+
+/***/ },
+
+/***/ "./src/scenes/ui/tradingHud.ts"
+/*!*************************************!*\
+  !*** ./src/scenes/ui/tradingHud.ts ***!
+  \*************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   createTradingHud: () => (/* binding */ createTradingHud)
+/* harmony export */ });
+/* harmony import */ var _style__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./style */ "./src/scenes/ui/style.ts");
+
+function createTradingHud(gui, ui) {
+    var card = (0,_style__WEBPACK_IMPORTED_MODULE_0__.createCard)(gui, "trading-hud");
+    card.width = "340px";
+    card.height = "1px";
+    card.adaptHeightToChildren = true;
+    card.horizontalAlignment = gui.Control.HORIZONTAL_ALIGNMENT_CENTER;
+    card.verticalAlignment = gui.Control.VERTICAL_ALIGNMENT_TOP;
+    card.top = "18px";
+    card.zIndex = 2;
+    card.isPointerBlocker = false;
+    card.isVisible = false;
+    var stack = new gui.StackPanel("trading-hud-stack");
+    stack.isVertical = true;
+    stack.paddingTop = "10px";
+    stack.paddingBottom = "12px";
+    card.addControl(stack);
+    var badge = new gui.Rectangle("trading-hud-badge");
+    badge.height = "24px";
+    badge.width = "1px";
+    badge.adaptWidthToChildren = true;
+    badge.thickness = 0;
+    badge.cornerRadius = 12;
+    var badgeText = (0,_style__WEBPACK_IMPORTED_MODULE_0__.createText)(gui, "trading-hud-badge-text", "", { size: 12, weight: "900", color: _style__WEBPACK_IMPORTED_MODULE_0__.UI.cream, align: "center" });
+    badgeText.resizeToFit = true;
+    badgeText.paddingLeft = "10px";
+    badgeText.paddingRight = "10px";
+    badge.addControl(badgeText);
+    stack.addControl(badge);
+    var main = (0,_style__WEBPACK_IMPORTED_MODULE_0__.createText)(gui, "trading-hud-main", "", { size: 20, weight: "900", color: _style__WEBPACK_IMPORTED_MODULE_0__.UI.navy, align: "center" });
+    main.height = "32px";
+    main.paddingTop = "6px";
+    stack.addControl(main);
+    var detail = (0,_style__WEBPACK_IMPORTED_MODULE_0__.createText)(gui, "trading-hud-detail", "", { size: 14, weight: "800", color: _style__WEBPACK_IMPORTED_MODULE_0__.UI.muted, align: "center" });
+    detail.textWrapping = true;
+    detail.resizeToFit = true;
+    detail.paddingLeft = "14px";
+    detail.paddingRight = "14px";
+    detail.paddingTop = "2px";
+    stack.addControl(detail);
+    ui.addControl(card);
+    (0,_style__WEBPACK_IMPORTED_MODULE_0__.refreshWhenFontLoaded)(ui);
+    var last = "";
+    return {
+        setVisible: function (visible) {
+            card.isVisible = visible;
+        },
+        set: function (badgeLabel, badgeColor, mainText, detailText, mainColor) {
+            if (mainColor === void 0) { mainColor = _style__WEBPACK_IMPORTED_MODULE_0__.UI.navy; }
+            var key = [badgeLabel, badgeColor, mainText, detailText, mainColor].join("|");
+            if (key === last) {
+                return;
+            }
+            last = key;
+            badgeText.text = badgeLabel;
+            badge.background = badgeColor;
+            main.text = mainText;
+            main.color = mainColor;
+            detail.text = detailText;
+        },
+    };
 }
 
 
@@ -8764,6 +8892,533 @@ function buildDisc(name, cx, cz, radiusX, radiusZ, rotation, y, scene) {
 
 /***/ },
 
+/***/ "./src/scenes/world/tradingGame.ts"
+/*!*****************************************!*\
+  !*** ./src/scenes/world/tradingGame.ts ***!
+  \*****************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   createTradingGame: () => (/* binding */ createTradingGame)
+/* harmony export */ });
+/* harmony import */ var _ui_style__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../ui/style */ "./src/scenes/ui/style.ts");
+/* harmony import */ var _ui_tradingHud__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../ui/tradingHud */ "./src/scenes/ui/tradingHud.ts");
+/* harmony import */ var _infoStand__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./infoStand */ "./src/scenes/world/infoStand.ts");
+/* harmony import */ var _workCorner__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./workCorner */ "./src/scenes/world/workCorner.ts");
+var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __generator = (undefined && undefined.__generator) || function (thisArg, body) {
+    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
+    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    function verb(n) { return function (v) { return step([n, v]); }; }
+    function step(op) {
+        if (f) throw new TypeError("Generator is already executing.");
+        while (g && (g = 0, op[0] && (_ = 0)), _) try {
+            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
+            if (y = 0, t) op = [op[0] & 2, t.value];
+            switch (op[0]) {
+                case 0: case 1: t = op; break;
+                case 4: _.label++; return { value: op[1], done: false };
+                case 5: _.label++; y = op[1]; op = [0]; continue;
+                case 7: op = _.ops.pop(); _.trys.pop(); continue;
+                default:
+                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
+                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
+                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
+                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
+                    if (t[2]) _.ops.pop();
+                    _.trys.pop(); continue;
+            }
+            op = body.call(thisArg, _);
+        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
+        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
+    }
+};
+
+
+
+
+/**
+ * Quantum Trader, the work corner's minigame: a 45-second trading round played with the tank.
+ *
+ * - Shoot BUY or SELL (the big buttons in front of the board) to start. The board turns into a live
+ *   price chart.
+ * - Shoot BUY to buy (or to close a short), SELL to sell short (or to close a long). Each trade is
+ *   SHARES shares; profit is counted when a position is closed, and an open position is closed
+ *   when time runs out.
+ * - The market moves in trends that switch every few seconds. Shortly before a switch, the quantum
+ *   core lights up mint (going up) or pink (going down): a "quantum-inspired" forecast, right
+ *   SIGNAL_ACCURACY of the time. Trading with it is how you score.
+ *
+ * The best result is remembered in the browser.
+ */
+var ROUND_SECONDS = 45;
+var SHARES = 100;
+var START_PRICE = 100;
+/** Trend speeds (price per second) and how long a trend lasts. */
+var TREND_SPEED = 2.6;
+var TREND_SECONDS = { min: 2.8, max: 4.6 };
+/** Random wobble on top of the trend. */
+var NOISE = 1.3;
+/** How long before a trend change the core shows its forecast, and how often it's right. */
+var SIGNAL_LEAD = 1.5;
+var SIGNAL_ACCURACY = 0.8;
+/** The forecast stays on this long into the new trend. */
+var SIGNAL_LINGER = 0.6;
+/** The card shows up this close to the corner. */
+var HUD_DISTANCE = 75;
+/**
+ * The trading floor: during a round, driving further than this from the corner's centre starts a
+ * short countdown (LEAVE_GRACE seconds), and the round is called off unless you come back.
+ */
+var LEAVE_DISTANCE = 60;
+var LEAVE_GRACE = 2;
+/** Price samples kept for the chart (one every SAMPLE_SECONDS). */
+var SAMPLE_SECONDS = 0.1;
+var HISTORY_SAMPLES = 160;
+var SCREEN_FPS = 12;
+var RESULTS_SECONDS = 8;
+/** A shot often bounces off a button and hits it again; ignore repeat hits within this time. */
+var PRESS_COOLDOWN = 0.5;
+var BEST_KEY = "quantum-trader-best";
+var COLORS = {
+    background: _ui_style__WEBPACK_IMPORTED_MODULE_0__.UI.navyDeep,
+    grid: "#33475C",
+    line: _ui_style__WEBPACK_IMPORTED_MODULE_0__.UI.cream,
+    up: _ui_style__WEBPACK_IMPORTED_MODULE_0__.UI.mint,
+    down: _ui_style__WEBPACK_IMPORTED_MODULE_0__.UI.pink,
+    muted: "#8FA1B3",
+    gold: _ui_style__WEBPACK_IMPORTED_MODULE_0__.UI.gold,
+};
+function createTradingGame(context, corner) {
+    return __awaiter(this, void 0, void 0, function () {
+        var scene, tank, sounds, gui, ui, hud, board, buttons, setSignal, soundAt, state, best, timeLeft, resultsLeft, price, trend, trendLeft, nextTrend, signal, signalLeft, position, entry, realized, finalResult, newBest, message, messageLeft, sampleTimer, sampleCount, screenTimer, history, trades, pressedAt, clock, awayFor, idleTicker, flash, openProfit, startRound, closePosition, endRound, trade, press, pickTrend, forecast, stepMarket, screen, screenSize, updateScreen, W, H, font, drawChart, drawResults;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    scene = context.scene, tank = context.tank, sounds = context.sounds;
+                    return [4 /*yield*/, __webpack_require__.e(/*! import() */ "vendors-node_modules_babylonjs_gui_index_js").then(__webpack_require__.bind(__webpack_require__, /*! @babylonjs/gui */ "./node_modules/@babylonjs/gui/index.js"))];
+                case 1:
+                    gui = _a.sent();
+                    if (scene.isDisposed) {
+                        return [2 /*return*/];
+                    }
+                    ui = gui.AdvancedDynamicTexture.CreateFullscreenUI("trading-ui", true, scene);
+                    hud = (0,_ui_tradingHud__WEBPACK_IMPORTED_MODULE_1__.createTradingHud)(gui, ui);
+                    board = corner.board, buttons = corner.buttons, setSignal = corner.setSignal;
+                    soundAt = corner.center;
+                    state = "idle";
+                    best = loadBest();
+                    timeLeft = 0;
+                    resultsLeft = 0;
+                    price = START_PRICE;
+                    trend = "flat";
+                    trendLeft = 0;
+                    nextTrend = null;
+                    signal = "none";
+                    signalLeft = 0;
+                    position = 0;
+                    entry = 0;
+                    realized = 0;
+                    finalResult = 0;
+                    newBest = false;
+                    message = "";
+                    messageLeft = 0;
+                    sampleTimer = 0;
+                    sampleCount = 0;
+                    screenTimer = 0;
+                    history = [];
+                    trades = [];
+                    pressedAt = { buy: -Infinity, sell: -Infinity };
+                    clock = 0;
+                    awayFor = 0;
+                    idleTicker = function () { return (best !== null
+                        ? "QUANTUM TRADER   \u25B2   SHOOT BUY OR SELL TO PLAY   \u25B2   BEST ".concat(formatMoney(best), "   \u25B2   ")
+                        : "QUANTUM TRADER   \u25B2   SHOOT BUY OR SELL TO PLAY   \u25B2   ".concat(_workCorner__WEBPACK_IMPORTED_MODULE_3__.TICKER_TEXT)); };
+                    board.setTicker(idleTicker());
+                    flash = function (text) {
+                        message = text;
+                        messageLeft = 2.2;
+                    };
+                    openProfit = function () { return (position === 0 ? 0 : position * (price - entry) * SHARES); };
+                    startRound = function () {
+                        state = "playing";
+                        timeLeft = ROUND_SECONDS;
+                        price = START_PRICE;
+                        trend = "flat";
+                        trendLeft = 1.5;
+                        nextTrend = null;
+                        signal = "none";
+                        signalLeft = 0;
+                        position = 0;
+                        realized = 0;
+                        history.length = 0;
+                        trades.length = 0;
+                        sampleCount = 0;
+                        sampleTimer = 0;
+                        for (var i = 0; i < 20; i++) {
+                            history.push(START_PRICE + ((Math.random() - 0.5) * 0.6));
+                        }
+                        flash("Market open! Watch the quantum core.");
+                        board.setTicker("BUY LOW   ▲   SELL HIGH   ▲   WATCH THE QUANTUM CORE   ▲   MINT MEANS UP, PINK MEANS DOWN   ▲   ");
+                        board.showScreen(true);
+                        sounds.trade("start", soundAt);
+                    };
+                    closePosition = function () {
+                        var profit = openProfit();
+                        realized += profit;
+                        position = 0;
+                        return profit;
+                    };
+                    endRound = function (cancelled) {
+                        setSignal("none");
+                        if (cancelled) {
+                            state = "idle";
+                            board.showScreen(false);
+                            board.setTicker(idleTicker());
+                            return;
+                        }
+                        closePosition();
+                        finalResult = realized;
+                        newBest = best === null || finalResult > best;
+                        if (newBest) {
+                            best = finalResult;
+                            saveBest(finalResult);
+                        }
+                        state = "results";
+                        resultsLeft = RESULTS_SECONDS;
+                        drawResults();
+                        sounds.trade("end", soundAt);
+                    };
+                    trade = function (kind) {
+                        var direction = kind === "buy" ? 1 : -1;
+                        if (position === direction) {
+                            flash(kind === "buy" ? "Already holding. Shoot SELL to take profit!" : "Already short. Shoot BUY to close it!");
+                            return;
+                        }
+                        trades.push({ sample: sampleCount, kind: kind });
+                        if (position === 0) {
+                            position = direction;
+                            entry = price;
+                            flash("".concat(kind === "buy" ? "Bought" : "Sold short", " ").concat(SHARES, " at ").concat(price.toFixed(2)));
+                            sounds.trade(kind, soundAt);
+                            return;
+                        }
+                        var profit = closePosition();
+                        flash("Closed for ".concat(formatMoney(profit)));
+                        sounds.trade(profit >= 0 ? "profit" : "loss", soundAt);
+                    };
+                    press = function (kind) {
+                        if (clock - pressedAt[kind] < PRESS_COOLDOWN) {
+                            return;
+                        }
+                        pressedAt[kind] = clock;
+                        buttons[kind].press();
+                        if (state === "playing") {
+                            trade(kind);
+                        }
+                        else if (state === "idle" || resultsLeft < RESULTS_SECONDS - 1.5) {
+                            startRound();
+                        }
+                    };
+                    buttons.buy.onHit.add(function () { return press("buy"); });
+                    buttons.sell.onHit.add(function () { return press("sell"); });
+                    pickTrend = function () {
+                        var roll = Math.random();
+                        // Keep the price roughly in range: lean towards trends that bring it back.
+                        var lean = Math.max(-0.25, Math.min(0.25, (START_PRICE - price) / 60));
+                        return roll < 0.4 + lean ? "up" : roll < 0.8 ? "down" : "flat";
+                    };
+                    forecast = function (actual) {
+                        var right = Math.random() < SIGNAL_ACCURACY;
+                        if (actual === "flat") {
+                            return right ? "none" : Math.random() < 0.5 ? "up" : "down";
+                        }
+                        return right ? actual : actual === "up" ? "down" : "up";
+                    };
+                    stepMarket = function (dt) {
+                        trendLeft -= dt;
+                        if (nextTrend === null && trendLeft <= SIGNAL_LEAD) {
+                            nextTrend = pickTrend();
+                            signal = forecast(nextTrend);
+                            signalLeft = trendLeft + SIGNAL_LINGER;
+                            setSignal(signal);
+                        }
+                        if (trendLeft <= 0) {
+                            trend = nextTrend !== null && nextTrend !== void 0 ? nextTrend : pickTrend();
+                            nextTrend = null;
+                            trendLeft = TREND_SECONDS.min + (Math.random() * (TREND_SECONDS.max - TREND_SECONDS.min));
+                        }
+                        if (signalLeft > 0) {
+                            signalLeft -= dt;
+                            if (signalLeft <= 0) {
+                                signal = "none";
+                                setSignal("none");
+                            }
+                        }
+                        var drift = trend === "up" ? TREND_SPEED : trend === "down" ? -TREND_SPEED : 0;
+                        price = Math.max(5, price + (drift * dt) + (gaussian() * NOISE * Math.sqrt(dt)));
+                        sampleTimer += dt;
+                        while (sampleTimer >= SAMPLE_SECONDS) {
+                            sampleTimer -= SAMPLE_SECONDS;
+                            sampleCount++;
+                            history.push(price);
+                            if (history.length > HISTORY_SAMPLES) {
+                                history.shift();
+                            }
+                        }
+                    };
+                    screen = board.screen, screenSize = board.screenSize, updateScreen = board.updateScreen;
+                    W = screenSize.width;
+                    H = screenSize.height;
+                    font = function (size) { return "900 ".concat(size, "px ").concat(_ui_style__WEBPACK_IMPORTED_MODULE_0__.UI.font); };
+                    drawChart = function () {
+                        screen.fillStyle = COLORS.background;
+                        screen.fillRect(0, 0, W, H);
+                        screen.textBaseline = "middle";
+                        // Header: title, forecast and clock.
+                        screen.textAlign = "left";
+                        screen.fillStyle = COLORS.line;
+                        screen.font = font(34);
+                        screen.fillText("QUANTUM TRADER", 36, 44);
+                        screen.textAlign = "right";
+                        screen.fillStyle = timeLeft < 10 ? COLORS.down : COLORS.gold;
+                        screen.font = font(40);
+                        screen.fillText(formatTime(timeLeft), W - 36, 44);
+                        var signalText = signal === "up" ? "SIGNAL ▲" : signal === "down" ? "SIGNAL ▼" : "SIGNAL —";
+                        screen.fillStyle = signal === "up" ? COLORS.up : signal === "down" ? COLORS.down : COLORS.muted;
+                        screen.font = font(30);
+                        screen.textAlign = "center";
+                        screen.fillText(signalText, W * 0.62, 44);
+                        // Chart.
+                        var left = 36;
+                        var right = W - 170;
+                        var top = 92;
+                        var bottom = H - 86;
+                        var low = Infinity;
+                        var high = -Infinity;
+                        for (var _i = 0, history_1 = history; _i < history_1.length; _i++) {
+                            var value = history_1[_i];
+                            low = Math.min(low, value);
+                            high = Math.max(high, value);
+                        }
+                        if (position !== 0) {
+                            low = Math.min(low, entry);
+                            high = Math.max(high, entry);
+                        }
+                        var padding = Math.max(1.5, (high - low) * 0.15);
+                        low -= padding;
+                        high += padding;
+                        var toY = function (value) { return bottom - (((value - low) / (high - low)) * (bottom - top)); };
+                        var toX = function (index) { return left + ((index / (HISTORY_SAMPLES - 1)) * (right - left)); };
+                        var offset = HISTORY_SAMPLES - history.length;
+                        screen.strokeStyle = COLORS.grid;
+                        screen.lineWidth = 2;
+                        for (var i = 0; i <= 4; i++) {
+                            var y = top + ((i / 4) * (bottom - top));
+                            screen.beginPath();
+                            screen.moveTo(left, y);
+                            screen.lineTo(right, y);
+                            screen.stroke();
+                        }
+                        if (position !== 0) {
+                            screen.setLineDash([14, 10]);
+                            screen.strokeStyle = position > 0 ? COLORS.up : COLORS.down;
+                            screen.lineWidth = 3;
+                            screen.beginPath();
+                            screen.moveTo(left, toY(entry));
+                            screen.lineTo(right, toY(entry));
+                            screen.stroke();
+                            screen.setLineDash([]);
+                        }
+                        var rising = history.length > 1 && history[history.length - 1] >= history[Math.max(0, history.length - 30)];
+                        screen.strokeStyle = rising ? COLORS.up : COLORS.down;
+                        screen.lineWidth = 6;
+                        screen.lineJoin = "round";
+                        screen.beginPath();
+                        history.forEach(function (value, i) {
+                            var x = toX(i + offset);
+                            var y = toY(value);
+                            if (i === 0) {
+                                screen.moveTo(x, y);
+                            }
+                            else {
+                                screen.lineTo(x, y);
+                            }
+                        });
+                        screen.stroke();
+                        // Trade markers: triangles under (buy) or over (sell) the line.
+                        var firstSample = sampleCount - history.length + 1;
+                        for (var _a = 0, trades_1 = trades; _a < trades_1.length; _a++) {
+                            var t = trades_1[_a];
+                            var index = t.sample - firstSample;
+                            if (index < 0 || index >= history.length) {
+                                continue;
+                            }
+                            var x = toX(index + offset);
+                            var y = toY(history[index]);
+                            var up = t.kind === "buy";
+                            screen.fillStyle = up ? COLORS.up : COLORS.down;
+                            screen.beginPath();
+                            screen.moveTo(x, y + (up ? 14 : -14));
+                            screen.lineTo(x - 13, y + (up ? 36 : -36));
+                            screen.lineTo(x + 13, y + (up ? 36 : -36));
+                            screen.closePath();
+                            screen.fill();
+                        }
+                        // Current price tag.
+                        var tagY = toY(price);
+                        screen.fillStyle = rising ? COLORS.up : COLORS.down;
+                        (0,_infoStand__WEBPACK_IMPORTED_MODULE_2__.roundRect)(screen, right + 12, tagY - 24, 140, 48, 12);
+                        screen.fill();
+                        screen.fillStyle = COLORS.background;
+                        screen.font = font(30);
+                        screen.textAlign = "center";
+                        screen.fillText(price.toFixed(2), right + 82, tagY + 2);
+                        // Footer: profit and position.
+                        var total = realized + openProfit();
+                        screen.textAlign = "left";
+                        screen.font = font(36);
+                        screen.fillStyle = total >= 0 ? COLORS.up : COLORS.down;
+                        screen.fillText("P&L ".concat(formatMoney(total)), 36, H - 42);
+                        screen.textAlign = "right";
+                        screen.font = font(30);
+                        screen.fillStyle = position === 0 ? COLORS.muted : position > 0 ? COLORS.up : COLORS.down;
+                        screen.fillText(positionText(position, entry), W - 36, H - 42);
+                        updateScreen();
+                    };
+                    drawResults = function () {
+                        screen.fillStyle = COLORS.background;
+                        screen.fillRect(0, 0, W, H);
+                        screen.textAlign = "center";
+                        screen.textBaseline = "middle";
+                        screen.fillStyle = COLORS.gold;
+                        screen.font = font(40);
+                        screen.fillText(newBest ? "NEW BEST!" : "MARKET CLOSED", W / 2, H * 0.2);
+                        screen.fillStyle = finalResult >= 0 ? COLORS.up : COLORS.down;
+                        screen.font = font(120);
+                        screen.fillText(formatMoney(finalResult), W / 2, H * 0.47);
+                        screen.fillStyle = COLORS.line;
+                        screen.font = font(32);
+                        screen.fillText(best !== null ? "Best ".concat(formatMoney(best)) : "", W / 2, H * 0.7);
+                        screen.fillStyle = COLORS.muted;
+                        screen.font = font(28);
+                        screen.fillText("Shoot BUY or SELL to play again", W / 2, H * 0.86);
+                        updateScreen();
+                    };
+                    // ----- Loop
+                    scene.onBeforeRenderObservable.add(function () {
+                        var dt = Math.min(scene.getEngine().getDeltaTime() / 1000, 0.1);
+                        clock += dt;
+                        var distance = Math.hypot(tank.position.x - corner.center.x, tank.position.z - corner.center.z);
+                        awayFor = distance > LEAVE_DISTANCE ? awayFor + dt : 0;
+                        if (state === "playing") {
+                            if (awayFor > LEAVE_GRACE) {
+                                endRound(true);
+                                flash("Round called off: you left the trading floor.");
+                                messageLeft = 3.5;
+                            }
+                            else {
+                                timeLeft -= dt;
+                                stepMarket(dt);
+                                messageLeft -= dt;
+                                screenTimer -= dt;
+                                if (screenTimer <= 0) {
+                                    screenTimer = 1 / SCREEN_FPS;
+                                    drawChart();
+                                }
+                                if (timeLeft <= 0) {
+                                    endRound(false);
+                                }
+                            }
+                        }
+                        else if (state === "results") {
+                            resultsLeft -= dt;
+                            if (resultsLeft <= 0 || awayFor > LEAVE_GRACE) {
+                                state = "idle";
+                                board.showScreen(false);
+                                board.setTicker(idleTicker());
+                            }
+                        }
+                        messageLeft -= state === "playing" ? 0 : dt;
+                        var showHud = state !== "idle" || distance < HUD_DISTANCE || messageLeft > 0;
+                        hud.setVisible(showHud);
+                        if (!showHud) {
+                            return;
+                        }
+                        if (state === "idle" && messageLeft > 0) {
+                            hud.set("QUANTUM TRADER", _ui_style__WEBPACK_IMPORTED_MODULE_0__.UI.pinkDeep, "Round called off", "You left the trading floor. Come back and shoot BUY or SELL to play again.");
+                        }
+                        else if (state === "playing" && awayFor > 0) {
+                            hud.set("TRADING  ".concat(formatTime(timeLeft)), _ui_style__WEBPACK_IMPORTED_MODULE_0__.UI.pinkDeep, "Come back!", "Leaving the trading floor ends the round in ".concat(Math.max(0, LEAVE_GRACE - awayFor).toFixed(1), " s."), _ui_style__WEBPACK_IMPORTED_MODULE_0__.UI.pinkDeep);
+                        }
+                        else if (state === "idle") {
+                            hud.set("QUANTUM TRADER", _ui_style__WEBPACK_IMPORTED_MODULE_0__.UI.navy, "Shoot BUY or SELL to play", "Buy low, sell high in ".concat(ROUND_SECONDS, " s. The quantum core glows mint or pink when it senses the market turning.").concat(best !== null ? " Best: ".concat(formatMoney(best)) : ""));
+                        }
+                        else if (state === "playing") {
+                            var total = realized + openProfit();
+                            var signalHint = signal === "up" ? "Core says UP: buy!" : signal === "down" ? "Core says DOWN: sell!" : "";
+                            hud.set("TRADING  ".concat(formatTime(timeLeft)), timeLeft < 10 ? _ui_style__WEBPACK_IMPORTED_MODULE_0__.UI.pinkDeep : _ui_style__WEBPACK_IMPORTED_MODULE_0__.UI.gold, "P&L ".concat(formatMoney(total)), messageLeft > 0 ? message : signalHint || positionText(position, entry), total >= 0 ? "#3E9C6E" : _ui_style__WEBPACK_IMPORTED_MODULE_0__.UI.pinkDeep);
+                        }
+                        else {
+                            hud.set(newBest ? "NEW BEST!" : "MARKET CLOSED", _ui_style__WEBPACK_IMPORTED_MODULE_0__.UI.mint, formatMoney(finalResult), "".concat(best !== null ? "Best ".concat(formatMoney(best), ". ") : "", "Shoot BUY or SELL to play again."), finalResult >= 0 ? "#3E9C6E" : _ui_style__WEBPACK_IMPORTED_MODULE_0__.UI.pinkDeep);
+                        }
+                    });
+                    scene.onDisposeObservable.addOnce(function () { return ui.dispose(); });
+                    return [2 /*return*/];
+            }
+        });
+    });
+}
+function positionText(position, entry) {
+    if (position === 0) {
+        return "No position. Shoot BUY or SELL to trade.";
+    }
+    return "".concat(position > 0 ? "LONG" : "SHORT", " ").concat(SHARES, " @ ").concat(entry.toFixed(2));
+}
+function formatMoney(value) {
+    var rounded = Math.round(value);
+    return "".concat(rounded < 0 ? "−" : "+", "$").concat(Math.abs(rounded).toLocaleString("en-US"));
+}
+function formatTime(seconds) {
+    var whole = Math.max(0, Math.ceil(seconds));
+    return "0:".concat(whole.toString().padStart(2, "0"));
+}
+function gaussian() {
+    // Box-Muller.
+    var u = 1 - Math.random();
+    var v = Math.random();
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+function loadBest() {
+    try {
+        var stored = window.localStorage.getItem(BEST_KEY);
+        var value = stored === null ? NaN : Number(stored);
+        return Number.isFinite(value) ? value : null;
+    }
+    catch (_a) {
+        return null;
+    }
+}
+function saveBest(value) {
+    try {
+        window.localStorage.setItem(BEST_KEY, String(Math.round(value)));
+    }
+    catch (_a) {
+        // Private mode or blocked storage: the best score just isn't remembered.
+    }
+}
+
+
+/***/ },
+
 /***/ "./src/scenes/world/trees.ts"
 /*!***********************************!*\
   !*** ./src/scenes/world/trees.ts ***!
@@ -8803,8 +9458,8 @@ var CANOPY_PIVOT_Y = 6;
 var TREE_POSITIONS = [
     new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(78.3985, 5.1848, -11.2018),
     new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(47.5043, 5.1848, -36.9549),
-    // Moved west, out of the way of the path to the work corner.
-    new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(-74, 5.1848, -46),
+    // Out west, where it doesn't stand between the camera and the work corner.
+    new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(-126, 5.1848, -70),
     // Behind the work corner, as a backdrop (it used to hide the corner from the start).
     new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(-6, 5.1848, -97),
     new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(57.1332, 5.1848, 77.0256),
@@ -9320,15 +9975,17 @@ function addBullseye(scene, id, parent, y, materials) {
 (__unused_webpack_module, __webpack_exports__, __webpack_require__) {
 
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   TICKER_TEXT: () => (/* binding */ TICKER_TEXT),
 /* harmony export */   createWorkCorner: () => (/* binding */ createWorkCorner)
 /* harmony export */ });
 /* unused harmony export WORK_CORNER_POSITION */
 /* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core */ "./node_modules/@babylonjs/core/index.js");
-/* harmony import */ var _core_staticBodies__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../core/staticBodies */ "./src/scenes/core/staticBodies.ts");
-/* harmony import */ var _core_toyStyle__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../core/toyStyle */ "./src/scenes/core/toyStyle.ts");
-/* harmony import */ var _core_constants__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../core/constants */ "./src/scenes/core/constants.ts");
-/* harmony import */ var _ui_style__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../ui/style */ "./src/scenes/ui/style.ts");
-/* harmony import */ var _infoStand__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./infoStand */ "./src/scenes/world/infoStand.ts");
+/* harmony import */ var _audio_soundMaterials__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../audio/soundMaterials */ "./src/scenes/audio/soundMaterials.ts");
+/* harmony import */ var _core_staticBodies__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../core/staticBodies */ "./src/scenes/core/staticBodies.ts");
+/* harmony import */ var _core_toyStyle__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../core/toyStyle */ "./src/scenes/core/toyStyle.ts");
+/* harmony import */ var _core_constants__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../core/constants */ "./src/scenes/core/constants.ts");
+/* harmony import */ var _ui_style__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../ui/style */ "./src/scenes/ui/style.ts");
+/* harmony import */ var _infoStand__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./infoStand */ "./src/scenes/world/infoStand.ts");
 var __assign = (undefined && undefined.__assign) || function () {
     __assign = Object.assign || function(t) {
         for (var s, i = 1, n = arguments.length; i < n; i++) {
@@ -9346,6 +10003,7 @@ var __assign = (undefined && undefined.__assign) || function () {
 
 
 
+
 /**
  * The work corner, in the open field south of the start, past the brick wall: straight ahead from
  * the crossroads sign, with a side path leading there from the main loop. The work itself is confidential, so the corner
@@ -9355,7 +10013,9 @@ var __assign = (undefined && undefined.__assign) || function () {
  * - a "quantum core" sculpture: a glowing sphere with a precessing state arrow and two orbiting
  *   rings, on a plinth;
  * - a toy trading board: candlesticks trending up, a gold trend line and a scrolling ticker strip;
- * - a briefcase stamped CONFIDENTIAL with a padlock, which can be pushed around.
+ * - a briefcase stamped CONFIDENTIAL with a padlock, which can be pushed around;
+ * - BUY and SELL buttons in front of the board, for the Quantum Trader minigame (see
+ *   tradingGame.ts), which also uses the board as its screen and the core as its signal light.
  *
  * Laid out in a frame facing the camera: local x runs to the right on screen and local -z towards
  * the camera.
@@ -9364,7 +10024,7 @@ var __assign = (undefined && undefined.__assign) || function () {
 var WORK_CORNER_POSITION = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector2(-20, -72);
 /** Nothing animates when the tank is further away than this. */
 var ANIMATION_DISTANCE = 170;
-var FONT = _ui_style__WEBPACK_IMPORTED_MODULE_4__.UI.font;
+var FONT = _ui_style__WEBPACK_IMPORTED_MODULE_5__.UI.font;
 var PALETTE = {
     navy: "#344B63",
     navyLight: "#4A6280",
@@ -9383,19 +10043,39 @@ var PALETTE = {
     stamp: "#C94F4F",
 };
 function createWorkCorner(scene) {
-    var yaw = _core_constants__WEBPACK_IMPORTED_MODULE_3__.FACE_CAMERA_YAW;
+    var yaw = _core_constants__WEBPACK_IMPORTED_MODULE_4__.FACE_CAMERA_YAW;
     var right = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
     var away = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(Math.sin(yaw), 0, Math.cos(yaw));
     var frame = {
         yaw: yaw,
-        toWorld: function (x, y, z) { return new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(WORK_CORNER_POSITION.x + (right.x * x) + (away.x * z), _core_constants__WEBPACK_IMPORTED_MODULE_3__.GROUND_Y + y, WORK_CORNER_POSITION.y + (right.z * x) + (away.z * z)); },
+        toWorld: function (x, y, z) { return new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(WORK_CORNER_POSITION.x + (right.x * x) + (away.x * z), _core_constants__WEBPACK_IMPORTED_MODULE_4__.GROUND_Y + y, WORK_CORNER_POSITION.y + (right.z * x) + (away.z * z)); },
     };
     var materials = createMaterials(scene);
     var animations = [];
+    var setSignal = null;
+    var board = null;
+    var buttons = null;
     var parts = [
         ["info stand", function () { return createWorkInfoStand(scene, frame); }],
-        ["quantum core", function () { return animations.push(createQuantumCore(scene, frame, materials)); }],
-        ["trading board", function () { return animations.push(createTradingBoard(scene, frame, materials)); }],
+        ["quantum core", function () {
+                var core = createQuantumCore(scene, frame, materials);
+                animations.push(core.animate);
+                setSignal = core.setSignal;
+            }],
+        ["trading board", function () {
+                board = createTradingBoard(scene, frame, materials);
+                animations.push(board.animate);
+            }],
+        ["trade buttons", function () {
+                buttons = {
+                    buy: createTradeButton(scene, frame, materials, "buy", 16, -8),
+                    sell: createTradeButton(scene, frame, materials, "sell", 30, -8),
+                };
+                animations.push(function (dt) {
+                    buttons === null || buttons === void 0 ? void 0 : buttons.buy.animate(dt);
+                    buttons === null || buttons === void 0 ? void 0 : buttons.sell.animate(dt);
+                });
+            }],
         ["briefcase", function () { return createBriefcase(scene, frame, materials); }],
     ];
     for (var _i = 0, parts_1 = parts; _i < parts_1.length; _i++) {
@@ -9419,13 +10099,17 @@ function createWorkCorner(scene) {
             animate(dt);
         }
     });
+    if (!setSignal || !board || !buttons) {
+        return null;
+    }
+    return { center: center, setSignal: setSignal, board: board, buttons: buttons };
 }
 function createMaterials(scene) {
     var toy = function (name, hex, roughness, clearCoat, metallic) {
         if (roughness === void 0) { roughness = 0.45; }
         if (clearCoat === void 0) { clearCoat = 0.4; }
         if (metallic === void 0) { metallic = 0; }
-        return (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "work-".concat(name), hex, { roughness: roughness, clearCoat: clearCoat, metallic: metallic });
+        return (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createToyMaterial)(scene, "work-".concat(name), hex, { roughness: roughness, clearCoat: clearCoat, metallic: metallic });
     };
     var core = toy("core", PALETTE.core, 0.2, 0.9);
     core.emissiveColor = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.FromHexString(PALETTE.core).toLinearSpace().scale(0.35);
@@ -9468,7 +10152,7 @@ function addCollider(scene, node, local, width, height, depth, sound) {
     if (sound === void 0) { sound = "solid"; }
     node.computeWorldMatrix(true);
     var scale = node.scaling.x;
-    (0,_core_staticBodies__WEBPACK_IMPORTED_MODULE_1__.addStaticBox)(scene, _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.TransformCoordinates(local, node.getWorldMatrix()), width * scale, height * scale, depth * scale, {
+    (0,_core_staticBodies__WEBPACK_IMPORTED_MODULE_2__.addStaticBox)(scene, _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.TransformCoordinates(local, node.getWorldMatrix()), width * scale, height * scale, depth * scale, {
         rotation: _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Quaternion.RotationYawPitchRoll(node.rotation.y, 0, 0),
         sound: sound,
     });
@@ -9476,13 +10160,13 @@ function addCollider(scene, node, local, width, height, depth, sound) {
 // ==================================================================== Info stand
 function createWorkInfoStand(scene, frame) {
     var position = frame.toWorld(-19, 0, -4);
-    (0,_infoStand__WEBPACK_IMPORTED_MODULE_5__.createInfoStand)(scene, {
+    (0,_infoStand__WEBPACK_IMPORTED_MODULE_6__.createInfoStand)(scene, {
         id: "work-info-stand",
         x: position.x,
         z: position.z,
         draw: function (context) {
             var pad = 64;
-            var bottom = (0,_infoStand__WEBPACK_IMPORTED_MODULE_5__.drawInfoText)(context, FONT, {
+            var bottom = (0,_infoStand__WEBPACK_IMPORTED_MODULE_6__.drawInfoText)(context, FONT, {
                 eyebrow: "MY WORK",
                 eyebrowColor: PALETTE.pinkDeep,
                 title: "Quantum-Inspired Trading",
@@ -9497,7 +10181,7 @@ function createWorkInfoStand(scene, frame) {
             context.font = "900 34px ".concat(FONT);
             var pillText = "Top secret, sorry!";
             var pillWidth = context.measureText(pillText).width + 116;
-            (0,_infoStand__WEBPACK_IMPORTED_MODULE_5__.roundRect)(context, pad, pillY, pillWidth, pillHeight, pillHeight / 2);
+            (0,_infoStand__WEBPACK_IMPORTED_MODULE_6__.roundRect)(context, pad, pillY, pillWidth, pillHeight, pillHeight / 2);
             context.fillStyle = PALETTE.navy;
             context.fill();
             drawPadlock(context, pad + 46, pillY + (pillHeight / 2) + 4, 0.9, PALETTE.cream, PALETTE.navy);
@@ -9521,7 +10205,7 @@ function drawPadlock(context, x, y, size, color, hole) {
     context.lineTo(-12, -4);
     context.stroke();
     context.fillStyle = color;
-    (0,_infoStand__WEBPACK_IMPORTED_MODULE_5__.roundRect)(context, -19, -6, 38, 30, 6);
+    (0,_infoStand__WEBPACK_IMPORTED_MODULE_6__.roundRect)(context, -19, -6, 38, 30, 6);
     context.fill();
     context.fillStyle = hole;
     context.beginPath();
@@ -9584,16 +10268,20 @@ function drawCandles(context, x, y) {
         context.lineTo(cx, y - high);
         context.stroke();
         context.fillStyle = up ? PALETTE.mint : PALETTE.pink;
-        (0,_infoStand__WEBPACK_IMPORTED_MODULE_5__.roundRect)(context, cx - 15, y - Math.max(open, close), 30, Math.max(8, Math.abs(close - open)), 6);
+        (0,_infoStand__WEBPACK_IMPORTED_MODULE_6__.roundRect)(context, cx - 15, y - Math.max(open, close), 30, Math.max(8, Math.abs(close - open)), 6);
         context.fill();
     });
 }
 // ==================================================================== Quantum core
 /** Returns its animation step. */
+/** The core's colours for each signal: its own pale blue, or mint / pink for up / down. */
+var SIGNAL_COLORS = { none: PALETTE.core, up: PALETTE.mint, down: PALETTE.pink };
+/** Where the state arrow leans for each signal (0 = straight up). */
+var SIGNAL_TILT = { none: -0.6, up: -0.15, down: Math.PI - 0.15 };
 function createQuantumCore(scene, frame, materials) {
     var root = createAnchor(scene, "work-quantum-core", frame, 2, 5, 1.5);
-    attach((0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("work-core-plinth", 6, 1.6, 6, 0.4, scene), root, materials.navy).position.y = 0.8;
-    attach((0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("work-core-plinth-top", 5.2, 0.3, 5.2, 0.12, scene), root, materials.sand).position.y = 1.75;
+    attach((0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createRoundedBox)("work-core-plinth", 6, 1.6, 6, 0.4, scene), root, materials.navy).position.y = 0.8;
+    attach((0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createRoundedBox)("work-core-plinth-top", 5.2, 0.3, 5.2, 0.12, scene), root, materials.sand).position.y = 1.75;
     var pillar = attach(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder("work-core-pillar", { diameterTop: 0.6, diameterBottom: 1.4, height: 3.6, tessellation: 20 }, scene), root, materials.gold);
     pillar.position.y = 3.6;
     var coreY = 8.4;
@@ -9628,17 +10316,34 @@ function createQuantumCore(scene, frame, materials) {
         return { spinner: spinner, speed: speed };
     });
     addCollider(scene, root, new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, 5.5, 0), 6.6, 11, 6.6);
+    // The minigame's signal: the core lights up in the signal's colour, the arrow swings up or
+    // down, and the rings spin faster.
+    var material = materials.core;
+    var targetColor = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.FromHexString(PALETTE.core).toLinearSpace();
+    var signal = "none";
+    var tilt = SIGNAL_TILT.none;
     var time = 0;
-    return function (dt) {
+    var animate = function (dt) {
         time += dt;
-        precession.rotation.y += dt * 0.9;
+        var excited = signal !== "none";
+        precession.rotation.y += dt * (excited ? 2.4 : 0.9);
+        tilt += (SIGNAL_TILT[signal] - tilt) * Math.min(1, dt * 6);
         // A gentle nod, so it doesn't look like a plain turntable.
-        arrow.rotation.z = -0.6 + (Math.sin(time * 0.8) * 0.2);
+        arrow.rotation.z = tilt + (Math.sin(time * 0.8) * (excited ? 0.06 : 0.2));
         for (var _i = 0, rings_1 = rings; _i < rings_1.length; _i++) {
             var ring = rings_1[_i];
-            ring.spinner.rotation.y += dt * ring.speed;
+            ring.spinner.rotation.y += dt * ring.speed * (excited ? 3 : 1);
         }
+        var blend = Math.min(1, dt * 8);
+        _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.LerpToRef(material.albedoColor, targetColor, blend, material.albedoColor);
+        var glow = excited ? 0.55 + (Math.sin(time * 9) * 0.15) : 0.35;
+        _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.LerpToRef(material.emissiveColor, targetColor.scale(glow), blend, material.emissiveColor);
     };
+    var setSignal = function (next) {
+        signal = next;
+        _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.FromHexString(SIGNAL_COLORS[next]).toLinearSpaceToRef(targetColor);
+    };
+    return { animate: animate, setSignal: setSignal };
 }
 // ==================================================================== Trading board
 /** Open, close, low, high, in chart units (0 at the bottom of the chart area). */
@@ -9653,19 +10358,18 @@ var CANDLES = [
     [4.4, 6.4, 4.2, 6.8],
 ];
 var TICKER_TEXT = "QUANTUM-INSPIRED ALGORITHMS   ▲   FINANCIAL TRADING   ▲   OPTIMISATION   ▲   SOFTWARE ENGINEERING   ▲   ";
-/** Returns its animation step (the ticker scrolling). */
 function createTradingBoard(scene, frame, materials) {
     var root = createAnchor(scene, "work-trading-board", frame, 23, 3, 1.25);
     var width = 16;
     var height = 10.5;
     var centerY = 9;
     var depth = 0.8;
-    attach((0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("work-board", width, height, depth, 0.6, scene), root, materials.navy).position.y = centerY;
-    var rim = attach((0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("work-board-rim", width + 1.2, height + 1.2, depth * 0.7, 0.8, scene), root, materials.sand);
+    attach((0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createRoundedBox)("work-board", width, height, depth, 0.6, scene), root, materials.navy).position.y = centerY;
+    var rim = attach((0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createRoundedBox)("work-board-rim", width + 1.2, height + 1.2, depth * 0.7, 0.8, scene), root, materials.sand);
     rim.position.set(0, centerY, 0.2);
     for (var _i = 0, _a = [-1, 1]; _i < _a.length; _i++) {
         var side = _a[_i];
-        var post = attach((0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("work-board-post-".concat(side), 1.1, centerY, 1.1, 0.35, scene), root, materials.wood);
+        var post = attach((0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createRoundedBox)("work-board-post-".concat(side), 1.1, centerY, 1.1, 0.35, scene), root, materials.wood);
         post.position.set(side * (width / 2 - 2.2), centerY / 2, 0.9);
     }
     // Chart area: faint grid lines, the candles and a gold trend line in front.
@@ -9674,11 +10378,12 @@ function createTradingBoard(scene, frame, materials) {
     var chartLeft = -6.3;
     var pitch = 1.8;
     var grid = [0, 1, 2, 3].map(function (i) {
-        var line = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("work-board-grid-".concat(i), width - 2, 0.12, 0.1, 0.04, scene, 1);
+        var line = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createRoundedBox)("work-board-grid-".concat(i), width - 2, 0.12, 0.1, 0.04, scene, 1);
         line.position.set(0, chartBottom + (i * 2.2), front - 0.05);
         return line;
     });
-    mergeInto("work-board-grid", grid, root, materials.navyLight);
+    var decor = [];
+    decor.push.apply(decor, mergeInto("work-board-grid", grid, root, materials.navyLight));
     var ups = [];
     var downs = [];
     var wicks = [];
@@ -9686,16 +10391,16 @@ function createTradingBoard(scene, frame, materials) {
         var open = _a[0], close = _a[1], low = _a[2], high = _a[3];
         var x = chartLeft + (i * pitch);
         var bodyHeight = Math.max(0.3, Math.abs(close - open));
-        var body = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("work-candle-".concat(i), 1.05, bodyHeight, 0.7, 0.14, scene, 2);
+        var body = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createRoundedBox)("work-candle-".concat(i), 1.05, bodyHeight, 0.7, 0.14, scene, 2);
         body.position.set(x, chartBottom + ((open + close) / 2), front - 0.4);
         (close > open ? ups : downs).push(body);
-        var wick = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("work-wick-".concat(i), 0.2, high - low, 0.25, 0.08, scene, 1);
+        var wick = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createRoundedBox)("work-wick-".concat(i), 0.2, high - low, 0.25, 0.08, scene, 1);
         wick.position.set(x, chartBottom + ((low + high) / 2), front - 0.3);
         wicks.push(wick);
     });
-    mergeInto("work-candles-up", ups, root, materials.mint);
-    mergeInto("work-candles-down", downs, root, materials.pink);
-    mergeInto("work-wicks", wicks, root, materials.cream);
+    decor.push.apply(decor, mergeInto("work-candles-up", ups, root, materials.mint));
+    decor.push.apply(decor, mergeInto("work-candles-down", downs, root, materials.pink));
+    decor.push.apply(decor, mergeInto("work-wicks", wicks, root, materials.cream));
     // Trend line through the candles' closes, ending in an arrowhead past the last one.
     var path = CANDLES.map(function (_a, i) {
         var close = _a[1];
@@ -9710,23 +10415,53 @@ function createTradingBoard(scene, frame, materials) {
     var head = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder("work-trend-head", { diameterTop: 0, diameterBottom: 0.9, height: 1, tessellation: 12 }, scene);
     head.position.copyFrom(headBase.add(direction.scale(0.5)));
     head.rotation.z = -Math.atan2(direction.x, direction.y);
-    mergeInto("work-trend-line", [line, head], root, materials.gold);
+    decor.push.apply(decor, mergeInto("work-trend-line", [line, head], root, materials.gold));
     // Ticker strip along the bottom of the board, scrolling sideways.
     var ticker = createTicker(scene, width - 1.6, 1.2);
     ticker.mesh.parent = root;
     ticker.mesh.position.set(0, 4.35, front - 0.03);
+    // The minigame's screen over the chart area (between the ticker and the top of the board).
+    var screenWidth = width - 1.6;
+    var screenHeight = (centerY + (height / 2) - 0.7) - 5.1;
+    var screenPixels = { width: 1024, height: Math.round((1024 * screenHeight) / screenWidth) };
+    var screenTexture = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.DynamicTexture("work-screen-texture", screenPixels, scene, true);
+    var screenMaterial = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.StandardMaterial("work-screen-material", scene);
+    screenMaterial.disableLighting = true;
+    screenMaterial.emissiveTexture = screenTexture;
+    screenMaterial.diffuseColor = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.Black();
+    var screen = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreatePlane("work-screen", { width: screenWidth, height: screenHeight }, scene);
+    screen.material = screenMaterial;
+    screen.parent = root;
+    screen.isPickable = false;
+    screen.position.set(0, 5.1 + (screenHeight / 2), front - 0.04);
+    screen.setEnabled(false);
     addCollider(scene, root, new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, (centerY + (height / 2) + 0.6) / 2, 0.3), width + 1.4, centerY + (height / 2) + 0.6, 2.4, "post");
-    return function (dt) {
-        ticker.texture.uOffset = (ticker.texture.uOffset + (dt * 0.045)) % 1;
+    return {
+        animate: function (dt) {
+            ticker.texture.uOffset = (ticker.texture.uOffset + (dt * 0.045)) % 1;
+        },
+        showScreen: function (show) {
+            screen.setEnabled(show);
+            for (var _i = 0, decor_1 = decor; _i < decor_1.length; _i++) {
+                var mesh = decor_1[_i];
+                mesh.setEnabled(!show);
+            }
+        },
+        screen: screenTexture.getContext(),
+        screenSize: screenPixels,
+        updateScreen: function () { return screenTexture.update(); },
+        setTicker: ticker.setText,
     };
 }
 /** Merges meshes (built in the parent's frame) into one under `parent`. */
 function mergeInto(name, meshes, parent, material) {
     var merged = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Mesh.MergeMeshes(meshes, true, true);
-    if (merged) {
-        merged.name = name;
-        attach(merged, parent, material);
+    if (!merged) {
+        return [];
     }
+    merged.name = name;
+    attach(merged, parent, material);
+    return [merged];
 }
 function createTicker(scene, width, height) {
     var textureWidth = 4096;
@@ -9736,6 +10471,7 @@ function createTicker(scene, width, height) {
     // Same aspect ratio as the strip, so the letters aren't stretched.
     texture.uScale = (width / height) / (textureWidth / textureHeight);
     var context = texture.getContext();
+    var text = TICKER_TEXT;
     var draw = function () {
         context.fillStyle = PALETTE.navyDeep;
         context.fillRect(0, 0, textureWidth, textureHeight);
@@ -9743,13 +10479,13 @@ function createTicker(scene, width, height) {
         context.textBaseline = "middle";
         // Whole copies of the text across the width (squeezed or stretched a little to fit), so
         // it tiles seamlessly as it scrolls.
-        var textWidth = context.measureText(TICKER_TEXT).width;
+        var textWidth = context.measureText(text).width;
         var copies = Math.max(1, Math.round(textureWidth / textWidth));
         var step = textureWidth / copies;
         for (var i = 0; i < copies; i++) {
             context.setTransform(step / textWidth, 0, 0, 1, i * step, 0);
             var x = 0;
-            for (var _i = 0, _a = TICKER_TEXT.split(/(\u25B2)/); _i < _a.length; _i++) {
+            for (var _i = 0, _a = text.split(/(\u25B2)/); _i < _a.length; _i++) {
                 var word = _a[_i];
                 context.fillStyle = word === "\u25B2" ? PALETTE.mint : PALETTE.cream;
                 context.fillText(word, x, (textureHeight / 2) + 4);
@@ -9770,14 +10506,117 @@ function createTicker(scene, width, height) {
     var mesh = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreatePlane("work-ticker", { width: width, height: height }, scene);
     mesh.material = material;
     mesh.isPickable = false;
-    return { mesh: mesh, texture: texture };
+    var setText = function (next) {
+        if (next !== text) {
+            text = next;
+            draw();
+        }
+    };
+    return { mesh: mesh, texture: texture, setText: setText };
+}
+// ==================================================================== Trade buttons
+var BUTTON_STYLE = {
+    buy: { label: "BUY", arrow: "\u25B2", color: PALETTE.mint },
+    sell: { label: "SELL", arrow: "\u25BC", color: PALETTE.pink },
+};
+/**
+ * A big round arcade button on a post, facing the camera, for the minigame: shoot it to press it.
+ * Built at (x, z) in the corner's frame.
+ */
+function createTradeButton(scene, frame, materials, kind, x, z) {
+    var style = BUTTON_STYLE[kind];
+    var id = "work-button-".concat(kind);
+    var root = createAnchor(scene, id, frame, x, z, 1.2);
+    var discY = 6.2;
+    attach((0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createRoundedBox)("".concat(id, "-base"), 2.8, 0.6, 2.8, 0.25, scene), root, materials.sand).position.y = 0.3;
+    var post = attach((0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createRoundedBox)("".concat(id, "-post"), 0.8, discY, 0.8, 0.3, scene), root, materials.wood);
+    post.position.set(0, (discY / 2) + 0.3, 0.6);
+    // Cylinders stand along Y; tip them so their faces point at the camera (-Z).
+    var holder = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.TransformNode("".concat(id, "-holder"), scene);
+    holder.parent = root;
+    holder.position.set(0, discY, 0);
+    holder.rotation.x = -Math.PI / 2;
+    var rim = attach(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder("".concat(id, "-rim"), { diameter: 5, height: 0.8, tessellation: 40 }, scene), holder, materials.navy);
+    rim.position.y = 0.1;
+    // The cap is what moves in when the button is pressed.
+    var cap = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.TransformNode("".concat(id, "-cap"), scene);
+    cap.parent = holder;
+    var face = attach(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder("".concat(id, "-face"), { diameter: 4.1, height: 0.7, tessellation: 40 }, scene), cap, kind === "buy" ? materials.mint : materials.pink, true);
+    face.position.y = 0.6;
+    var label = createButtonLabel(scene, "".concat(id, "-label"), style.arrow, style.label);
+    label.parent = cap;
+    label.position.y = 0.97;
+    label.rotation.x = Math.PI / 2;
+    label.metadata = { keepUnfrozen: true };
+    var onHit = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Observable();
+    root.computeWorldMatrix(true);
+    var scale = root.scaling.x;
+    var position = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.TransformCoordinates(new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, discY, -0.5), root.getWorldMatrix());
+    var rotation = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Quaternion.RotationYawPitchRoll(root.rotation.y, 0, 0);
+    // Only shots press it; the tank driving into it just bumps.
+    (0,_core_staticBodies__WEBPACK_IMPORTED_MODULE_2__.addStaticBox)(scene, position, 5 * scale, 5 * scale, 1.6 * scale, {
+        rotation: rotation,
+        sound: "post",
+        onHit: function (body) {
+            if ((0,_audio_soundMaterials__WEBPACK_IMPORTED_MODULE_1__.getSoundMaterial)(body) === "ball") {
+                onHit.notifyObservers();
+            }
+        },
+    });
+    (0,_core_staticBodies__WEBPACK_IMPORTED_MODULE_2__.addStaticBox)(scene, _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.TransformCoordinates(new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, discY / 2, 0.6), root.getWorldMatrix()), 1.2 * scale, discY * scale, 1.2 * scale, { rotation: rotation, sound: "post" });
+    var pressed = 0;
+    return {
+        position: position,
+        onHit: onHit,
+        press: function () {
+            pressed = 1;
+        },
+        animate: function (dt) {
+            if (pressed <= 0 && cap.position.y === 0) {
+                return;
+            }
+            pressed = Math.max(0, pressed - (dt * 3));
+            // In fast, back out slowly.
+            cap.position.y = -0.45 * Math.sin(Math.min(1, pressed) * Math.PI * 0.5);
+        },
+    };
+}
+function createButtonLabel(scene, name, arrow, text) {
+    var size = 256;
+    var texture = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.DynamicTexture("".concat(name, "-texture"), { width: size, height: size }, scene, true);
+    texture.hasAlpha = true;
+    var context = texture.getContext();
+    var draw = function () {
+        context.clearRect(0, 0, size, size);
+        context.fillStyle = PALETTE.navyDeep;
+        context.textAlign = "center";
+        context.textBaseline = "middle";
+        context.font = "900 54px ".concat(FONT);
+        context.fillText(arrow, size / 2, size * 0.32);
+        context.font = "900 ".concat(text.length > 3 ? 70 : 80, "px ").concat(FONT);
+        context.fillText(text, size / 2, size * 0.64);
+        texture.update();
+    };
+    draw();
+    if ("fonts" in document) {
+        void document.fonts.load("900 40px Nunito").then(draw).catch(function () { return undefined; });
+    }
+    var material = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.StandardMaterial("".concat(name, "-material"), scene);
+    material.diffuseTexture = texture;
+    material.useAlphaFromDiffuseTexture = true;
+    material.specularColor = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3(0.1, 0.1, 0.1);
+    material.emissiveColor = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3(0.3, 0.3, 0.3);
+    var plane = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreatePlane(name, { size: 3.4 }, scene);
+    plane.material = material;
+    plane.isPickable = false;
+    return plane;
 }
 // ==================================================================== Briefcase
 /** A pushable briefcase with a padlock and a CONFIDENTIAL stamp. */
 function createBriefcase(scene, frame, materials) {
     var size = { width: 5, height: 3.8, depth: 1.6 };
     var collider = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateBox("work-briefcase-collider", size, scene);
-    collider.position.copyFrom(frame.toWorld(12, (size.height / 2) + 0.05, -5));
+    collider.position.copyFrom(frame.toWorld(-4, (size.height / 2) + 0.05, -9));
     collider.rotation.y = frame.yaw - 0.35;
     collider.isVisible = false;
     collider.isPickable = false;
@@ -9789,9 +10628,9 @@ function createBriefcase(scene, frame, materials) {
         body.angularDamping = 0.3;
     }
     var add = function (mesh, material) { return attach(mesh, collider, material, true); };
-    add((0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("work-briefcase-body", size.width, size.height, size.depth, 0.35, scene), materials.leather);
+    add((0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createRoundedBox)("work-briefcase-body", size.width, size.height, size.depth, 0.35, scene), materials.leather);
     // A band round the middle where the lid closes.
-    add((0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("work-briefcase-band", size.width + 0.08, 0.35, size.depth + 0.08, 0.12, scene, 2), materials.leatherDark).position.y = 0.55;
+    add((0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createRoundedBox)("work-briefcase-band", size.width + 0.08, 0.35, size.depth + 0.08, 0.12, scene, 2), materials.leatherDark).position.y = 0.55;
     var handlePath = [];
     for (var i = 0; i <= 12; i++) {
         var angle = (i / 12) * Math.PI;
@@ -9802,12 +10641,12 @@ function createBriefcase(scene, frame, materials) {
     var front = -(size.depth / 2);
     for (var _i = 0, _a = [-1, 1]; _i < _a.length; _i++) {
         var side = _a[_i];
-        add((0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("work-briefcase-latch-".concat(side), 0.6, 0.5, 0.2, 0.08, scene, 1), materials.gold).position.set(side * 1.6, 0.55, front - 0.08);
+        add((0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createRoundedBox)("work-briefcase-latch-".concat(side), 0.6, 0.5, 0.2, 0.08, scene, 1), materials.gold).position.set(side * 1.6, 0.55, front - 0.08);
     }
     var shackle = add(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateTorus("work-briefcase-shackle", { diameter: 0.6, thickness: 0.12, tessellation: 20 }, scene), materials.gold);
     shackle.rotation.x = Math.PI / 2;
     shackle.position.set(0, 0.45, front - 0.15);
-    add((0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("work-briefcase-lock", 0.8, 0.7, 0.3, 0.12, scene, 2), materials.gold).position.set(0, -0.05, front - 0.18);
+    add((0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createRoundedBox)("work-briefcase-lock", 0.8, 0.7, 0.3, 0.12, scene, 2), materials.gold).position.set(0, -0.05, front - 0.18);
     var stamp = createStamp(scene);
     stamp.parent = collider;
     stamp.position.set(0, -1, front - 0.02);
@@ -9824,7 +10663,7 @@ function createStamp(scene) {
         context.clearRect(0, 0, width, height);
         context.strokeStyle = PALETTE.stamp;
         context.lineWidth = 10;
-        (0,_infoStand__WEBPACK_IMPORTED_MODULE_5__.roundRect)(context, 10, 10, width - 20, height - 20, 18);
+        (0,_infoStand__WEBPACK_IMPORTED_MODULE_6__.roundRect)(context, 10, 10, width - 20, height - 20, 18);
         context.stroke();
         context.fillStyle = PALETTE.stamp;
         context.font = "900 66px ".concat(FONT);
@@ -9852,4 +10691,4 @@ function createStamp(scene) {
 /***/ }
 
 }]);
-//# sourceMappingURL=src_scenes_tools_ts.1dc0b5983693463eb03a.js.map
+//# sourceMappingURL=src_scenes_tools_ts.624b0a8d2e0c44b4b72f.js.map

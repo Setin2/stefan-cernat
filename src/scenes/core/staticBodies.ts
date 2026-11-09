@@ -16,6 +16,7 @@ type CannonBody = {
     addShape: (shape: unknown) => void;
     collisionFilterGroup: number;
     collisionFilterMask: number;
+    addEventListener: (type: string, listener: (event: { body: object }) => void) => void;
 };
 type Cannon = {
     Body: new (options: { mass: number }) => CannonBody;
@@ -40,6 +41,8 @@ export type StaticBodyOptions = {
     mask?: number;
     /** What it sounds like when something hits it (see audio/soundMaterials.ts). */
     sound?: SurfaceMaterial;
+    /** Called when a body first touches it, with that body (a cannon.js body). */
+    onHit?: (body: object) => void;
 };
 
 function addBody(scene: BABYLON.Scene, shape: (CANNON: Cannon) => unknown, center: BABYLON.Vector3, options: StaticBodyOptions): boolean {
@@ -62,6 +65,10 @@ function addBody(scene: BABYLON.Scene, shape: (CANNON: Cannon) => unknown, cente
     }
     cannon.world.addBody(body);
     setSoundMaterial(body, options.sound ?? "static");
+    const onHit = options.onHit;
+    if (onHit) {
+        body.addEventListener("collide", (event) => onHit(event.body));
+    }
     scene.onDisposeObservable.addOnce(() => cannon.world.removeBody(body));
     return true;
 }
