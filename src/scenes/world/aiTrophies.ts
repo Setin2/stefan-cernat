@@ -7,7 +7,7 @@ import { GROUND_Y, FACE_CAMERA_YAW } from "../core/constants";
  * Toy trophies with the logos of the AI assistants used while building the site, in place of the
  * three imported figures (plus three new spots next to them).
  *
- * Each trophy is a navy plinth with a nameplate, a gold stem, and a chunky glossy version of the
+ * Each trophy is a navy plinth, a gold stem, and a chunky glossy version of the
  * logo facing the camera. The standing ones are pushable like the figures were: an invisible box
  * collider carries the visible parts.
  *
@@ -38,7 +38,6 @@ const PALETTE = {
     plinth: "#344B63",
     plinthTop: "#E8DCC6",
     gold: "#C9A35B",
-    nameplate: "#F4EBDD",
 };
 
 /** Where the figure at the desk stood. */
@@ -137,7 +136,7 @@ function createTrophy(scene: BABYLON.Scene, spot: Spot, shared: SharedMaterials)
         return mesh;
     };
 
-    // Plinth with a sand top and a nameplate on the front.
+    // Plinth with a sand top.
     const plinth = attach(createRoundedBox(`${id}-plinth`, 3.8, 1.5, 3.8, 0.3, scene));
     plinth.material = shared.plinth;
     plinth.position.y = -HALF_HEIGHT + 0.75;
@@ -154,12 +153,6 @@ function createTrophy(scene: BABYLON.Scene, spot: Spot, shared: SharedMaterials)
     stem.material = shared.gold;
     stem.position.set(0, -HALF_HEIGHT + 3.4, 0.15);
 
-    const plate = createNameplate(scene, `${id}-nameplate`, spot.label);
-    if (plate) {
-        attach(plate);
-        plate.position.set(0, -HALF_HEIGHT + 0.75, -1.92);
-    }
-
     // The logo itself.
     const logo = new BABYLON.TransformNode(`${id}-logo`, scene);
     logo.parent = root;
@@ -170,37 +163,6 @@ function createTrophy(scene: BABYLON.Scene, spot: Spot, shared: SharedMaterials)
         mesh.isPickable = false;
         mesh.metadata = { ...(mesh.metadata ?? {}), keepUnfrozen: true };
     }
-}
-
-function createNameplate(scene: BABYLON.Scene, name: string, label: string): BABYLON.Mesh | null {
-    const width = 512;
-    const height = 128;
-    let texture: BABYLON.DynamicTexture;
-    try {
-        texture = new BABYLON.DynamicTexture(`${name}-texture`, { width, height }, scene, true);
-    } catch {
-        return null;
-    }
-    texture.hasAlpha = true;
-    const context = texture.getContext() as CanvasRenderingContext2D;
-    context.clearRect(0, 0, width, height);
-    context.fillStyle = PALETTE.nameplate;
-    const fontSize = label.length > 9 ? 70 : 84;
-    context.font = `900 ${fontSize}px "Arial Rounded MT Bold", "Nunito", "Trebuchet MS", Arial, sans-serif`;
-    context.textAlign = "center";
-    context.textBaseline = "middle";
-    context.fillText(label, width / 2, height * 0.54);
-    texture.update();
-
-    const material = new BABYLON.StandardMaterial(`${name}-material`, scene);
-    material.diffuseTexture = texture;
-    material.useAlphaFromDiffuseTexture = true;
-    material.specularColor = new BABYLON.Color3(0.1, 0.1, 0.1);
-    material.emissiveColor = new BABYLON.Color3(0.25, 0.25, 0.25);
-
-    const plane = BABYLON.MeshBuilder.CreatePlane(name, { width: 3.3, height: 0.82 }, scene);
-    plane.material = material;
-    return plane;
 }
 
 // ==================================================================== Logos

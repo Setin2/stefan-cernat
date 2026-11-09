@@ -4,7 +4,8 @@ import { addThinInstances, buildMesh, createLumpyBall, createRandom, createRound
 import { GROUND_Y } from "../core/constants";
 
 /**
- * Rebuilds the Fruit Factory corner (the desk with the PC, and the C# trophy) as a toy desk setup.
+ * Rebuilds the Fruit Factory corner (the desk with the PC) as a toy desk setup. The C# trophy next
+ * to it is built in codeTrophy.ts.
  *
  * Every piece of the original desk model is replaced by a toy version built in code at the same
  * place and size: desk, monitor (reusing the Fruit Factory screenshot), PC tower, keyboard, mouse
@@ -29,7 +30,6 @@ const PALETTE = {
     soil: "#5E4436",
     leaves: ["#6E9F7E", "#5B8C70", "#82B08F"],
     title: "#F4EBDD",
-    trophy: "#C9A35B",
 };
 
 /** Horizontal frame aligned with the desk: x to the desk's right, z towards its front, y up. */
@@ -49,12 +49,6 @@ export function restyleFruitFactory(scene: BABYLON.Scene): void {
         restyleDesk(scene);
     } catch (error) {
         console.error("Fruit Factory desk restyle failed", error);
-    }
-
-    try {
-        restyleTrophy(scene);
-    } catch (error) {
-        console.error("C# trophy restyle failed, keeping the original", error);
     }
 }
 
@@ -652,17 +646,4 @@ function place(mesh: BABYLON.AbstractMesh, frame: DeskFrame, x: number, y: numbe
     mesh.position.copyFrom(frame.toWorld(x, y, z));
     mesh.rotation.y = frame.yaw;
     mesh.isPickable = false;
-}
-
-/** The C# logo becomes a shiny gold trophy. */
-function restyleTrophy(scene: BABYLON.Scene): void {
-    const trophy = scene.getMeshByName("c#");
-    if (!trophy) {
-        return;
-    }
-
-    const gold = createToyMaterial(scene, "toy-trophy-gold", PALETTE.trophy, { roughness: 0.25, metallic: 0.75, clearCoat: 0.6 });
-    trophy.getChildMeshes().forEach((mesh) => {
-        mesh.material = gold;
-    });
 }

@@ -164,7 +164,7 @@ function createImpactSounds(scene, sounds, tank) {
         var name_1 = (_c = impostor.object.name) !== null && _c !== void 0 ? _c : "";
         var material = name_1.startsWith("brick") ? "brick"
             : name_1.startsWith("cone-") ? "cone"
-                : name_1.endsWith("-collider") || name_1 === "c#" ? "trophy"
+                : name_1.endsWith("-collider") ? "trophy"
                     // Big props imported with the scene (the desk, the sword and symbol).
                     : impostor.mass === 0 && impostor.object !== ground ? "solid"
                         : null;
@@ -1784,14 +1784,15 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _world_aiTrophies__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ./world/aiTrophies */ "./src/scenes/world/aiTrophies.ts");
 /* harmony import */ var _world_bricks__WEBPACK_IMPORTED_MODULE_16__ = __webpack_require__(/*! ./world/bricks */ "./src/scenes/world/bricks.ts");
 /* harmony import */ var _world_clouds__WEBPACK_IMPORTED_MODULE_17__ = __webpack_require__(/*! ./world/clouds */ "./src/scenes/world/clouds.ts");
-/* harmony import */ var _world_fruitFactory__WEBPACK_IMPORTED_MODULE_18__ = __webpack_require__(/*! ./world/fruitFactory */ "./src/scenes/world/fruitFactory.ts");
-/* harmony import */ var _world_fruitFactorySigns__WEBPACK_IMPORTED_MODULE_19__ = __webpack_require__(/*! ./world/fruitFactorySigns */ "./src/scenes/world/fruitFactorySigns.ts");
-/* harmony import */ var _world_ground__WEBPACK_IMPORTED_MODULE_20__ = __webpack_require__(/*! ./world/ground */ "./src/scenes/world/ground.ts");
-/* harmony import */ var _world_landmarks__WEBPACK_IMPORTED_MODULE_21__ = __webpack_require__(/*! ./world/landmarks */ "./src/scenes/world/landmarks.ts");
-/* harmony import */ var _world_mascots__WEBPACK_IMPORTED_MODULE_22__ = __webpack_require__(/*! ./world/mascots */ "./src/scenes/world/mascots.ts");
-/* harmony import */ var _world_playground__WEBPACK_IMPORTED_MODULE_23__ = __webpack_require__(/*! ./world/playground */ "./src/scenes/world/playground.ts");
-/* harmony import */ var _world_trees__WEBPACK_IMPORTED_MODULE_24__ = __webpack_require__(/*! ./world/trees */ "./src/scenes/world/trees.ts");
-/* harmony import */ var _world_waypointSigns__WEBPACK_IMPORTED_MODULE_25__ = __webpack_require__(/*! ./world/waypointSigns */ "./src/scenes/world/waypointSigns.ts");
+/* harmony import */ var _world_codeTrophy__WEBPACK_IMPORTED_MODULE_18__ = __webpack_require__(/*! ./world/codeTrophy */ "./src/scenes/world/codeTrophy.ts");
+/* harmony import */ var _world_fruitFactory__WEBPACK_IMPORTED_MODULE_19__ = __webpack_require__(/*! ./world/fruitFactory */ "./src/scenes/world/fruitFactory.ts");
+/* harmony import */ var _world_fruitFactorySigns__WEBPACK_IMPORTED_MODULE_20__ = __webpack_require__(/*! ./world/fruitFactorySigns */ "./src/scenes/world/fruitFactorySigns.ts");
+/* harmony import */ var _world_ground__WEBPACK_IMPORTED_MODULE_21__ = __webpack_require__(/*! ./world/ground */ "./src/scenes/world/ground.ts");
+/* harmony import */ var _world_landmarks__WEBPACK_IMPORTED_MODULE_22__ = __webpack_require__(/*! ./world/landmarks */ "./src/scenes/world/landmarks.ts");
+/* harmony import */ var _world_mascots__WEBPACK_IMPORTED_MODULE_23__ = __webpack_require__(/*! ./world/mascots */ "./src/scenes/world/mascots.ts");
+/* harmony import */ var _world_playground__WEBPACK_IMPORTED_MODULE_24__ = __webpack_require__(/*! ./world/playground */ "./src/scenes/world/playground.ts");
+/* harmony import */ var _world_trees__WEBPACK_IMPORTED_MODULE_25__ = __webpack_require__(/*! ./world/trees */ "./src/scenes/world/trees.ts");
+/* harmony import */ var _world_waypointSigns__WEBPACK_IMPORTED_MODULE_26__ = __webpack_require__(/*! ./world/waypointSigns */ "./src/scenes/world/waypointSigns.ts");
 var __extends = (undefined && undefined.__extends) || (function () {
     var extendStatics = function (d, b) {
         extendStatics = Object.setPrototypeOf ||
@@ -1807,6 +1808,7 @@ var __extends = (undefined && undefined.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
+
 
 
 
@@ -1898,17 +1900,18 @@ var Play = /** @class */ (function (_super) {
         var scene = this.scene;
         this.createToyTankModel();
         (0,_tank_tankTrail__WEBPACK_IMPORTED_MODULE_11__.createTankTrail)(scene, this.tank);
-        (0,_world_trees__WEBPACK_IMPORTED_MODULE_24__.instantiateTrees)({ scene: scene });
-        (0,_world_landmarks__WEBPACK_IMPORTED_MODULE_21__.restyleLandmarks)(scene);
-        (0,_world_fruitFactory__WEBPACK_IMPORTED_MODULE_18__.restyleFruitFactory)(scene);
-        (0,_world_fruitFactorySigns__WEBPACK_IMPORTED_MODULE_19__.createFruitFactorySigns)(scene);
-        (0,_world_mascots__WEBPACK_IMPORTED_MODULE_22__.restyleMascots)(scene);
+        (0,_world_trees__WEBPACK_IMPORTED_MODULE_25__.instantiateTrees)({ scene: scene });
+        (0,_world_landmarks__WEBPACK_IMPORTED_MODULE_22__.restyleLandmarks)(scene);
+        (0,_world_fruitFactory__WEBPACK_IMPORTED_MODULE_19__.restyleFruitFactory)(scene);
+        (0,_world_fruitFactorySigns__WEBPACK_IMPORTED_MODULE_20__.createFruitFactorySigns)(scene);
+        (0,_world_mascots__WEBPACK_IMPORTED_MODULE_23__.restyleMascots)(scene);
         tryTo("AI trophies", function () { return (0,_world_aiTrophies__WEBPACK_IMPORTED_MODULE_15__.createAiTrophies)(scene); });
-        (0,_world_waypointSigns__WEBPACK_IMPORTED_MODULE_25__.createWaypointSigns)(scene);
-        tryTo("Playground", function () { return (0,_world_playground__WEBPACK_IMPORTED_MODULE_23__.createPlayground)(scene); });
+        tryTo("C# trophy", function () { return (0,_world_codeTrophy__WEBPACK_IMPORTED_MODULE_18__.createCodeTrophy)(scene); });
+        (0,_world_waypointSigns__WEBPACK_IMPORTED_MODULE_26__.createWaypointSigns)(scene);
+        tryTo("Playground", function () { return (0,_world_playground__WEBPACK_IMPORTED_MODULE_24__.createPlayground)(scene); });
         (0,_world_bricks__WEBPACK_IMPORTED_MODULE_16__.createBrickBuilds)({ scene: scene, tank: this.tank });
         // After the bricks: walls measure the ground height with a ray, and decorations avoid them.
-        (0,_world_ground__WEBPACK_IMPORTED_MODULE_20__.decorateGround)(scene, _world_trees__WEBPACK_IMPORTED_MODULE_24__.TREE_POSITIONS);
+        (0,_world_ground__WEBPACK_IMPORTED_MODULE_21__.decorateGround)(scene, _world_trees__WEBPACK_IMPORTED_MODULE_25__.TREE_POSITIONS);
         tryTo("Clouds", function () { return (0,_world_clouds__WEBPACK_IMPORTED_MODULE_17__.createClouds)(scene, _this.tank, _this.camera); });
         // After everything else, so every mesh is considered as a shadow caster.
         tryTo("Shadows", function () { return (0,_core_shadows__WEBPACK_IMPORTED_MODULE_7__.initializeShadows)(scene, { camera: _this.camera, focus: function () { return _this.tank.position; } }); });
@@ -5304,7 +5307,6 @@ var PALETTE = {
     plinth: "#344B63",
     plinthTop: "#E8DCC6",
     gold: "#C9A35B",
-    nameplate: "#F4EBDD",
 };
 /** Where the figure at the desk stood. */
 var FIGURE_AT_DESK = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector2(-86.3, -4.8);
@@ -5396,7 +5398,7 @@ function createTrophy(scene, spot, shared) {
         parts.push(mesh);
         return mesh;
     };
-    // Plinth with a sand top and a nameplate on the front.
+    // Plinth with a sand top.
     var plinth = attach((0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createRoundedBox)("".concat(id, "-plinth"), 3.8, 1.5, 3.8, 0.3, scene));
     plinth.material = shared.plinth;
     plinth.position.y = -HALF_HEIGHT + 0.75;
@@ -5409,11 +5411,6 @@ function createTrophy(scene, spot, shared) {
     var stem = attach(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder("".concat(id, "-stem"), { diameter: 0.45, height: 3, tessellation: 16 }, scene));
     stem.material = shared.gold;
     stem.position.set(0, -HALF_HEIGHT + 3.4, 0.15);
-    var plate = createNameplate(scene, "".concat(id, "-nameplate"), spot.label);
-    if (plate) {
-        attach(plate);
-        plate.position.set(0, -HALF_HEIGHT + 0.75, -1.92);
-    }
     // The logo itself.
     var logo = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.TransformNode("".concat(id, "-logo"), scene);
     logo.parent = root;
@@ -5425,35 +5422,6 @@ function createTrophy(scene, spot, shared) {
         mesh.isPickable = false;
         mesh.metadata = __assign(__assign({}, ((_a = mesh.metadata) !== null && _a !== void 0 ? _a : {})), { keepUnfrozen: true });
     }
-}
-function createNameplate(scene, name, label) {
-    var width = 512;
-    var height = 128;
-    var texture;
-    try {
-        texture = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.DynamicTexture("".concat(name, "-texture"), { width: width, height: height }, scene, true);
-    }
-    catch (_a) {
-        return null;
-    }
-    texture.hasAlpha = true;
-    var context = texture.getContext();
-    context.clearRect(0, 0, width, height);
-    context.fillStyle = PALETTE.nameplate;
-    var fontSize = label.length > 9 ? 70 : 84;
-    context.font = "900 ".concat(fontSize, "px \"Arial Rounded MT Bold\", \"Nunito\", \"Trebuchet MS\", Arial, sans-serif");
-    context.textAlign = "center";
-    context.textBaseline = "middle";
-    context.fillText(label, width / 2, height * 0.54);
-    texture.update();
-    var material = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.StandardMaterial("".concat(name, "-material"), scene);
-    material.diffuseTexture = texture;
-    material.useAlphaFromDiffuseTexture = true;
-    material.specularColor = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3(0.1, 0.1, 0.1);
-    material.emissiveColor = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3(0.25, 0.25, 0.25);
-    var plane = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreatePlane(name, { width: 3.3, height: 0.82 }, scene);
-    plane.material = material;
-    return plane;
 }
 var LOGO_BUILDERS = {
     claude: buildClaude,
@@ -6118,6 +6086,226 @@ function createSoftDiscTexture(scene) {
 
 /***/ },
 
+/***/ "./src/scenes/world/codeTrophy.ts"
+/*!****************************************!*\
+  !*** ./src/scenes/world/codeTrophy.ts ***!
+  \****************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   createCodeTrophy: () => (/* binding */ createCodeTrophy)
+/* harmony export */ });
+/* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core */ "./node_modules/@babylonjs/core/index.js");
+/* harmony import */ var _core_constants__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../core/constants */ "./src/scenes/core/constants.ts");
+/* harmony import */ var _core_toyStyle__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../core/toyStyle */ "./src/scenes/core/toyStyle.ts");
+var __assign = (undefined && undefined.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
+var __spreadArray = (undefined && undefined.__spreadArray) || function (to, from, pack) {
+    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
+        if (ar || !(i in from)) {
+            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
+            ar[i] = from[i];
+        }
+    }
+    return to.concat(ar || Array.prototype.slice.call(from));
+};
+
+
+
+/**
+ * The C# trophy: a gold cup with two loop handles on a purple plinth, with a hexagon "C#" badge on
+ * the front of the cup. It replaces the imported C# logo model (whose physics box ended up out of
+ * step with what was drawn, so the tank drove straight through it).
+ *
+ * Like the AI trophies it can be pushed around: an invisible box collider carries the visible
+ * parts, and its name ends in "-collider" so hits play the trophy sound.
+ *
+ * Built at size 1 in trophy space: y = 0 is the ground, the front faces -Z.
+ */
+var ID = "code-trophy";
+/** Where the C# logo model stood (x, z). */
+var POSITION = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector2(-117.93, -15.92);
+var SCALE = 1.5;
+var PALETTE = {
+    plinth: "#5B3A8C",
+    plinthTop: "#E8DCC6",
+    gold: "#C9A35B",
+    badge: "#7E57C2",
+    letters: "#FFFFFF",
+};
+/** The cup's outline, turned around the Y axis: (radius, height) from the foot up and back down inside. */
+var CUP_PROFILE = [
+    [0, 1.6],
+    [1.45, 1.6],
+    [1.45, 1.85],
+    [1.15, 2.05],
+    [0.55, 2.2],
+    [0.36, 2.55],
+    [0.34, 3.1],
+    // A knot halfway up the stem.
+    [0.62, 3.3],
+    [0.62, 3.55],
+    [0.36, 3.75],
+    [0.42, 4.15],
+    // The bowl, widening up to a rolled rim.
+    [0.95, 4.45],
+    [1.5, 4.85],
+    [1.88, 5.4],
+    [2.1, 6.1],
+    [2.2, 6.9],
+    [2.42, 7.15],
+    [2.42, 7.35],
+    [2.2, 7.38],
+    // Inside the bowl.
+    [2.0, 7.2],
+    [1.92, 6.4],
+    [1.6, 5.5],
+    [0.9, 5.0],
+    [0, 4.9],
+];
+/** Collider size (trophy space), covering the plinth, the cup and its handles. */
+var BOX = { width: 5.6, height: 7.4, depth: 4.4 };
+function createCodeTrophy(scene) {
+    var _a;
+    removeLogoModel(scene);
+    var yaw = _core_constants__WEBPACK_IMPORTED_MODULE_1__.FACE_CAMERA_YAW + 0.1;
+    var collider = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateBox("".concat(ID, "-collider"), { width: BOX.width * SCALE, height: BOX.height * SCALE, depth: BOX.depth * SCALE }, scene);
+    collider.position.set(POSITION.x, _core_constants__WEBPACK_IMPORTED_MODULE_1__.GROUND_Y + (BOX.height * SCALE / 2) + 0.05, POSITION.y);
+    collider.rotation.y = yaw;
+    collider.isVisible = false;
+    collider.isPickable = false;
+    // Same feel as the AI trophies: no bounce, slides and tips when bumped.
+    var impostor = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.PhysicsImpostor(collider, _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.PhysicsImpostor.BoxImpostor, { mass: 4, friction: 0.6, restitution: 0 }, scene);
+    collider.physicsImpostor = impostor;
+    var body = impostor.physicsBody;
+    if (body) {
+        body.linearDamping = 0.15;
+        body.angularDamping = 0.3;
+    }
+    var root = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.TransformNode(ID, scene);
+    root.parent = collider;
+    root.position.y = -BOX.height * SCALE / 2;
+    root.scaling.setAll(SCALE);
+    for (var _i = 0, _b = buildModel(scene); _i < _b.length; _i++) {
+        var mesh = _b[_i];
+        mesh.parent = root;
+        mesh.isPickable = false;
+        // Moves with its physics body, so its world matrix mustn't be frozen.
+        mesh.metadata = __assign(__assign({}, ((_a = mesh.metadata) !== null && _a !== void 0 ? _a : {})), { keepUnfrozen: true });
+    }
+}
+/** The imported logo: a box with a physics body and the logo mesh as its child. */
+function removeLogoModel(scene) {
+    var _a, _b, _c;
+    var logo = scene.getMeshByName("c#");
+    if (!logo) {
+        return;
+    }
+    // The scene loader doesn't set mesh.physicsImpostor, so find the body through the engine.
+    (_c = ((_a = logo.physicsImpostor) !== null && _a !== void 0 ? _a : (_b = scene.getPhysicsEngine()) === null || _b === void 0 ? void 0 : _b.getImpostorForPhysicsObject(logo))) === null || _c === void 0 ? void 0 : _c.dispose();
+    logo.dispose();
+}
+function buildModel(scene) {
+    var _a;
+    var gold = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "".concat(ID, "-gold"), PALETTE.gold, { roughness: 0.25, metallic: 0.75, clearCoat: 0.6 });
+    var meshes = [];
+    // Two-step plinth.
+    var plinth = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("".concat(ID, "-plinth"), 4.4, 1.2, 4.2, 0.3, scene);
+    plinth.material = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "".concat(ID, "-plinth-material"), PALETTE.plinth, { roughness: 0.45, clearCoat: 0.4 });
+    plinth.position.y = 0.6;
+    var top = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("".concat(ID, "-plinth-top"), 3.6, 0.4, 3.4, 0.15, scene);
+    top.material = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "".concat(ID, "-plinth-top-material"), PALETTE.plinthTop, { roughness: 0.45, clearCoat: 0.35 });
+    top.position.y = 1.4;
+    meshes.push(plinth, top);
+    // The cup, with both handles merged in (one draw call).
+    var cup = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateLathe("".concat(ID, "-cup"), {
+        shape: CUP_PROFILE.map(function (_a) {
+            var r = _a[0], y = _a[1];
+            return new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(r, y, 0);
+        }),
+        tessellation: 40,
+        sideOrientation: _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Mesh.DOUBLESIDE,
+    }, scene);
+    var handles = [-1, 1].map(function (side) { return createHandle(scene, side); });
+    var goldParts = (_a = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Mesh.MergeMeshes(__spreadArray([cup], handles, true), true, true)) !== null && _a !== void 0 ? _a : cup;
+    goldParts.name = "".concat(ID, "-gold-parts");
+    goldParts.material = gold;
+    meshes.push(goldParts);
+    meshes.push.apply(meshes, createBadge(scene));
+    return meshes;
+}
+/** A loop handle on one side of the bowl, from just under the rim curling out and back in lower down. */
+function createHandle(scene, side) {
+    var from = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(2.05, 6.6, 0);
+    var out1 = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(3.3, 6.9, 0);
+    var out2 = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(3.2, 5.0, 0);
+    var to = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(1.55, 4.95, 0);
+    var curve = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Curve3.CreateCubicBezier(from, out1, out2, to, 24).getPoints();
+    var path = curve.map(function (point) { return new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(point.x * side, point.y, point.z); });
+    return _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateTube("".concat(ID, "-handle-").concat(side), {
+        path: path,
+        radiusFunction: function (i) { return 0.2 + (0.06 * Math.sin((i / (path.length - 1)) * Math.PI)); },
+        tessellation: 14,
+        cap: _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Mesh.CAP_ALL,
+    }, scene);
+}
+/** A purple hexagon on the front of the bowl with a white "C#" on it. */
+function createBadge(scene) {
+    var centerY = 6.1;
+    // Just in front of the bowl's surface at that height.
+    var frontZ = -2.06;
+    var hexagon = [];
+    for (var i = 0; i < 6; i++) {
+        var angle = (Math.PI / 6) + (i * Math.PI / 3);
+        hexagon.push([Math.cos(angle) * 0.95, Math.sin(angle) * 0.95]);
+    }
+    var badge = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.extrudeOutline)("".concat(ID, "-badge"), hexagon, 0.3, 0.08, scene);
+    badge.position.set(0, centerY, frontZ);
+    badge.material = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "".concat(ID, "-badge-material"), PALETTE.badge, { roughness: 0.35, clearCoat: 0.7 });
+    // The letters are built around the origin and then moved onto the badge.
+    // "C": an open ring.
+    var arc = [];
+    for (var i = 0; i <= 20; i++) {
+        var angle = 0.75 + ((i / 20) * (Math.PI * 2 - 1.5));
+        arc.push(new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(-0.28 + (Math.cos(angle) * 0.45), Math.sin(angle) * 0.45, 0));
+    }
+    var letterC = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateTube("".concat(ID, "-c"), { path: arc, radius: 0.11, tessellation: 10, cap: _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Mesh.CAP_ALL }, scene);
+    // "#": two slanted uprights and two crossbars (tubes, so they merge with the "C").
+    var stroke = function (name, x1, y1, x2, y2) { return _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateTube(name, {
+        path: [new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(x1, y1, 0), new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(x2, y2, 0)],
+        radius: 0.06,
+        tessellation: 8,
+        cap: _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Mesh.CAP_ALL,
+    }, scene); };
+    var sharpParts = [];
+    for (var _i = 0, _a = [-0.13, 0.13]; _i < _a.length; _i++) {
+        var offset = _a[_i];
+        sharpParts.push(stroke("".concat(ID, "-sharp-v"), 0.52 + offset - 0.05, -0.3, 0.52 + offset + 0.05, 0.3));
+        sharpParts.push(stroke("".concat(ID, "-sharp-h"), 0.27, offset, 0.77, offset));
+    }
+    var letters = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Mesh.MergeMeshes(__spreadArray([letterC], sharpParts, true), true, true);
+    if (!letters) {
+        return [badge];
+    }
+    letters.name = "".concat(ID, "-letters");
+    letters.position.set(0, centerY, frontZ - 0.18);
+    letters.scaling.setAll(0.82);
+    letters.material = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "".concat(ID, "-letters-material"), PALETTE.letters, { roughness: 0.35, clearCoat: 0.6 });
+    return [badge, letters];
+}
+
+
+/***/ },
+
 /***/ "./src/scenes/world/fruitFactory.ts"
 /*!******************************************!*\
   !*** ./src/scenes/world/fruitFactory.ts ***!
@@ -6145,7 +6333,8 @@ var __assign = (undefined && undefined.__assign) || function () {
 
 
 /**
- * Rebuilds the Fruit Factory corner (the desk with the PC, and the C# trophy) as a toy desk setup.
+ * Rebuilds the Fruit Factory corner (the desk with the PC) as a toy desk setup. The C# trophy next
+ * to it is built in codeTrophy.ts.
  *
  * Every piece of the original desk model is replaced by a toy version built in code at the same
  * place and size: desk, monitor (reusing the Fruit Factory screenshot), PC tower, keyboard, mouse
@@ -6169,7 +6358,6 @@ var PALETTE = {
     soil: "#5E4436",
     leaves: ["#6E9F7E", "#5B8C70", "#82B08F"],
     title: "#F4EBDD",
-    trophy: "#C9A35B",
 };
 function restyleFruitFactory(scene) {
     try {
@@ -6177,12 +6365,6 @@ function restyleFruitFactory(scene) {
     }
     catch (error) {
         console.error("Fruit Factory desk restyle failed", error);
-    }
-    try {
-        restyleTrophy(scene);
-    }
-    catch (error) {
-        console.error("C# trophy restyle failed, keeping the original", error);
     }
 }
 function createMaterials(scene) {
@@ -6711,17 +6893,6 @@ function place(mesh, frame, x, y, z) {
     mesh.position.copyFrom(frame.toWorld(x, y, z));
     mesh.rotation.y = frame.yaw;
     mesh.isPickable = false;
-}
-/** The C# logo becomes a shiny gold trophy. */
-function restyleTrophy(scene) {
-    var trophy = scene.getMeshByName("c#");
-    if (!trophy) {
-        return;
-    }
-    var gold = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_1__.createToyMaterial)(scene, "toy-trophy-gold", PALETTE.trophy, { roughness: 0.25, metallic: 0.75, clearCoat: 0.6 });
-    trophy.getChildMeshes().forEach(function (mesh) {
-        mesh.material = gold;
-    });
 }
 
 
@@ -9029,4 +9200,4 @@ function addBullseye(scene, id, parent, y, materials) {
 /***/ }
 
 }]);
-//# sourceMappingURL=src_scenes_tools_ts.296b66ad1879f924d951.js.map
+//# sourceMappingURL=src_scenes_tools_ts.999d90c0ff50084a237c.js.map

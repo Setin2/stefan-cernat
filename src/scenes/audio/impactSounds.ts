@@ -66,7 +66,7 @@ export function createImpactSounds(scene: BABYLON.Scene, sounds: SoundBoard, tan
         const name = (impostor.object as { name?: string }).name ?? "";
         const material: SoundMaterial | null = name.startsWith("brick") ? "brick"
             : name.startsWith("cone-") ? "cone"
-            : name.endsWith("-collider") || name === "c#" ? "trophy"
+            : name.endsWith("-collider") ? "trophy"
             // Big props imported with the scene (the desk, the sword and symbol).
             : impostor.mass === 0 && impostor.object !== ground ? "solid"
             : null;

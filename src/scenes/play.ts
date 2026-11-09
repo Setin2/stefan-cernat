@@ -17,6 +17,7 @@ import { attachFpsCounter } from "./ui/fpsCounter";
 import { createAiTrophies } from "./world/aiTrophies";
 import { createBrickBuilds } from "./world/bricks";
 import { createClouds } from "./world/clouds";
+import { createCodeTrophy } from "./world/codeTrophy";
 import { restyleFruitFactory } from "./world/fruitFactory";
 import { createFruitFactorySigns } from "./world/fruitFactorySigns";
 import { decorateGround } from "./world/ground";
@@ -107,6 +108,7 @@ export default class Play extends Node {
         createFruitFactorySigns(scene);
         restyleMascots(scene);
         tryTo("AI trophies", () => createAiTrophies(scene));
+        tryTo("C# trophy", () => createCodeTrophy(scene));
         createWaypointSigns(scene);
         tryTo("Playground", () => createPlayground(scene));
         createBrickBuilds({ scene, tank: this.tank });
