@@ -391,9 +391,9 @@ export async function initializeShooting(_this: TankContext, forward: BABYLON.Ve
 
     _this.scene.actionManager.registerAction(
         new BABYLON.ExecuteCodeAction(
-            { trigger: BABYLON.ActionManager.OnKeyDownTrigger, parameter: 'e' },
-            handleShoot
-        )
+            { trigger: BABYLON.ActionManager.OnKeyDownTrigger, parameter: "e" },
+            handleShoot,
+        ),
     );
 
     _this.scene.onDisposeObservable.addOnce(() => {

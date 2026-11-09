@@ -200,4 +200,3 @@ function createSoftDiscTexture(scene: BABYLON.Scene): BABYLON.DynamicTexture {
     texture.getAlphaFromRGB = false;
     return texture;
 }
-

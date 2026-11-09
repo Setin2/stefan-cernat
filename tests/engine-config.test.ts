@@ -1,3 +1,5 @@
+import type { Engine } from "@babylonjs/core/Engines/engine";
+
 import { configureEngine, projectConfiguration } from "../src/engine-config";
 
 describe("configureEngine", () => {
@@ -8,7 +10,7 @@ describe("configureEngine", () => {
     it("skips texture format configuration when no formats are available", () => {
         const setTextureFormatToUse = jest.fn();
 
-        configureEngine({ setTextureFormatToUse } as any);
+        configureEngine({ setTextureFormatToUse } as unknown as Engine);
 
         expect(setTextureFormatToUse).not.toHaveBeenCalled();
     });
@@ -17,7 +19,7 @@ describe("configureEngine", () => {
         const setTextureFormatToUse = jest.fn();
         projectConfiguration.compressedTextures.supportedFormats.push("etc1");
 
-        configureEngine({ setTextureFormatToUse } as any);
+        configureEngine({ setTextureFormatToUse } as unknown as Engine);
 
         expect(setTextureFormatToUse).toHaveBeenCalledWith(["etc1"]);
     });

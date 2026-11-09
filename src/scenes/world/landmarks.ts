@@ -293,4 +293,3 @@ function restyleSigns(scene: BABYLON.Scene): void {
     // The description lying on the ground is replaced by the info stand in fruitFactorySigns.ts.
     scene.getMeshByName("ffdescription")?.setEnabled(false);
 }
-

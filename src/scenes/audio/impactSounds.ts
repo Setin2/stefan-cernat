@@ -74,17 +74,26 @@ export function createImpactSounds(scene: BABYLON.Scene, sounds: SoundBoard, tan
     track(ground && (ground.physicsImpostor ?? engine?.getImpostorForPhysicsObject(ground)), "ground");
     track(tank.physicsImpostor, "tank");
     for (const impostor of engine?.getImpostors() ?? []) {
-        const name = (impostor.object as { name?: string }).name ?? "";
-        const material: SoundMaterial | null = name.startsWith("brick") ? "brick"
-            : name.startsWith("cone-") ? "cone"
-            : name.endsWith("-collider") ? "trophy"
-            // Big props imported with the scene (the desk, the sword and symbol).
-            : impostor.mass === 0 && impostor.object !== ground ? "solid"
-            : null;
+        const material = materialFor((impostor.object as { name?: string }).name ?? "", impostor.mass === 0 && impostor.object !== ground);
         if (material) {
             track(impostor, material);
         }
     }
 
     return { track };
+}
+
+/** What a body from the scene sounds like, by its name; `isProp` for other static bodies. */
+function materialFor(name: string, isProp: boolean): SoundMaterial | null {
+    if (name.startsWith("brick")) {
+        return "brick";
+    }
+    if (name.startsWith("cone-")) {
+        return "cone";
+    }
+    if (name.endsWith("-collider")) {
+        return "trophy";
+    }
+    // Big props imported with the scene (the desk, the sword and symbol).
+    return isProp ? "solid" : null;
 }

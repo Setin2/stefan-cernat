@@ -13,6 +13,10 @@ The application is still being developed and has only a few features so far, so 
 2. (Optional) If you want webpack to rebuild while you edit, run `npm run watch`.
 3. You can start the application using `npm run webserver`, which will use `http-server` to host it on `http://localhost:1338/app/`.
 
+# Linting and formatting
+
+`npm run lint` checks the code with ESLint (`eslint.config.mjs`): common mistakes, TypeScript issues and formatting. Formatting means 4-space indents, double quotes, semicolons and trailing commas, the style the code is written in. Any warning fails the check. `npm run lint:fix` fixes what can be fixed automatically. `.editorconfig` sets up most editors to match.
+
 # Tests
 
 Run `npm test` to run the test suite (Jest). The tests live in `tests/`, in folders that mirror `src/scenes/`:
@@ -27,9 +31,9 @@ GitHub Pages serves the site straight from `main`, including the built `dist/` f
 1. Stop `npm run watch` if it's running (it writes a development build into `dist/`).
 2. Run `npm run build` and commit `dist/` together with the source changes.
 
-`npm run verify` runs everything CI checks: typecheck, tests, the production build, and that `dist/` matches the committed one.
+`npm run verify` runs everything CI checks: lint and formatting, typecheck, tests, the production build, and that `dist/` matches the committed one.
 
 # CI
 
-`.github/workflows/ci.yml` runs on every push to `main` and every pull request. It typechecks, runs the tests and builds. It fails if the committed `dist/` isn't the production build of the source, which catches a forgotten `npm run build` before it reaches the live site. The build is reproducible (the same source always builds to the same files), which is what makes that check possible. Dependabot keeps the workflow's actions up to date.
+`.github/workflows/ci.yml` runs on every push to `main` and every pull request. It lints and checks formatting, typechecks, runs the tests and builds. It fails if the committed `dist/` isn't the production build of the source, which catches a forgotten `npm run build` before it reaches the live site. The build is reproducible (the same source always builds to the same files), which is what makes that check possible. Dependabot keeps the workflow's actions up to date.
 

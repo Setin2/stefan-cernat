@@ -10,8 +10,10 @@
         "webserver": "http-server -p 1338 -c-1",
         "test": "node --no-deprecation node_modules/jest/bin/jest.js",
         "typecheck": "tsc --noEmit -p .",
+        "lint": "eslint . --max-warnings=0",
+        "lint:fix": "eslint . --fix",
         "check:dist": "git diff --quiet -- dist && test -z \"$(git ls-files --others --exclude-standard -- dist)\" && echo 'dist/ is up to date' || (echo 'dist/ differs from the committed build: commit the new dist/' && exit 1)",
-        "verify": "npm run typecheck && npm test && npm run build && npm run check:dist"
+        "verify": "npm run lint && npm run typecheck && npm test && npm run build && npm run check:dist"
     },
     "license": "(Apache-2.0)",
     "devDependencies": {
@@ -21,7 +23,9 @@
         "@babel/preset-typescript": "^7.24.7",
         "@babylonjs/core": "5.19.0",
         "@babylonjs/gui": "5.19.0",
+        "@eslint/js": "^9.13.0",
         "@jest/globals": "^29.7.0",
+        "@stylistic/eslint-plugin": "^2.9.0",
         "@types/cypress": "^0.1.6",
         "@types/jest": "^29.5.12",
         "@types/node": "^18.7.4",
@@ -30,6 +34,8 @@
         "babel-loader": "8.2.3",
         "babylonjs-editor-webpack-progress": "1.0.3",
         "cypress": "^16.2.1",
+        "eslint": "^9.13.0",
+        "globals": "^15.11.0",
         "http-server": "^14.1.1",
         "jest": "^29.7.0",
         "jest-canvas-mock": "^2.5.2",
@@ -40,6 +46,7 @@
         "sinon": "^15.0.1",
         "ts-loader": "^9.5.1",
         "typescript": "^5.5.4",
+        "typescript-eslint": "^8.11.0",
         "webpack": "^5.93.0",
         "webpack-cli": "4.9.1"
     },

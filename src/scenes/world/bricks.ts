@@ -113,7 +113,7 @@ function instantiateBricks(
     y: number,
     z: number,
     numColumnsPerRow: number[],
-    rotationY: number = 0
+    rotationY: number = 0,
 ): void {
     const brickScaleFactor = 1.1;
     const brickLength = 6 * brickScaleFactor;
@@ -125,7 +125,7 @@ function instantiateBricks(
     // One hidden template per colour; the visible bricks are instances of these.
     const brickTemplates = createBrickTemplates(_this, brickLength, brickHeight, brickDepth);
     const colorOffset = Math.abs(Math.round(x + z)) % BRICK_COLORS.length;
-    
+
     // Define a small buffer to prevent collision
     const buffer = 0; // Adjust this value as needed
 
@@ -140,10 +140,10 @@ function instantiateBricks(
     for (let j = 0; j < numColumnsPerRow.length; j++) {
         // Number of bricks in the current row
         const numBricksInRow = numColumnsPerRow[j] ?? 0;
-        
+
         // Calculate the total width of the current row
         const totalRowWidth = numBricksInRow * (brickLength + buffer);
-        
+
         // Start placing bricks so the row is centered on the wall's center
         let localX = -(totalRowWidth / 2);
         const localY = initialY + j * (brickHeight + buffer);
@@ -167,7 +167,7 @@ function instantiateBricks(
         _this: BrickContext,
         length: number,
         height: number,
-        depth: number
+        depth: number,
     ): BABYLON.Mesh[] {
         return BRICK_COLORS.map((hex, i) => {
             const material = createToyMaterial(_this.scene, `toy-brick-${i}`, hex, { roughness: 0.5, clearCoat: 0.4 });

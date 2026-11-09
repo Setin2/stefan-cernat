@@ -1,8 +1,9 @@
 # Checks every push to main and every pull request:
-#   1. TypeScript compiles (the game and the tests),
-#   2. the tests pass,
-#   3. the production build works, and
-#   4. the committed dist/ is that build. GitHub Pages serves dist/ straight from main, so a push
+#   1. the code passes the linter and is formatted (ESLint, see eslint.config.mjs),
+#   2. TypeScript compiles (the game and the tests),
+#   3. the tests pass,
+#   4. the production build works, and
+#   5. the committed dist/ is that build. GitHub Pages serves dist/ straight from main, so a push
 #      without a fresh `npm run build` would deploy an old version of the site.
 #
 # Run the same checks locally with `npm run verify`.
@@ -24,7 +25,7 @@ permissions:
 
 jobs:
   check:
-    name: Typecheck, test, build
+    name: Lint, typecheck, test, build
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -39,6 +40,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Lint and formatting
+        run: npm run lint
 
       - name: Typecheck
         run: npm run typecheck

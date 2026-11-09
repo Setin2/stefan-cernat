@@ -374,4 +374,3 @@ function buildDisc(name: string, cx: number, cz: number, radiusX: number, radius
     }
     return buildMesh(name, positions, normals, indices, scene, uvs);
 }
-

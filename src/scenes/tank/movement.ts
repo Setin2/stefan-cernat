@@ -128,7 +128,6 @@ export function initializeTankMovement(_this: TankContext, rotationSpeed: number
         const turnInput = (inputMap["d"] ? 1 : 0) - (inputMap["a"] ? 1 : 0);
         applyMovement(_this.tank, moveInput, deltaSeconds);
 
-
         const desiredTurnSpeed = turnInput * maxTurnSpeed;
         currentTurnSpeed = moveToward(currentTurnSpeed, desiredTurnSpeed, turnAcceleration * deltaSeconds);
         if (currentTurnSpeed !== 0) {

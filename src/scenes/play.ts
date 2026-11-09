@@ -48,7 +48,7 @@ export default class Play extends Node {
     private workCorner: WorkCorner | null = null;
     private fruitRushButton: ArcadeButton | null = null;
 
-    // @ts-ignore Babylon attaches script classes without calling Node's public constructor shape.
+    // @ts-expect-error Babylon attaches script classes without calling Node's public constructor shape.
     protected constructor() {}
 
     /**
@@ -58,6 +58,8 @@ export default class Play extends Node {
     public onInitialize(): void {
         this.findSceneObjects();
         this.loadScreenTexture();
+        // An easter egg for whoever opens the console.
+        // eslint-disable-next-line no-console
         console.log("%c Very sly of you, but there is nothing to see here ;)", "color: #CE718F");
 
         enablePhysics(this.scene);
