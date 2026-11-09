@@ -17,6 +17,8 @@ type CannonContact = {
     getImpactVelocityAlongNormal: () => number;
 };
 type CannonBody = {
+    id: number;
+    world?: { stepnumber: number } | null;
     position: CannonVec3;
     addEventListener: (type: string, listener: (event: { contact: CannonContact }) => void) => void;
 };
@@ -28,15 +30,24 @@ export type ImpactSounds = {
 
 export function createImpactSounds(scene: BABYLON.Scene, sounds: SoundBoard, tank: BABYLON.AbstractMesh): ImpactSounds {
     const position = new BABYLON.Vector3();
-    let lastContact: CannonContact | null = null;
+    // Pairs of bodies already played this physics step. Both bodies get the event for each
+    // contact, and a box landing flat touches down at up to four corners at once (one contact
+    // each): it's still one hit.
+    const playedThisStep = new Set<string>();
+    let step = -1;
 
-    // Both bodies get the event for the same contact, one right after the other: play it once.
     const onCollide = (event: { contact: CannonContact }) => {
         const contact = event.contact;
-        if (contact === lastContact) {
+        const currentStep = contact.bi.world?.stepnumber ?? contact.bj.world?.stepnumber ?? 0;
+        if (currentStep !== step) {
+            step = currentStep;
+            playedThisStep.clear();
+        }
+        const pair = contact.bi.id < contact.bj.id ? `${contact.bi.id}:${contact.bj.id}` : `${contact.bj.id}:${contact.bi.id}`;
+        if (playedThisStep.has(pair)) {
             return;
         }
-        lastContact = contact;
+        playedThisStep.add(pair);
         const a = getSoundMaterial(contact.bi) ?? "static";
         const b = getSoundMaterial(contact.bj) ?? "static";
         position.set(contact.bi.position.x + contact.ri.x, contact.bi.position.y + contact.ri.y, contact.bi.position.z + contact.ri.z);

@@ -6,6 +6,7 @@ import { GROUND_Y, FACE_CAMERA_YAW } from "../core/constants";
 import { UI } from "../ui/style";
 import { createArcadeButton, type ArcadeButton } from "./arcadeButton";
 import { createInfoStand, drawInfoText, roundRect } from "./infoStand";
+import type { Signal } from "./tradingMarket";
 
 /**
  * The work corner, in the open field south of the start, past the brick wall: straight ahead from
@@ -59,7 +60,7 @@ type Frame = {
 };
 
 /** A "signal" shown by the quantum core: which way it expects the market to go next. */
-export type CoreSignal = "up" | "down" | "none";
+export type CoreSignal = Signal;
 
 /** What the minigame uses. */
 export type WorkCorner = {

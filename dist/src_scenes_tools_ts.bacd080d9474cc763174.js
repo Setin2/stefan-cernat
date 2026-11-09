@@ -127,17 +127,26 @@ function buildEngine(context, bus, noise) {
 function createImpactSounds(scene, sounds, tank) {
     var _a, _b, _c;
     var position = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3();
-    var lastContact = null;
-    // Both bodies get the event for the same contact, one right after the other: play it once.
+    // Pairs of bodies already played this physics step. Both bodies get the event for each
+    // contact, and a box landing flat touches down at up to four corners at once (one contact
+    // each): it's still one hit.
+    var playedThisStep = new Set();
+    var step = -1;
     var onCollide = function (event) {
-        var _a, _b;
+        var _a, _b, _c, _d, _e, _f;
         var contact = event.contact;
-        if (contact === lastContact) {
+        var currentStep = (_d = (_b = (_a = contact.bi.world) === null || _a === void 0 ? void 0 : _a.stepnumber) !== null && _b !== void 0 ? _b : (_c = contact.bj.world) === null || _c === void 0 ? void 0 : _c.stepnumber) !== null && _d !== void 0 ? _d : 0;
+        if (currentStep !== step) {
+            step = currentStep;
+            playedThisStep.clear();
+        }
+        var pair = contact.bi.id < contact.bj.id ? "".concat(contact.bi.id, ":").concat(contact.bj.id) : "".concat(contact.bj.id, ":").concat(contact.bi.id);
+        if (playedThisStep.has(pair)) {
             return;
         }
-        lastContact = contact;
-        var a = (_a = (0,_soundMaterials__WEBPACK_IMPORTED_MODULE_1__.getSoundMaterial)(contact.bi)) !== null && _a !== void 0 ? _a : "static";
-        var b = (_b = (0,_soundMaterials__WEBPACK_IMPORTED_MODULE_1__.getSoundMaterial)(contact.bj)) !== null && _b !== void 0 ? _b : "static";
+        playedThisStep.add(pair);
+        var a = (_e = (0,_soundMaterials__WEBPACK_IMPORTED_MODULE_1__.getSoundMaterial)(contact.bi)) !== null && _e !== void 0 ? _e : "static";
+        var b = (_f = (0,_soundMaterials__WEBPACK_IMPORTED_MODULE_1__.getSoundMaterial)(contact.bj)) !== null && _f !== void 0 ? _f : "static";
         position.set(contact.bi.position.x + contact.ri.x, contact.bi.position.y + contact.ri.y, contact.bi.position.z + contact.ri.z);
         sounds.impact(a, b, Math.abs(contact.getImpactVelocityAlongNormal()), position);
     };
@@ -947,9 +956,28 @@ function enablePhysics(scene) {
         var subSteps = Math.max(1, Math.ceil(delta / MAX_SUB_STEP_SECONDS - 1e-6));
         var subStepSeconds = delta / subSteps;
         for (var i = 0; i < subSteps; i++) {
+            if (world) {
+                refreshBroadphase(world);
+            }
             executeStep(subStepSeconds, impostors);
         }
     };
+}
+/**
+ * cannon.js 0.6.2's sweep-and-prune broadphase keeps its bodies sorted along an axis and stops
+ * looking for pairs once the next body is out of reach, but it only re-sorts (and refreshes the
+ * bodies' bounding boxes) when a body is added or removed. As things move, the order goes stale
+ * and real overlaps are skipped. Bodies Babylon moves into place also keep the bounding box of
+ * where they were created: the bricks' boxes stayed at their wall's local coordinates, near the
+ * world origin. So the tank, and shots, drove straight through sleeping bricks.
+ * Re-sorting every step is cheap (the list is nearly sorted already).
+ */
+function refreshBroadphase(world) {
+    for (var _i = 0, _a = world.bodies; _i < _a.length; _i++) {
+        var body = _a[_i];
+        body.aabbNeedsUpdate = true;
+    }
+    world.broadphase.dirty = true;
 }
 /**
  * cannon.js 0.6.2 limits each friction *impulse* by the friction *force* (mu * g * mass) without
@@ -2117,6 +2145,16 @@ var MAX_LAUNCH_SPEED = 22;
 /** Steeper steps than this (the back of a ramp, a platform's side) are walls. */
 var MAX_CLIMB_STEP = 1.2;
 var MAX_TILT = 0.5;
+/**
+ * A grounded tank follows the surface down by up to this much per frame instead of taking off.
+ * Tipping over an edge lowers the lowest point of the tank faster than it falls; without this it
+ * would count as airborne, level out in the "air", land, tip again, and so on, every few frames
+ * (shaking, and flickering the engine and landing sounds). Real drops are much bigger than this.
+ * It doesn't apply while the surface is lifting the tank faster than SNAP_MAX_RISE (driving up
+ * the lip of a ramp), so jumps still launch.
+ */
+var SNAP_DOWN = 0.6;
+var SNAP_MAX_RISE = 4;
 /** How quickly the model's tilt follows the surface (per second). */
 var GROUNDED_TILT_RATE = 14;
 var AIR_PITCH_RATE = 6;
@@ -2174,9 +2212,10 @@ onLand) {
             roll -= roll * Math.min(1, deltaSeconds * AIR_ROLL_RATE);
         }
         var support = supportHeight();
+        var snaps = grounded && verticalSpeed < SNAP_MAX_RISE;
         verticalSpeed -= GRAVITY * deltaSeconds;
         var next = elevation + (verticalSpeed * deltaSeconds);
-        if (next <= support) {
+        if (next <= support || (snaps && next - support < SNAP_DOWN)) {
             // On the surface: move with it, keeping the speed it gives (so the lip of a ramp launches
             // the tank and it stays glued to a downhill slope). A landing never pushes it back up.
             var surfaceSpeed = (support - elevation) / deltaSeconds;
@@ -6207,6 +6246,11 @@ function instantiateBricks(_this, x, y, z, numColumnsPerRow, rotationY) {
     function positionBrick(brick, x, y, z) {
         brick.position.set(x, y, z);
         var impostor = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.PhysicsImpostor(brick, _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.PhysicsImpostor.BoxImpostor, BRICK_PHYSICS, _this.scene);
+        // Babylon doesn't link the impostor to the mesh by itself. Without the link, the startup
+        // optimisation (core/performance.ts) took bricks for static scenery: it froze them and
+        // stopped updating their bounding boxes, which stayed where each brick was first built.
+        // Knocked-down bricks then vanished whenever that old spot went off screen.
+        brick.physicsImpostor = impostor;
         brickImpostors.push(impostor);
         var body = impostor.physicsBody;
         if (body) {
@@ -7551,6 +7595,90 @@ function drawCherries(context, x, y) {
 
 /***/ },
 
+/***/ "./src/scenes/world/fruitFlight.ts"
+/*!*****************************************!*\
+  !*** ./src/scenes/world/fruitFlight.ts ***!
+  \*****************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   FLIGHT: () => (/* binding */ FLIGHT),
+/* harmony export */   canCollect: () => (/* binding */ canCollect),
+/* harmony export */   launchVelocity: () => (/* binding */ launchVelocity),
+/* harmony export */   stepFruit: () => (/* binding */ stepFruit)
+/* harmony export */ });
+/* unused harmony export spoilage */
+/**
+ * How Fruit Rush's fruit moves (see fruitRush.ts), kept free of Babylon so it can be tested on its
+ * own: thrown on a ballistic arc that lands on a chosen spot, bouncing a couple of times, rolling
+ * to a stop, then spoiling (shrinking away) after a while on the ground.
+ */
+var FLIGHT = {
+    gravity: 40,
+    /** Landing faster than this (downwards) bounces; slower just stops. */
+    bounceSpeed: 5,
+    /** Kept of the vertical / horizontal speed on a bounce. */
+    bounce: 0.4,
+    bounceFriction: 0.6,
+    /** How fast rolling slows down (per second, exponential). */
+    rollFriction: 2.5,
+    /** Seconds on the ground before spoiling starts, and how long spoiling takes. */
+    lifetime: 6,
+    spoilSeconds: 0.8,
+};
+/** The launch velocity that takes a fruit from `from` to `to` in `seconds`, under gravity. */
+function launchVelocity(from, to, seconds, gravity) {
+    if (gravity === void 0) { gravity = FLIGHT.gravity; }
+    return {
+        x: (to.x - from.x) / seconds,
+        y: ((to.y - from.y) + (0.5 * gravity * seconds * seconds)) / seconds,
+        z: (to.z - from.z) / seconds,
+    };
+}
+/**
+ * Advances a fruit by `dt` seconds. `restY` is the height of its centre when lying on the ground.
+ * Returns how much it has spoiled: 0 while fresh, rising to 1 when it has shrunk away.
+ */
+function stepFruit(fruit, dt, restY) {
+    var position = fruit.position, velocity = fruit.velocity;
+    velocity.y -= FLIGHT.gravity * dt;
+    position.x += velocity.x * dt;
+    position.y += velocity.y * dt;
+    position.z += velocity.z * dt;
+    if (position.y <= restY) {
+        position.y = restY;
+        if (fruit.groundTime < 0) {
+            fruit.groundTime = 0;
+        }
+        if (velocity.y < -FLIGHT.bounceSpeed) {
+            velocity.y *= -FLIGHT.bounce;
+            velocity.x *= FLIGHT.bounceFriction;
+            velocity.z *= FLIGHT.bounceFriction;
+        }
+        else {
+            velocity.y = 0;
+        }
+    }
+    if (fruit.groundTime >= 0) {
+        fruit.groundTime += dt;
+        var friction = Math.exp(-FLIGHT.rollFriction * dt);
+        velocity.x *= friction;
+        velocity.z *= friction;
+    }
+    return spoilage(fruit.groundTime);
+}
+/** 0 while fresh, then rising to 1 over spoilSeconds once its time on the ground is up. */
+function spoilage(groundTime) {
+    return Math.max(0, Math.min(1, (groundTime - FLIGHT.lifetime) / FLIGHT.spoilSeconds));
+}
+/** Whether a tank centred at (x, z) picks up the fruit: close enough, and the fruit low enough. */
+function canCollect(fruit, tankX, tankZ, restY, radius) {
+    return fruit.y < restY + 6 && Math.hypot(fruit.x - tankX, fruit.z - tankZ) < radius;
+}
+
+
+/***/ },
+
 /***/ "./src/scenes/world/fruitRush.ts"
 /*!***************************************!*\
   !*** ./src/scenes/world/fruitRush.ts ***!
@@ -7567,7 +7695,9 @@ function drawCherries(context, x, y) {
 /* harmony import */ var _ui_minigameHud__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../ui/minigameHud */ "./src/scenes/ui/minigameHud.ts");
 /* harmony import */ var _ui_style__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../ui/style */ "./src/scenes/ui/style.ts");
 /* harmony import */ var _arcadeButton__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./arcadeButton */ "./src/scenes/world/arcadeButton.ts");
-/* harmony import */ var _ground__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./ground */ "./src/scenes/world/ground.ts");
+/* harmony import */ var _fruitFlight__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./fruitFlight */ "./src/scenes/world/fruitFlight.ts");
+/* harmony import */ var _ground__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./ground */ "./src/scenes/world/ground.ts");
+/* harmony import */ var _minigameScores__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./minigameScores */ "./src/scenes/world/minigameScores.ts");
 var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -7620,6 +7750,8 @@ var __spreadArray = (undefined && undefined.__spreadArray) || function (to, from
 
 
 
+
+
 /**
  * Fruit Rush, the Fruit Factory's minigame (Idle Fruit Factory is a game about producing fruit):
  *
@@ -7629,8 +7761,8 @@ var __spreadArray = (undefined && undefined.__spreadArray) || function (to, from
  * - Drive into fruit to collect it before it spoils (it shrinks away after a few seconds on the
  *   ground). Golden apples are rare and count GOLDEN_POINTS; quick pickups in a row climb in pitch.
  *
- * Fruit flies on simple hand-made arcs and bounces (no physics bodies), so even a busy round costs
- * little. The best score is remembered in the browser.
+ * Fruit flies on simple hand-made arcs and bounces (no physics bodies, see fruitFlight.ts), so
+ * even a busy round costs little. The best score is remembered in the browser.
  */
 var ROUND_SECONDS = 40;
 /** Where the fruit lands: a disc on the grass in front of the desk (toward the camera). */
@@ -7639,7 +7771,6 @@ var FIELD = { x: -118, z: 14, radius: 12 };
 var BUTTON_POSITION = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector2(-129, 0);
 /** Fruit launches from here if the factory's sign isn't found. */
 var FALLBACK_LAUNCH = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(-96, 20, -6);
-var GRAVITY = 40;
 var FLIGHT_SECONDS = { min: 1.1, max: 1.6 };
 /** Seconds between fruit, from the start of the round to the end. */
 var SPAWN_INTERVAL = { start: 0.8, end: 0.38 };
@@ -7648,9 +7779,6 @@ var BURST_EVERY = 9;
 var BURST_SIZE = 4;
 var GOLDEN_CHANCE = 0.07;
 var GOLDEN_POINTS = 5;
-/** How long fruit lasts on the ground, then how long it takes to shrink away. */
-var LIFETIME = 6;
-var SPOIL_SECONDS = 0.8;
 var FRUIT_SCALE = 3;
 /** The tank picks up fruit this close to its centre (it's about 12 units across). */
 var COLLECT_RADIUS = 7.5;
@@ -7672,7 +7800,7 @@ var COLORS = {
 };
 /** The PLAY button, built with the world (so ground decorations keep clear of it and the field). */
 function createFruitRushButton(scene) {
-    (0,_ground__WEBPACK_IMPORTED_MODULE_6__.keepGroundClear)({ minX: FIELD.x - FIELD.radius - 3, maxX: FIELD.x + FIELD.radius + 3, minZ: FIELD.z - FIELD.radius - 3, maxZ: FIELD.z + FIELD.radius + 3 });
+    (0,_ground__WEBPACK_IMPORTED_MODULE_7__.keepGroundClear)({ minX: FIELD.x - FIELD.radius - 3, maxX: FIELD.x + FIELD.radius + 3, minZ: FIELD.z - FIELD.radius - 3, maxZ: FIELD.z + FIELD.radius + 3 });
     return (0,_arcadeButton__WEBPACK_IMPORTED_MODULE_5__.createArcadeButton)(scene, {
         id: "fruit-rush-button",
         x: BUTTON_POSITION.x,
@@ -7710,7 +7838,7 @@ function createFruitRush(context, button) {
                     fieldCenter = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(FIELD.x, _core_constants__WEBPACK_IMPORTED_MODULE_1__.GROUND_Y, FIELD.z);
                     restY = _core_constants__WEBPACK_IMPORTED_MODULE_1__.GROUND_Y + (FRUIT_SCALE * 0.45);
                     state = "idle";
-                    best = loadBest();
+                    best = (0,_minigameScores__WEBPACK_IMPORTED_MODULE_8__.loadBest)(BEST_KEY);
                     timeLeft = 0;
                     resultsLeft = 0;
                     score = 0;
@@ -7758,7 +7886,7 @@ function createFruitRush(context, button) {
                         newBest = best === null || score > best;
                         if (newBest) {
                             best = score;
-                            saveBest(score);
+                            (0,_minigameScores__WEBPACK_IMPORTED_MODULE_8__.saveBest)(BEST_KEY, score);
                         }
                         state = "results";
                         resultsLeft = RESULTS_SECONDS;
@@ -7788,7 +7916,8 @@ function createFruitRush(context, button) {
                         var kind = Math.random() < GOLDEN_CHANCE ? "golden" : ["apple", "orange", "pear"][Math.floor(Math.random() * 3)];
                         var from = launch.add(new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3((Math.random() - 0.5) * 6, 0, (Math.random() - 0.5) * 2));
                         var time = FLIGHT_SECONDS.min + (Math.random() * (FLIGHT_SECONDS.max - FLIGHT_SECONDS.min));
-                        var velocity = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3((target.x - from.x) / time, ((target.y - from.y) + (0.5 * GRAVITY * time * time)) / time, (target.z - from.z) / time);
+                        var thrown = (0,_fruitFlight__WEBPACK_IMPORTED_MODULE_6__.launchVelocity)(from, target, time);
+                        var velocity = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(thrown.x, thrown.y, thrown.z);
                         var mesh = templates[kind].createInstance("fruit-rush-".concat(kind, "-").concat(fruitCount++));
                         mesh.isPickable = false;
                         mesh.position.copyFrom(from);
@@ -7805,58 +7934,31 @@ function createFruitRush(context, button) {
                     updateFruit = function (dt) {
                         for (var i = fruits.length - 1; i >= 0; i--) {
                             var fruit = fruits[i];
-                            var position = fruit.position, velocity = fruit.velocity;
-                            // Flight and bounces.
-                            velocity.y -= GRAVITY * dt;
-                            position.addInPlace(velocity.scale(dt));
-                            if (position.y <= restY) {
-                                position.y = restY;
-                                if (fruit.groundTime < 0) {
-                                    fruit.groundTime = 0;
-                                }
-                                if (velocity.y < -5) {
-                                    velocity.y *= -0.4;
-                                    velocity.x *= 0.6;
-                                    velocity.z *= 0.6;
-                                }
-                                else {
-                                    velocity.y = 0;
-                                }
-                            }
+                            var spoil = (0,_fruitFlight__WEBPACK_IMPORTED_MODULE_6__.stepFruit)(fruit, dt, restY);
                             if (fruit.groundTime >= 0) {
-                                fruit.groundTime += dt;
-                                // Rolling to a stop.
-                                var friction = Math.exp(-2.5 * dt);
-                                velocity.x *= friction;
-                                velocity.z *= friction;
-                                fruit.spin.scaleInPlace(friction);
+                                fruit.spin.scaleInPlace(Math.exp(-_fruitFlight__WEBPACK_IMPORTED_MODULE_6__.FLIGHT.rollFriction * dt));
                             }
-                            fruit.mesh.position.copyFrom(position);
+                            fruit.mesh.position.copyFrom(fruit.position);
                             fruit.mesh.rotation.addInPlace(fruit.spin.scale(dt));
                             if (fruit.kind === "golden") {
                                 fruit.mesh.rotation.y += dt * 3;
                             }
-                            // Picked up by the tank?
-                            if (position.y < restY + 6 && Math.hypot(position.x - tank.position.x, position.z - tank.position.z) < COLLECT_RADIUS) {
+                            if ((0,_fruitFlight__WEBPACK_IMPORTED_MODULE_6__.canCollect)(fruit.position, tank.position.x, tank.position.z, restY, COLLECT_RADIUS)) {
                                 var golden = fruit.kind === "golden";
                                 score += golden ? GOLDEN_POINTS : 1;
                                 caught++;
                                 streak = clock - lastPickup < STREAK_SECONDS ? streak + 1 : 0;
                                 lastPickup = clock;
-                                sounds.pickup(golden, streak, position);
+                                sounds.pickup(golden, streak, fruit.position);
                                 fruit.mesh.dispose();
                                 fruits.splice(i, 1);
-                                continue;
                             }
-                            // Spoiling: shrinks away after a while on the ground.
-                            var spoil = (fruit.groundTime - LIFETIME) / SPOIL_SECONDS;
-                            if (spoil > 0) {
-                                if (spoil >= 1) {
-                                    missed++;
-                                    fruit.mesh.dispose();
-                                    fruits.splice(i, 1);
-                                    continue;
-                                }
+                            else if (spoil >= 1) {
+                                missed++;
+                                fruit.mesh.dispose();
+                                fruits.splice(i, 1);
+                            }
+                            else if (spoil > 0) {
                                 fruit.mesh.scaling.setAll(FRUIT_SCALE * (1 - spoil));
                             }
                         }
@@ -7910,11 +8012,11 @@ function createFruitRush(context, button) {
                             hud.set("FRUIT RUSH", _ui_style__WEBPACK_IMPORTED_MODULE_4__.UI.navy, "Shoot PLAY to start", "The factory is overflowing! Drive into the fruit to collect it before it spoils. Golden apples count ".concat(GOLDEN_POINTS, ".").concat(best !== null ? " Best: ".concat(best) : ""));
                         }
                         else if (state === "playing" && awayFor > 0) {
-                            hud.set("FRUIT RUSH  ".concat(formatTime(timeLeft)), _ui_style__WEBPACK_IMPORTED_MODULE_4__.UI.pinkDeep, "Come back!", "Leaving the orchard ends the round in ".concat(Math.max(0, LEAVE_GRACE - awayFor).toFixed(1), " s."), _ui_style__WEBPACK_IMPORTED_MODULE_4__.UI.pinkDeep);
+                            hud.set("FRUIT RUSH  ".concat((0,_minigameScores__WEBPACK_IMPORTED_MODULE_8__.formatClock)(timeLeft)), _ui_style__WEBPACK_IMPORTED_MODULE_4__.UI.pinkDeep, "Come back!", "Leaving the orchard ends the round in ".concat(Math.max(0, LEAVE_GRACE - awayFor).toFixed(1), " s."), _ui_style__WEBPACK_IMPORTED_MODULE_4__.UI.pinkDeep);
                         }
                         else if (state === "playing") {
                             var streakText = streak >= 2 && clock - lastPickup < STREAK_SECONDS ? "Streak x".concat(streak + 1, "!") : "Drive into the fruit before it spoils!";
-                            hud.set("FRUIT RUSH  ".concat(formatTime(timeLeft)), timeLeft < 10 ? _ui_style__WEBPACK_IMPORTED_MODULE_4__.UI.pinkDeep : _ui_style__WEBPACK_IMPORTED_MODULE_4__.UI.gold, "".concat(score, " fruit"), streakText, "#3E9C6E");
+                            hud.set("FRUIT RUSH  ".concat((0,_minigameScores__WEBPACK_IMPORTED_MODULE_8__.formatClock)(timeLeft)), timeLeft < 10 ? _ui_style__WEBPACK_IMPORTED_MODULE_4__.UI.pinkDeep : _ui_style__WEBPACK_IMPORTED_MODULE_4__.UI.gold, "".concat(score, " fruit"), streakText, "#3E9C6E");
                         }
                         else {
                             hud.set(newBest ? "NEW BEST!" : "HARVEST DONE", _ui_style__WEBPACK_IMPORTED_MODULE_4__.UI.mint, "".concat(score, " fruit"), "Caught ".concat(caught, ", ").concat(missed, " spoiled.").concat(best !== null ? " Best ".concat(best, ".") : "", " Shoot PLAY to go again."), "#3E9C6E");
@@ -7988,28 +8090,6 @@ function createFruitTemplates(scene) {
         pear: build("fruit-rush-pear", __spreadArray([pearBody, pearNeck], stemAndLeaf("fruit-rush-pear", 0.78), true), material),
         golden: build("fruit-rush-golden", apple("fruit-rush-golden", COLORS.golden), golden),
     };
-}
-function formatTime(seconds) {
-    var whole = Math.max(0, Math.ceil(seconds));
-    return "0:".concat(whole.toString().padStart(2, "0"));
-}
-function loadBest() {
-    try {
-        var stored = window.localStorage.getItem(BEST_KEY);
-        var value = stored === null ? NaN : Number(stored);
-        return Number.isFinite(value) ? value : null;
-    }
-    catch (_a) {
-        return null;
-    }
-}
-function saveBest(value) {
-    try {
-        window.localStorage.setItem(BEST_KEY, String(Math.round(value)));
-    }
-    catch (_a) {
-        // Private mode or blocked storage: the best score just isn't remembered.
-    }
 }
 
 
@@ -8881,6 +8961,46 @@ function restyleSymbol(scene) {
 
 /***/ },
 
+/***/ "./src/scenes/world/minigameScores.ts"
+/*!********************************************!*\
+  !*** ./src/scenes/world/minigameScores.ts ***!
+  \********************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   formatClock: () => (/* binding */ formatClock),
+/* harmony export */   loadBest: () => (/* binding */ loadBest),
+/* harmony export */   saveBest: () => (/* binding */ saveBest)
+/* harmony export */ });
+/** Small helpers shared by the minigames: the round clock and the best score kept in the browser. */
+/** "0:07" for a clock counting down (whole seconds, rounded up, never negative). */
+function formatClock(seconds) {
+    var whole = Math.max(0, Math.ceil(seconds));
+    return "".concat(Math.floor(whole / 60), ":").concat((whole % 60).toString().padStart(2, "0"));
+}
+/** The best score saved under `key`, or null if there is none (or storage is blocked). */
+function loadBest(key) {
+    try {
+        var stored = window.localStorage.getItem(key);
+        var value = stored === null ? NaN : Number(stored);
+        return Number.isFinite(value) ? value : null;
+    }
+    catch (_a) {
+        return null;
+    }
+}
+function saveBest(key, value) {
+    try {
+        window.localStorage.setItem(key, String(Math.round(value)));
+    }
+    catch (_a) {
+        // Private mode or blocked storage: the best score just isn't remembered.
+    }
+}
+
+
+/***/ },
+
 /***/ "./src/scenes/world/playground.ts"
 /*!****************************************!*\
   !*** ./src/scenes/world/playground.ts ***!
@@ -8893,7 +9013,7 @@ function restyleSymbol(scene) {
 /* harmony export */   createPlayground: () => (/* binding */ createPlayground),
 /* harmony export */   getPlaygroundHeight: () => (/* binding */ getPlaygroundHeight)
 /* harmony export */ });
-/* unused harmony export RAMP_COLLISION_GROUP */
+/* unused harmony exports RAMP_COLLISION_GROUP, RAMPS */
 /* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core */ "./node_modules/@babylonjs/core/index.js");
 /* harmony import */ var _core_toyStyle__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../core/toyStyle */ "./src/scenes/core/toyStyle.ts");
 /* harmony import */ var _core_staticBodies__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../core/staticBodies */ "./src/scenes/core/staticBodies.ts");
@@ -9579,7 +9699,9 @@ function buildDisc(name, cx, cz, radiusX, radiusZ, rotation, y, scene) {
 /* harmony import */ var _ui_style__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../ui/style */ "./src/scenes/ui/style.ts");
 /* harmony import */ var _ui_minigameHud__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../ui/minigameHud */ "./src/scenes/ui/minigameHud.ts");
 /* harmony import */ var _infoStand__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./infoStand */ "./src/scenes/world/infoStand.ts");
-/* harmony import */ var _workCorner__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./workCorner */ "./src/scenes/world/workCorner.ts");
+/* harmony import */ var _minigameScores__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./minigameScores */ "./src/scenes/world/minigameScores.ts");
+/* harmony import */ var _tradingMarket__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./tradingMarket */ "./src/scenes/world/tradingMarket.ts");
+/* harmony import */ var _workCorner__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./workCorner */ "./src/scenes/world/workCorner.ts");
 var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -9620,6 +9742,8 @@ var __generator = (undefined && undefined.__generator) || function (thisArg, bod
 
 
 
+
+
 /**
  * Quantum Trader, the work corner's minigame: a 45-second trading round played with the tank.
  *
@@ -9630,23 +9754,12 @@ var __generator = (undefined && undefined.__generator) || function (thisArg, bod
  *   when time runs out.
  * - The market moves in trends that switch every few seconds. Shortly before a switch, the quantum
  *   core lights up mint (going up) or pink (going down): a "quantum-inspired" forecast, right
- *   SIGNAL_ACCURACY of the time. Trading with it is how you score.
+ *   most of the time. Trading with it is how you score.
  *
- * The best result is remembered in the browser.
+ * The rules (market, forecast, trades) are in tradingMarket.ts; this file is the game around
+ * them: buttons, screen, HUD and sounds. The best result is remembered in the browser.
  */
 var ROUND_SECONDS = 45;
-var SHARES = 100;
-var START_PRICE = 100;
-/** Trend speeds (price per second) and how long a trend lasts. */
-var TREND_SPEED = 2.6;
-var TREND_SECONDS = { min: 2.8, max: 4.6 };
-/** Random wobble on top of the trend. */
-var NOISE = 1.3;
-/** How long before a trend change the core shows its forecast, and how often it's right. */
-var SIGNAL_LEAD = 1.5;
-var SIGNAL_ACCURACY = 0.8;
-/** The forecast stays on this long into the new trend. */
-var SIGNAL_LINGER = 0.6;
 /** The card shows up this close to the corner. */
 var HUD_DISTANCE = 50;
 /**
@@ -9655,9 +9768,6 @@ var HUD_DISTANCE = 50;
  */
 var LEAVE_DISTANCE = 60;
 var LEAVE_GRACE = 2;
-/** Price samples kept for the chart (one every SAMPLE_SECONDS). */
-var SAMPLE_SECONDS = 0.1;
-var HISTORY_SAMPLES = 160;
 var SCREEN_FPS = 12;
 var RESULTS_SECONDS = 8;
 /** A shot often bounces off a button and hits it again; ignore repeat hits within this time. */
@@ -9674,7 +9784,7 @@ var COLORS = {
 };
 function createTradingGame(context, corner) {
     return __awaiter(this, void 0, void 0, function () {
-        var scene, tank, sounds, gui, hud, board, buttons, setSignal, soundAt, state, best, timeLeft, resultsLeft, price, trend, trendLeft, nextTrend, signal, signalLeft, position, entry, realized, finalResult, newBest, message, messageLeft, sampleTimer, sampleCount, screenTimer, history, trades, pressedAt, clock, awayFor, idleTicker, flash, openProfit, startRound, closePosition, endRound, trade, press, pickTrend, forecast, stepMarket, screen, screenSize, updateScreen, W, H, font, drawChart, drawResults;
+        var scene, tank, sounds, gui, hud, board, buttons, setSignal, soundAt, market, portfolio, state, best, timeLeft, resultsLeft, finalResult, newBest, message, messageLeft, screenTimer, trades, pressedAt, clock, awayFor, idleTicker, flash, startRound, endRound, trade, press, screen, screenSize, updateScreen, W, H, font, drawChart, drawResults;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -9688,68 +9798,40 @@ function createTradingGame(context, corner) {
                     hud = (0,_ui_minigameHud__WEBPACK_IMPORTED_MODULE_1__.createMinigameHud)(gui, scene, "trading");
                     board = corner.board, buttons = corner.buttons, setSignal = corner.setSignal;
                     soundAt = corner.center;
+                    market = new _tradingMarket__WEBPACK_IMPORTED_MODULE_4__.Market();
+                    market.onSignal = setSignal;
+                    portfolio = new _tradingMarket__WEBPACK_IMPORTED_MODULE_4__.Portfolio();
                     state = "idle";
-                    best = loadBest();
+                    best = (0,_minigameScores__WEBPACK_IMPORTED_MODULE_3__.loadBest)(BEST_KEY);
                     timeLeft = 0;
                     resultsLeft = 0;
-                    price = START_PRICE;
-                    trend = "flat";
-                    trendLeft = 0;
-                    nextTrend = null;
-                    signal = "none";
-                    signalLeft = 0;
-                    position = 0;
-                    entry = 0;
-                    realized = 0;
                     finalResult = 0;
                     newBest = false;
                     message = "";
                     messageLeft = 0;
-                    sampleTimer = 0;
-                    sampleCount = 0;
                     screenTimer = 0;
-                    history = [];
                     trades = [];
                     pressedAt = { buy: -Infinity, sell: -Infinity };
                     clock = 0;
                     awayFor = 0;
                     idleTicker = function () { return (best !== null
-                        ? "QUANTUM TRADER   \u25B2   SHOOT BUY OR SELL TO PLAY   \u25B2   BEST ".concat(formatMoney(best), "   \u25B2   ")
-                        : "QUANTUM TRADER   \u25B2   SHOOT BUY OR SELL TO PLAY   \u25B2   ".concat(_workCorner__WEBPACK_IMPORTED_MODULE_3__.TICKER_TEXT)); };
+                        ? "QUANTUM TRADER   \u25B2   SHOOT BUY OR SELL TO PLAY   \u25B2   BEST ".concat((0,_tradingMarket__WEBPACK_IMPORTED_MODULE_4__.formatMoney)(best), "   \u25B2   ")
+                        : "QUANTUM TRADER   \u25B2   SHOOT BUY OR SELL TO PLAY   \u25B2   ".concat(_workCorner__WEBPACK_IMPORTED_MODULE_5__.TICKER_TEXT)); };
                     board.setTicker(idleTicker());
                     flash = function (text) {
                         message = text;
                         messageLeft = 2.2;
                     };
-                    openProfit = function () { return (position === 0 ? 0 : position * (price - entry) * SHARES); };
                     startRound = function () {
                         state = "playing";
                         timeLeft = ROUND_SECONDS;
-                        price = START_PRICE;
-                        trend = "flat";
-                        trendLeft = 1.5;
-                        nextTrend = null;
-                        signal = "none";
-                        signalLeft = 0;
-                        position = 0;
-                        realized = 0;
-                        history.length = 0;
+                        market.reset();
+                        portfolio.reset();
                         trades.length = 0;
-                        sampleCount = 0;
-                        sampleTimer = 0;
-                        for (var i = 0; i < 20; i++) {
-                            history.push(START_PRICE + ((Math.random() - 0.5) * 0.6));
-                        }
                         flash("Market open! Watch the quantum core.");
                         board.setTicker("BUY LOW   ▲   SELL HIGH   ▲   WATCH THE QUANTUM CORE   ▲   MINT MEANS UP, PINK MEANS DOWN   ▲   ");
                         board.showScreen(true);
                         sounds.trade("start", soundAt);
-                    };
-                    closePosition = function () {
-                        var profit = openProfit();
-                        realized += profit;
-                        position = 0;
-                        return profit;
                     };
                     endRound = function (cancelled) {
                         setSignal("none");
@@ -9759,12 +9841,12 @@ function createTradingGame(context, corner) {
                             board.setTicker(idleTicker());
                             return;
                         }
-                        closePosition();
-                        finalResult = realized;
+                        portfolio.close(market.price);
+                        finalResult = portfolio.realized;
                         newBest = best === null || finalResult > best;
                         if (newBest) {
                             best = finalResult;
-                            saveBest(finalResult);
+                            (0,_minigameScores__WEBPACK_IMPORTED_MODULE_3__.saveBest)(BEST_KEY, finalResult);
                         }
                         state = "results";
                         resultsLeft = RESULTS_SECONDS;
@@ -9772,22 +9854,20 @@ function createTradingGame(context, corner) {
                         sounds.trade("end", soundAt);
                     };
                     trade = function (kind) {
-                        var direction = kind === "buy" ? 1 : -1;
-                        if (position === direction) {
+                        var result = portfolio.trade(kind, market.price);
+                        if (result.outcome === "ignored") {
                             flash(kind === "buy" ? "Already holding. Shoot SELL to take profit!" : "Already short. Shoot BUY to close it!");
                             return;
                         }
-                        trades.push({ sample: sampleCount, kind: kind });
-                        if (position === 0) {
-                            position = direction;
-                            entry = price;
-                            flash("".concat(kind === "buy" ? "Bought" : "Sold short", " ").concat(SHARES, " at ").concat(price.toFixed(2)));
+                        trades.push({ sample: market.sampleCount, kind: kind });
+                        if (result.outcome === "opened") {
+                            flash("".concat(kind === "buy" ? "Bought" : "Sold short", " ").concat(_tradingMarket__WEBPACK_IMPORTED_MODULE_4__.SHARES, " at ").concat(result.price.toFixed(2)));
                             sounds.trade(kind, soundAt);
-                            return;
                         }
-                        var profit = closePosition();
-                        flash("Closed for ".concat(formatMoney(profit)));
-                        sounds.trade(profit >= 0 ? "profit" : "loss", soundAt);
+                        else {
+                            flash("Closed for ".concat((0,_tradingMarket__WEBPACK_IMPORTED_MODULE_4__.formatMoney)(result.profit)));
+                            sounds.trade(result.profit >= 0 ? "profit" : "loss", soundAt);
+                        }
                     };
                     press = function (kind) {
                         if (clock - pressedAt[kind] < PRESS_COOLDOWN) {
@@ -9804,56 +9884,13 @@ function createTradingGame(context, corner) {
                     };
                     buttons.buy.onHit.add(function () { return press("buy"); });
                     buttons.sell.onHit.add(function () { return press("sell"); });
-                    pickTrend = function () {
-                        var roll = Math.random();
-                        // Keep the price roughly in range: lean towards trends that bring it back.
-                        var lean = Math.max(-0.25, Math.min(0.25, (START_PRICE - price) / 60));
-                        return roll < 0.4 + lean ? "up" : roll < 0.8 ? "down" : "flat";
-                    };
-                    forecast = function (actual) {
-                        var right = Math.random() < SIGNAL_ACCURACY;
-                        if (actual === "flat") {
-                            return right ? "none" : Math.random() < 0.5 ? "up" : "down";
-                        }
-                        return right ? actual : actual === "up" ? "down" : "up";
-                    };
-                    stepMarket = function (dt) {
-                        trendLeft -= dt;
-                        if (nextTrend === null && trendLeft <= SIGNAL_LEAD) {
-                            nextTrend = pickTrend();
-                            signal = forecast(nextTrend);
-                            signalLeft = trendLeft + SIGNAL_LINGER;
-                            setSignal(signal);
-                        }
-                        if (trendLeft <= 0) {
-                            trend = nextTrend !== null && nextTrend !== void 0 ? nextTrend : pickTrend();
-                            nextTrend = null;
-                            trendLeft = TREND_SECONDS.min + (Math.random() * (TREND_SECONDS.max - TREND_SECONDS.min));
-                        }
-                        if (signalLeft > 0) {
-                            signalLeft -= dt;
-                            if (signalLeft <= 0) {
-                                signal = "none";
-                                setSignal("none");
-                            }
-                        }
-                        var drift = trend === "up" ? TREND_SPEED : trend === "down" ? -TREND_SPEED : 0;
-                        price = Math.max(5, price + (drift * dt) + (gaussian() * NOISE * Math.sqrt(dt)));
-                        sampleTimer += dt;
-                        while (sampleTimer >= SAMPLE_SECONDS) {
-                            sampleTimer -= SAMPLE_SECONDS;
-                            sampleCount++;
-                            history.push(price);
-                            if (history.length > HISTORY_SAMPLES) {
-                                history.shift();
-                            }
-                        }
-                    };
                     screen = board.screen, screenSize = board.screenSize, updateScreen = board.updateScreen;
                     W = screenSize.width;
                     H = screenSize.height;
                     font = function (size) { return "900 ".concat(size, "px ").concat(_ui_style__WEBPACK_IMPORTED_MODULE_0__.UI.font); };
                     drawChart = function () {
+                        var price = market.price, history = market.history, sampleCount = market.sampleCount, signal = market.signal;
+                        var position = portfolio.position, entry = portfolio.entry;
                         screen.fillStyle = COLORS.background;
                         screen.fillRect(0, 0, W, H);
                         screen.textBaseline = "middle";
@@ -9865,7 +9902,7 @@ function createTradingGame(context, corner) {
                         screen.textAlign = "right";
                         screen.fillStyle = timeLeft < 10 ? COLORS.down : COLORS.gold;
                         screen.font = font(40);
-                        screen.fillText(formatTime(timeLeft), W - 36, 44);
+                        screen.fillText((0,_minigameScores__WEBPACK_IMPORTED_MODULE_3__.formatClock)(timeLeft), W - 36, 44);
                         var signalText = signal === "up" ? "SIGNAL ▲" : signal === "down" ? "SIGNAL ▼" : "SIGNAL —";
                         screen.fillStyle = signal === "up" ? COLORS.up : signal === "down" ? COLORS.down : COLORS.muted;
                         screen.font = font(30);
@@ -9891,8 +9928,8 @@ function createTradingGame(context, corner) {
                         low -= padding;
                         high += padding;
                         var toY = function (value) { return bottom - (((value - low) / (high - low)) * (bottom - top)); };
-                        var toX = function (index) { return left + ((index / (HISTORY_SAMPLES - 1)) * (right - left)); };
-                        var offset = HISTORY_SAMPLES - history.length;
+                        var toX = function (index) { return left + ((index / (_tradingMarket__WEBPACK_IMPORTED_MODULE_4__.MARKET.historySamples - 1)) * (right - left)); };
+                        var offset = _tradingMarket__WEBPACK_IMPORTED_MODULE_4__.MARKET.historySamples - history.length;
                         screen.strokeStyle = COLORS.grid;
                         screen.lineWidth = 2;
                         for (var i = 0; i <= 4; i++) {
@@ -9957,11 +9994,11 @@ function createTradingGame(context, corner) {
                         screen.textAlign = "center";
                         screen.fillText(price.toFixed(2), right + 82, tagY + 2);
                         // Footer: profit and position.
-                        var total = realized + openProfit();
+                        var total = portfolio.total(price);
                         screen.textAlign = "left";
                         screen.font = font(36);
                         screen.fillStyle = total >= 0 ? COLORS.up : COLORS.down;
-                        screen.fillText("P&L ".concat(formatMoney(total)), 36, H - 42);
+                        screen.fillText("P&L ".concat((0,_tradingMarket__WEBPACK_IMPORTED_MODULE_4__.formatMoney)(total)), 36, H - 42);
                         screen.textAlign = "right";
                         screen.font = font(30);
                         screen.fillStyle = position === 0 ? COLORS.muted : position > 0 ? COLORS.up : COLORS.down;
@@ -9978,10 +10015,10 @@ function createTradingGame(context, corner) {
                         screen.fillText(newBest ? "NEW BEST!" : "MARKET CLOSED", W / 2, H * 0.2);
                         screen.fillStyle = finalResult >= 0 ? COLORS.up : COLORS.down;
                         screen.font = font(120);
-                        screen.fillText(formatMoney(finalResult), W / 2, H * 0.47);
+                        screen.fillText((0,_tradingMarket__WEBPACK_IMPORTED_MODULE_4__.formatMoney)(finalResult), W / 2, H * 0.47);
                         screen.fillStyle = COLORS.line;
                         screen.font = font(32);
-                        screen.fillText(best !== null ? "Best ".concat(formatMoney(best)) : "", W / 2, H * 0.7);
+                        screen.fillText(best !== null ? "Best ".concat((0,_tradingMarket__WEBPACK_IMPORTED_MODULE_4__.formatMoney)(best)) : "", W / 2, H * 0.7);
                         screen.fillStyle = COLORS.muted;
                         screen.font = font(28);
                         screen.fillText("Shoot BUY or SELL to play again", W / 2, H * 0.86);
@@ -10001,7 +10038,7 @@ function createTradingGame(context, corner) {
                             }
                             else {
                                 timeLeft -= dt;
-                                stepMarket(dt);
+                                market.step(dt);
                                 messageLeft -= dt;
                                 screenTimer -= dt;
                                 if (screenTimer <= 0) {
@@ -10031,18 +10068,19 @@ function createTradingGame(context, corner) {
                             hud.set("QUANTUM TRADER", _ui_style__WEBPACK_IMPORTED_MODULE_0__.UI.pinkDeep, "Round called off", "You left the trading floor. Come back and shoot BUY or SELL to play again.");
                         }
                         else if (state === "playing" && awayFor > 0) {
-                            hud.set("TRADING  ".concat(formatTime(timeLeft)), _ui_style__WEBPACK_IMPORTED_MODULE_0__.UI.pinkDeep, "Come back!", "Leaving the trading floor ends the round in ".concat(Math.max(0, LEAVE_GRACE - awayFor).toFixed(1), " s."), _ui_style__WEBPACK_IMPORTED_MODULE_0__.UI.pinkDeep);
+                            hud.set("TRADING  ".concat((0,_minigameScores__WEBPACK_IMPORTED_MODULE_3__.formatClock)(timeLeft)), _ui_style__WEBPACK_IMPORTED_MODULE_0__.UI.pinkDeep, "Come back!", "Leaving the trading floor ends the round in ".concat(Math.max(0, LEAVE_GRACE - awayFor).toFixed(1), " s."), _ui_style__WEBPACK_IMPORTED_MODULE_0__.UI.pinkDeep);
                         }
                         else if (state === "idle") {
-                            hud.set("QUANTUM TRADER", _ui_style__WEBPACK_IMPORTED_MODULE_0__.UI.navy, "Shoot BUY or SELL to play", "Buy low, sell high in ".concat(ROUND_SECONDS, " s. The quantum core glows mint or pink when it senses the market turning.").concat(best !== null ? " Best: ".concat(formatMoney(best)) : ""));
+                            hud.set("QUANTUM TRADER", _ui_style__WEBPACK_IMPORTED_MODULE_0__.UI.navy, "Shoot BUY or SELL to play", "Buy low, sell high in ".concat(ROUND_SECONDS, " s. The quantum core glows mint or pink when it senses the market turning.").concat(best !== null ? " Best: ".concat((0,_tradingMarket__WEBPACK_IMPORTED_MODULE_4__.formatMoney)(best)) : ""));
                         }
                         else if (state === "playing") {
-                            var total = realized + openProfit();
+                            var total = portfolio.total(market.price);
+                            var signal = market.signal;
                             var signalHint = signal === "up" ? "Core says UP: buy!" : signal === "down" ? "Core says DOWN: sell!" : "";
-                            hud.set("TRADING  ".concat(formatTime(timeLeft)), timeLeft < 10 ? _ui_style__WEBPACK_IMPORTED_MODULE_0__.UI.pinkDeep : _ui_style__WEBPACK_IMPORTED_MODULE_0__.UI.gold, "P&L ".concat(formatMoney(total)), messageLeft > 0 ? message : signalHint || positionText(position, entry), total >= 0 ? "#3E9C6E" : _ui_style__WEBPACK_IMPORTED_MODULE_0__.UI.pinkDeep);
+                            hud.set("TRADING  ".concat((0,_minigameScores__WEBPACK_IMPORTED_MODULE_3__.formatClock)(timeLeft)), timeLeft < 10 ? _ui_style__WEBPACK_IMPORTED_MODULE_0__.UI.pinkDeep : _ui_style__WEBPACK_IMPORTED_MODULE_0__.UI.gold, "P&L ".concat((0,_tradingMarket__WEBPACK_IMPORTED_MODULE_4__.formatMoney)(total)), messageLeft > 0 ? message : signalHint || positionText(portfolio.position, portfolio.entry), total >= 0 ? "#3E9C6E" : _ui_style__WEBPACK_IMPORTED_MODULE_0__.UI.pinkDeep);
                         }
                         else {
-                            hud.set(newBest ? "NEW BEST!" : "MARKET CLOSED", _ui_style__WEBPACK_IMPORTED_MODULE_0__.UI.mint, formatMoney(finalResult), "".concat(best !== null ? "Best ".concat(formatMoney(best), ". ") : "", "Shoot BUY or SELL to play again."), finalResult >= 0 ? "#3E9C6E" : _ui_style__WEBPACK_IMPORTED_MODULE_0__.UI.pinkDeep);
+                            hud.set(newBest ? "NEW BEST!" : "MARKET CLOSED", _ui_style__WEBPACK_IMPORTED_MODULE_0__.UI.mint, (0,_tradingMarket__WEBPACK_IMPORTED_MODULE_4__.formatMoney)(finalResult), "".concat(best !== null ? "Best ".concat((0,_tradingMarket__WEBPACK_IMPORTED_MODULE_4__.formatMoney)(best), ". ") : "", "Shoot BUY or SELL to play again."), finalResult >= 0 ? "#3E9C6E" : _ui_style__WEBPACK_IMPORTED_MODULE_0__.UI.pinkDeep);
                         }
                     });
                     return [2 /*return*/];
@@ -10054,39 +10092,225 @@ function positionText(position, entry) {
     if (position === 0) {
         return "No position. Shoot BUY or SELL to trade.";
     }
-    return "".concat(position > 0 ? "LONG" : "SHORT", " ").concat(SHARES, " @ ").concat(entry.toFixed(2));
+    return "".concat(position > 0 ? "LONG" : "SHORT", " ").concat(_tradingMarket__WEBPACK_IMPORTED_MODULE_4__.SHARES, " @ ").concat(entry.toFixed(2));
 }
+
+
+/***/ },
+
+/***/ "./src/scenes/world/tradingMarket.ts"
+/*!*******************************************!*\
+  !*** ./src/scenes/world/tradingMarket.ts ***!
+  \*******************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   MARKET: () => (/* binding */ MARKET),
+/* harmony export */   Market: () => (/* binding */ Market),
+/* harmony export */   Portfolio: () => (/* binding */ Portfolio),
+/* harmony export */   SHARES: () => (/* binding */ SHARES),
+/* harmony export */   formatMoney: () => (/* binding */ formatMoney)
+/* harmony export */ });
+/* unused harmony exports pickTrend, forecast, gaussian */
+/**
+ * The rules of Quantum Trader (see tradingGame.ts), kept free of Babylon so they can be tested on
+ * their own: the simulated market with its "quantum-inspired" forecast, and the player's trades.
+ *
+ * Randomness comes from a `random` function (Math.random by default), so tests can make it
+ * repeatable.
+ */
+var MARKET = {
+    startPrice: 100,
+    minPrice: 5,
+    /** Trend speeds (price per second) and how long a trend lasts. */
+    trendSpeed: 2.6,
+    trendSeconds: { min: 2.8, max: 4.6 },
+    /** Random wobble on top of the trend. */
+    noise: 1.3,
+    /** How long before a trend change the forecast shows, how often it's right, how long it stays. */
+    signalLead: 1.5,
+    signalAccuracy: 0.8,
+    signalLinger: 0.6,
+    /** Price samples kept for the chart, one every sampleSeconds. */
+    sampleSeconds: 0.1,
+    historySamples: 160,
+};
+/** Shares per trade. */
+var SHARES = 100;
+/**
+ * The next trend: up or down 40% of the time each and flat 20%, leaning towards whichever brings
+ * the price back towards its start (at most 25 points of the 40), so it stays in range.
+ */
+function pickTrend(price, random) {
+    if (random === void 0) { random = Math.random; }
+    var lean = Math.max(-0.25, Math.min(0.25, (MARKET.startPrice - price) / 60));
+    var roll = random();
+    return roll < 0.4 + lean ? "up" : roll < 0.8 ? "down" : "flat";
+}
+/**
+ * The core's forecast of a trend: right `accuracy` of the time. A wrong forecast of an up or down
+ * trend says the opposite; a wrong forecast of a flat market says up or down.
+ */
+function forecast(actual, random, accuracy) {
+    if (random === void 0) { random = Math.random; }
+    if (accuracy === void 0) { accuracy = MARKET.signalAccuracy; }
+    var right = random() < accuracy;
+    if (actual === "flat") {
+        return right ? "none" : random() < 0.5 ? "up" : "down";
+    }
+    return right ? actual : actual === "up" ? "down" : "up";
+}
+/** A standard normal random number (Box-Muller). */
+function gaussian(random) {
+    if (random === void 0) { random = Math.random; }
+    var u = 1 - random();
+    var v = random();
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+/** The simulated market: a price following trends that switch every few seconds, plus noise. */
+var Market = /** @class */ (function () {
+    function Market(random) {
+        if (random === void 0) { random = Math.random; }
+        this.random = random;
+        this.price = MARKET.startPrice;
+        this.trend = "flat";
+        /** The forecast currently shown. */
+        this.signal = "none";
+        /** Recent prices for the chart, oldest first. */
+        this.history = [];
+        /** Samples taken since the round started (for placing trade markers on the chart). */
+        this.sampleCount = 0;
+        /** Called whenever the forecast shown changes. */
+        this.onSignal = null;
+        this.trendLeft = 0;
+        this.nextTrend = null;
+        this.signalLeft = 0;
+        this.sampleTimer = 0;
+        this.reset();
+    }
+    Market.prototype.reset = function () {
+        this.price = MARKET.startPrice;
+        this.trend = "flat";
+        this.trendLeft = 1.5;
+        this.nextTrend = null;
+        this.setSignal("none");
+        this.signalLeft = 0;
+        this.sampleTimer = 0;
+        this.sampleCount = 0;
+        this.history.length = 0;
+        // A short flat stretch, so the chart doesn't start empty.
+        for (var i = 0; i < 20; i++) {
+            this.history.push(MARKET.startPrice + ((this.random() - 0.5) * 0.6));
+        }
+    };
+    Object.defineProperty(Market.prototype, "timeToTrendChange", {
+        /** Seconds until the current trend ends. */
+        get: function () {
+            return this.trendLeft;
+        },
+        enumerable: false,
+        configurable: true
+    });
+    Object.defineProperty(Market.prototype, "upcomingTrend", {
+        /** The trend that comes next, once it has been decided (signalLead seconds before it starts). */
+        get: function () {
+            return this.nextTrend;
+        },
+        enumerable: false,
+        configurable: true
+    });
+    Market.prototype.step = function (dt) {
+        var _a;
+        this.trendLeft -= dt;
+        if (this.nextTrend === null && this.trendLeft <= MARKET.signalLead) {
+            this.nextTrend = pickTrend(this.price, this.random);
+            this.signalLeft = this.trendLeft + MARKET.signalLinger;
+            this.setSignal(forecast(this.nextTrend, this.random));
+        }
+        if (this.trendLeft <= 0) {
+            this.trend = (_a = this.nextTrend) !== null && _a !== void 0 ? _a : pickTrend(this.price, this.random);
+            this.nextTrend = null;
+            this.trendLeft = MARKET.trendSeconds.min + (this.random() * (MARKET.trendSeconds.max - MARKET.trendSeconds.min));
+        }
+        if (this.signalLeft > 0) {
+            this.signalLeft -= dt;
+            if (this.signalLeft <= 0) {
+                this.setSignal("none");
+            }
+        }
+        var drift = this.trend === "up" ? MARKET.trendSpeed : this.trend === "down" ? -MARKET.trendSpeed : 0;
+        this.price = Math.max(MARKET.minPrice, this.price + (drift * dt) + (gaussian(this.random) * MARKET.noise * Math.sqrt(dt)));
+        this.sampleTimer += dt;
+        while (this.sampleTimer >= MARKET.sampleSeconds) {
+            this.sampleTimer -= MARKET.sampleSeconds;
+            this.sampleCount++;
+            this.history.push(this.price);
+            if (this.history.length > MARKET.historySamples) {
+                this.history.shift();
+            }
+        }
+    };
+    Market.prototype.setSignal = function (signal) {
+        var _a;
+        if (signal !== this.signal) {
+            this.signal = signal;
+            (_a = this.onSignal) === null || _a === void 0 ? void 0 : _a.call(this, signal);
+        }
+    };
+    return Market;
+}());
+
+/**
+ * The player's position: flat, long (bought) or short (sold), always SHARES shares. BUY opens a
+ * long or closes a short; SELL opens a short or closes a long.
+ */
+var Portfolio = /** @class */ (function () {
+    function Portfolio() {
+        /** 1 long, -1 short, 0 flat. */
+        this.position = 0;
+        this.entry = 0;
+        /** Profit from closed trades. */
+        this.realized = 0;
+    }
+    Portfolio.prototype.reset = function () {
+        this.position = 0;
+        this.entry = 0;
+        this.realized = 0;
+    };
+    Portfolio.prototype.trade = function (kind, price) {
+        var direction = kind === "buy" ? 1 : -1;
+        if (this.position === direction) {
+            return { outcome: "ignored", kind: kind };
+        }
+        if (this.position === 0) {
+            this.position = direction;
+            this.entry = price;
+            return { outcome: "opened", kind: kind, price: price };
+        }
+        return { outcome: "closed", kind: kind, profit: this.close(price) };
+    };
+    /** Profit of the open position at `price` (0 when flat). */
+    Portfolio.prototype.openProfit = function (price) {
+        return this.position === 0 ? 0 : this.position * (price - this.entry) * SHARES;
+    };
+    /** Realized plus open profit. */
+    Portfolio.prototype.total = function (price) {
+        return this.realized + this.openProfit(price);
+    };
+    /** Closes any open position at `price`; returns its profit. */
+    Portfolio.prototype.close = function (price) {
+        var profit = this.openProfit(price);
+        this.realized += profit;
+        this.position = 0;
+        return profit;
+    };
+    return Portfolio;
+}());
+
+/** "+$1,240" or "−$35" (a real minus sign), rounded to whole dollars. */
 function formatMoney(value) {
     var rounded = Math.round(value);
     return "".concat(rounded < 0 ? "−" : "+", "$").concat(Math.abs(rounded).toLocaleString("en-US"));
-}
-function formatTime(seconds) {
-    var whole = Math.max(0, Math.ceil(seconds));
-    return "0:".concat(whole.toString().padStart(2, "0"));
-}
-function gaussian() {
-    // Box-Muller.
-    var u = 1 - Math.random();
-    var v = Math.random();
-    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
-}
-function loadBest() {
-    try {
-        var stored = window.localStorage.getItem(BEST_KEY);
-        var value = stored === null ? NaN : Number(stored);
-        return Number.isFinite(value) ? value : null;
-    }
-    catch (_a) {
-        return null;
-    }
-}
-function saveBest(value) {
-    try {
-        window.localStorage.setItem(BEST_KEY, String(Math.round(value)));
-    }
-    catch (_a) {
-        // Private mode or blocked storage: the best score just isn't remembered.
-    }
 }
 
 
@@ -11273,4 +11497,4 @@ function createStamp(scene) {
 /***/ }
 
 }]);
-//# sourceMappingURL=src_scenes_tools_ts.01e15d601fc310912cf0.js.map
+//# sourceMappingURL=src_scenes_tools_ts.bacd080d9474cc763174.js.map

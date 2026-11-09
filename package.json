@@ -8,7 +8,7 @@
         "build": "webpack --mode production",
         "watch": "webpack --mode development --watch",
         "webserver": "http-server -p 1338 -c-1",
-        "test": "jest"
+        "test": "node --no-deprecation node_modules/jest/bin/jest.js"
     },
     "license": "(Apache-2.0)",
     "devDependencies": {
@@ -28,13 +28,13 @@
         "babylonjs-editor-webpack-progress": "1.0.3",
         "cypress": "^16.2.1",
         "http-server": "^14.1.1",
-        "jest": "^25.1.0",
+        "jest": "^29.7.0",
+        "jest-canvas-mock": "^2.5.2",
         "jest-environment-jsdom": "^29.7.0",
         "mocha": "^12.0.3",
         "raw-loader": "4.0.2",
         "selenium-webdriver": "^4.23.0",
         "sinon": "^15.0.1",
-        "ts-jest": "^25.5.1",
         "ts-loader": "^9.5.1",
         "typescript": "^5.5.4",
         "webpack": "^5.93.0",

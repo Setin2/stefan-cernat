@@ -2,7 +2,9 @@ import type { TankContext } from "../tank/context";
 import { UI } from "../ui/style";
 import { createMinigameHud } from "../ui/minigameHud";
 import { roundRect } from "./infoStand";
-import { TICKER_TEXT, type CoreSignal, type WorkCorner } from "./workCorner";
+import { formatClock, loadBest, saveBest } from "./minigameScores";
+import { formatMoney, Market, MARKET, Portfolio, SHARES, type TradeKind } from "./tradingMarket";
+import { TICKER_TEXT, type WorkCorner } from "./workCorner";
 
 /**
  * Quantum Trader, the work corner's minigame: a 45-second trading round played with the tank.
@@ -14,24 +16,13 @@ import { TICKER_TEXT, type CoreSignal, type WorkCorner } from "./workCorner";
  *   when time runs out.
  * - The market moves in trends that switch every few seconds. Shortly before a switch, the quantum
  *   core lights up mint (going up) or pink (going down): a "quantum-inspired" forecast, right
- *   SIGNAL_ACCURACY of the time. Trading with it is how you score.
+ *   most of the time. Trading with it is how you score.
  *
- * The best result is remembered in the browser.
+ * The rules (market, forecast, trades) are in tradingMarket.ts; this file is the game around
+ * them: buttons, screen, HUD and sounds. The best result is remembered in the browser.
  */
 
 const ROUND_SECONDS = 45;
-const SHARES = 100;
-const START_PRICE = 100;
-/** Trend speeds (price per second) and how long a trend lasts. */
-const TREND_SPEED = 2.6;
-const TREND_SECONDS = { min: 2.8, max: 4.6 };
-/** Random wobble on top of the trend. */
-const NOISE = 1.3;
-/** How long before a trend change the core shows its forecast, and how often it's right. */
-const SIGNAL_LEAD = 1.5;
-const SIGNAL_ACCURACY = 0.8;
-/** The forecast stays on this long into the new trend. */
-const SIGNAL_LINGER = 0.6;
 /** The card shows up this close to the corner. */
 const HUD_DISTANCE = 50;
 /**
@@ -40,9 +31,6 @@ const HUD_DISTANCE = 50;
  */
 const LEAVE_DISTANCE = 60;
 const LEAVE_GRACE = 2;
-/** Price samples kept for the chart (one every SAMPLE_SECONDS). */
-const SAMPLE_SECONDS = 0.1;
-const HISTORY_SAMPLES = 160;
 const SCREEN_FPS = 12;
 const RESULTS_SECONDS = 8;
 /** A shot often bounces off a button and hits it again; ignore repeat hits within this time. */
@@ -50,8 +38,7 @@ const PRESS_COOLDOWN = 0.5;
 const BEST_KEY = "quantum-trader-best";
 
 type State = "idle" | "playing" | "results";
-type Trend = "up" | "down" | "flat";
-type Trade = { sample: number; kind: "buy" | "sell" };
+type Trade = { sample: number; kind: TradeKind };
 
 const COLORS = {
     background: UI.navyDeep,
@@ -73,27 +60,18 @@ export async function createTradingGame(context: TankContext, corner: WorkCorner
     const { board, buttons, setSignal } = corner;
     const soundAt = corner.center;
 
+    const market = new Market();
+    market.onSignal = setSignal;
+    const portfolio = new Portfolio();
     let state: State = "idle";
-    let best = loadBest();
+    let best = loadBest(BEST_KEY);
     let timeLeft = 0;
     let resultsLeft = 0;
-    let price = START_PRICE;
-    let trend: Trend = "flat";
-    let trendLeft = 0;
-    let nextTrend: Trend | null = null;
-    let signal: CoreSignal = "none";
-    let signalLeft = 0;
-    let position = 0;
-    let entry = 0;
-    let realized = 0;
     let finalResult = 0;
     let newBest = false;
     let message = "";
     let messageLeft = 0;
-    let sampleTimer = 0;
-    let sampleCount = 0;
     let screenTimer = 0;
-    const history: number[] = [];
     const trades: Trade[] = [];
     const pressedAt = { buy: -Infinity, sell: -Infinity };
     let clock = 0;
@@ -108,37 +86,16 @@ export async function createTradingGame(context: TankContext, corner: WorkCorner
         message = text;
         messageLeft = 2.2;
     };
-    const openProfit = () => (position === 0 ? 0 : position * (price - entry) * SHARES);
-
     const startRound = () => {
         state = "playing";
         timeLeft = ROUND_SECONDS;
-        price = START_PRICE;
-        trend = "flat";
-        trendLeft = 1.5;
-        nextTrend = null;
-        signal = "none";
-        signalLeft = 0;
-        position = 0;
-        realized = 0;
-        history.length = 0;
+        market.reset();
+        portfolio.reset();
         trades.length = 0;
-        sampleCount = 0;
-        sampleTimer = 0;
-        for (let i = 0; i < 20; i++) {
-            history.push(START_PRICE + ((Math.random() - 0.5) * 0.6));
-        }
         flash("Market open! Watch the quantum core.");
         board.setTicker("BUY LOW   ▲   SELL HIGH   ▲   WATCH THE QUANTUM CORE   ▲   MINT MEANS UP, PINK MEANS DOWN   ▲   ");
         board.showScreen(true);
         sounds.trade("start", soundAt);
-    };
-
-    const closePosition = () => {
-        const profit = openProfit();
-        realized += profit;
-        position = 0;
-        return profit;
     };
 
     const endRound = (cancelled: boolean) => {
@@ -149,12 +106,12 @@ export async function createTradingGame(context: TankContext, corner: WorkCorner
             board.setTicker(idleTicker());
             return;
         }
-        closePosition();
-        finalResult = realized;
+        portfolio.close(market.price);
+        finalResult = portfolio.realized;
         newBest = best === null || finalResult > best;
         if (newBest) {
             best = finalResult;
-            saveBest(finalResult);
+            saveBest(BEST_KEY, finalResult);
         }
         state = "results";
         resultsLeft = RESULTS_SECONDS;
@@ -162,26 +119,23 @@ export async function createTradingGame(context: TankContext, corner: WorkCorner
         sounds.trade("end", soundAt);
     };
 
-    const trade = (kind: "buy" | "sell") => {
-        const direction = kind === "buy" ? 1 : -1;
-        if (position === direction) {
+    const trade = (kind: TradeKind) => {
+        const result = portfolio.trade(kind, market.price);
+        if (result.outcome === "ignored") {
             flash(kind === "buy" ? "Already holding. Shoot SELL to take profit!" : "Already short. Shoot BUY to close it!");
             return;
         }
-        trades.push({ sample: sampleCount, kind });
-        if (position === 0) {
-            position = direction;
-            entry = price;
-            flash(`${kind === "buy" ? "Bought" : "Sold short"} ${SHARES} at ${price.toFixed(2)}`);
+        trades.push({ sample: market.sampleCount, kind });
+        if (result.outcome === "opened") {
+            flash(`${kind === "buy" ? "Bought" : "Sold short"} ${SHARES} at ${result.price.toFixed(2)}`);
             sounds.trade(kind, soundAt);
-            return;
+        } else {
+            flash(`Closed for ${formatMoney(result.profit)}`);
+            sounds.trade(result.profit >= 0 ? "profit" : "loss", soundAt);
         }
-        const profit = closePosition();
-        flash(`Closed for ${formatMoney(profit)}`);
-        sounds.trade(profit >= 0 ? "profit" : "loss", soundAt);
     };
 
-    const press = (kind: "buy" | "sell") => {
+    const press = (kind: TradeKind) => {
         if (clock - pressedAt[kind] < PRESS_COOLDOWN) {
             return;
         }
@@ -196,56 +150,6 @@ export async function createTradingGame(context: TankContext, corner: WorkCorner
     buttons.buy.onHit.add(() => press("buy"));
     buttons.sell.onHit.add(() => press("sell"));
 
-    // ----- Market
-
-    const pickTrend = (): Trend => {
-        const roll = Math.random();
-        // Keep the price roughly in range: lean towards trends that bring it back.
-        const lean = Math.max(-0.25, Math.min(0.25, (START_PRICE - price) / 60));
-        return roll < 0.4 + lean ? "up" : roll < 0.8 ? "down" : "flat";
-    };
-    const forecast = (actual: Trend): CoreSignal => {
-        const right = Math.random() < SIGNAL_ACCURACY;
-        if (actual === "flat") {
-            return right ? "none" : Math.random() < 0.5 ? "up" : "down";
-        }
-        return right ? actual : actual === "up" ? "down" : "up";
-    };
-
-    const stepMarket = (dt: number) => {
-        trendLeft -= dt;
-        if (nextTrend === null && trendLeft <= SIGNAL_LEAD) {
-            nextTrend = pickTrend();
-            signal = forecast(nextTrend);
-            signalLeft = trendLeft + SIGNAL_LINGER;
-            setSignal(signal);
-        }
-        if (trendLeft <= 0) {
-            trend = nextTrend ?? pickTrend();
-            nextTrend = null;
-            trendLeft = TREND_SECONDS.min + (Math.random() * (TREND_SECONDS.max - TREND_SECONDS.min));
-        }
-        if (signalLeft > 0) {
-            signalLeft -= dt;
-            if (signalLeft <= 0) {
-                signal = "none";
-                setSignal("none");
-            }
-        }
-        const drift = trend === "up" ? TREND_SPEED : trend === "down" ? -TREND_SPEED : 0;
-        price = Math.max(5, price + (drift * dt) + (gaussian() * NOISE * Math.sqrt(dt)));
-
-        sampleTimer += dt;
-        while (sampleTimer >= SAMPLE_SECONDS) {
-            sampleTimer -= SAMPLE_SECONDS;
-            sampleCount++;
-            history.push(price);
-            if (history.length > HISTORY_SAMPLES) {
-                history.shift();
-            }
-        }
-    };
-
     // ----- Screen
 
     const { screen, screenSize, updateScreen } = board;
@@ -254,6 +158,8 @@ export async function createTradingGame(context: TankContext, corner: WorkCorner
     const font = (size: number) => `900 ${size}px ${UI.font}`;
 
     const drawChart = () => {
+        const { price, history, sampleCount, signal } = market;
+        const { position, entry } = portfolio;
         screen.fillStyle = COLORS.background;
         screen.fillRect(0, 0, W, H);
         screen.textBaseline = "middle";
@@ -266,7 +172,7 @@ export async function createTradingGame(context: TankContext, corner: WorkCorner
         screen.textAlign = "right";
         screen.fillStyle = timeLeft < 10 ? COLORS.down : COLORS.gold;
         screen.font = font(40);
-        screen.fillText(formatTime(timeLeft), W - 36, 44);
+        screen.fillText(formatClock(timeLeft), W - 36, 44);
         const signalText = signal === "up" ? "SIGNAL ▲" : signal === "down" ? "SIGNAL ▼" : "SIGNAL —";
         screen.fillStyle = signal === "up" ? COLORS.up : signal === "down" ? COLORS.down : COLORS.muted;
         screen.font = font(30);
@@ -292,8 +198,8 @@ export async function createTradingGame(context: TankContext, corner: WorkCorner
         low -= padding;
         high += padding;
         const toY = (value: number) => bottom - (((value - low) / (high - low)) * (bottom - top));
-        const toX = (index: number) => left + ((index / (HISTORY_SAMPLES - 1)) * (right - left));
-        const offset = HISTORY_SAMPLES - history.length;
+        const toX = (index: number) => left + ((index / (MARKET.historySamples - 1)) * (right - left));
+        const offset = MARKET.historySamples - history.length;
 
         screen.strokeStyle = COLORS.grid;
         screen.lineWidth = 2;
@@ -362,7 +268,7 @@ export async function createTradingGame(context: TankContext, corner: WorkCorner
         screen.fillText(price.toFixed(2), right + 82, tagY + 2);
 
         // Footer: profit and position.
-        const total = realized + openProfit();
+        const total = portfolio.total(price);
         screen.textAlign = "left";
         screen.font = font(36);
         screen.fillStyle = total >= 0 ? COLORS.up : COLORS.down;
@@ -409,7 +315,7 @@ export async function createTradingGame(context: TankContext, corner: WorkCorner
                 messageLeft = 3.5;
             } else {
                 timeLeft -= dt;
-                stepMarket(dt);
+                market.step(dt);
                 messageLeft -= dt;
                 screenTimer -= dt;
                 if (screenTimer <= 0) {
@@ -438,16 +344,17 @@ export async function createTradingGame(context: TankContext, corner: WorkCorner
         if (state === "idle" && messageLeft > 0) {
             hud.set("QUANTUM TRADER", UI.pinkDeep, "Round called off", "You left the trading floor. Come back and shoot BUY or SELL to play again.");
         } else if (state === "playing" && awayFor > 0) {
-            hud.set(`TRADING  ${formatTime(timeLeft)}`, UI.pinkDeep, "Come back!",
+            hud.set(`TRADING  ${formatClock(timeLeft)}`, UI.pinkDeep, "Come back!",
                 `Leaving the trading floor ends the round in ${Math.max(0, LEAVE_GRACE - awayFor).toFixed(1)} s.`, UI.pinkDeep);
         } else if (state === "idle") {
             hud.set("QUANTUM TRADER", UI.navy, "Shoot BUY or SELL to play",
                 `Buy low, sell high in ${ROUND_SECONDS} s. The quantum core glows mint or pink when it senses the market turning.${best !== null ? ` Best: ${formatMoney(best)}` : ""}`);
         } else if (state === "playing") {
-            const total = realized + openProfit();
+            const total = portfolio.total(market.price);
+            const signal = market.signal;
             const signalHint = signal === "up" ? "Core says UP: buy!" : signal === "down" ? "Core says DOWN: sell!" : "";
-            hud.set(`TRADING  ${formatTime(timeLeft)}`, timeLeft < 10 ? UI.pinkDeep : UI.gold, `P&L ${formatMoney(total)}`,
-                messageLeft > 0 ? message : signalHint || positionText(position, entry),
+            hud.set(`TRADING  ${formatClock(timeLeft)}`, timeLeft < 10 ? UI.pinkDeep : UI.gold, `P&L ${formatMoney(total)}`,
+                messageLeft > 0 ? message : signalHint || positionText(portfolio.position, portfolio.entry),
                 total >= 0 ? "#3E9C6E" : UI.pinkDeep);
         } else {
             hud.set(newBest ? "NEW BEST!" : "MARKET CLOSED", UI.mint, formatMoney(finalResult),
@@ -463,39 +370,4 @@ function positionText(position: number, entry: number): string {
         return "No position. Shoot BUY or SELL to trade.";
     }
     return `${position > 0 ? "LONG" : "SHORT"} ${SHARES} @ ${entry.toFixed(2)}`;
-}
-
-function formatMoney(value: number): string {
-    const rounded = Math.round(value);
-    return `${rounded < 0 ? "−" : "+"}$${Math.abs(rounded).toLocaleString("en-US")}`;
-}
-
-function formatTime(seconds: number): string {
-    const whole = Math.max(0, Math.ceil(seconds));
-    return `0:${whole.toString().padStart(2, "0")}`;
-}
-
-function gaussian(): number {
-    // Box-Muller.
-    const u = 1 - Math.random();
-    const v = Math.random();
-    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
-}
-
-function loadBest(): number | null {
-    try {
-        const stored = window.localStorage.getItem(BEST_KEY);
-        const value = stored === null ? NaN : Number(stored);
-        return Number.isFinite(value) ? value : null;
-    } catch {
-        return null;
-    }
-}
-
-function saveBest(value: number): void {
-    try {
-        window.localStorage.setItem(BEST_KEY, String(Math.round(value)));
-    } catch {
-        // Private mode or blocked storage: the best score just isn't remembered.
-    }
 }

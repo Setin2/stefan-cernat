@@ -6,7 +6,8 @@ import { collideWithRamps } from "../world/playground";
 type FrictionEquation = { minForce: number; maxForce: number };
 type CannonWorld = {
     allowSleep: boolean;
-    broadphase: unknown;
+    broadphase: { dirty?: boolean };
+    bodies: { aabbNeedsUpdate: boolean }[];
     dt: number;
     narrowphase: { createFrictionEquationsFromContact: (contact: unknown, out: FrictionEquation[]) => boolean };
 };
@@ -58,7 +59,7 @@ export function enablePhysics(scene: BABYLON.Scene): void {
         world.allowSleep = true;
         const SAPBroadphase = cannonPlugin.BJSCANNON?.SAPBroadphase;
         if (SAPBroadphase) {
-            world.broadphase = new SAPBroadphase(world);
+            world.broadphase = new SAPBroadphase(world) as CannonWorld["broadphase"];
         }
         fixFriction(world);
     }
@@ -69,9 +70,28 @@ export function enablePhysics(scene: BABYLON.Scene): void {
         const subSteps = Math.max(1, Math.ceil(delta / MAX_SUB_STEP_SECONDS - 1e-6));
         const subStepSeconds = delta / subSteps;
         for (let i = 0; i < subSteps; i++) {
+            if (world) {
+                refreshBroadphase(world);
+            }
             executeStep(subStepSeconds, impostors);
         }
     };
+}
+
+/**
+ * cannon.js 0.6.2's sweep-and-prune broadphase keeps its bodies sorted along an axis and stops
+ * looking for pairs once the next body is out of reach, but it only re-sorts (and refreshes the
+ * bodies' bounding boxes) when a body is added or removed. As things move, the order goes stale
+ * and real overlaps are skipped. Bodies Babylon moves into place also keep the bounding box of
+ * where they were created: the bricks' boxes stayed at their wall's local coordinates, near the
+ * world origin. So the tank, and shots, drove straight through sleeping bricks.
+ * Re-sorting every step is cheap (the list is nearly sorted already).
+ */
+function refreshBroadphase(world: CannonWorld): void {
+    for (const body of world.bodies) {
+        body.aabbNeedsUpdate = true;
+    }
+    world.broadphase.dirty = true;
 }
 
 /**

@@ -181,6 +181,11 @@ function instantiateBricks(
     function positionBrick(brick: BABYLON.Mesh | BABYLON.InstancedMesh, x: number, y: number, z: number): void {
         brick.position.set(x, y, z);
         const impostor = new BABYLON.PhysicsImpostor(brick, BABYLON.PhysicsImpostor.BoxImpostor, BRICK_PHYSICS, _this.scene);
+        // Babylon doesn't link the impostor to the mesh by itself. Without the link, the startup
+        // optimisation (core/performance.ts) took bricks for static scenery: it froze them and
+        // stopped updating their bounding boxes, which stayed where each brick was first built.
+        // Knocked-down bricks then vanished whenever that old spot went off screen.
+        brick.physicsImpostor = impostor;
         brickImpostors.push(impostor);
 
         const body = impostor.physicsBody as { linearDamping: number; angularDamping: number; sleep: () => void } | null;

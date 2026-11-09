@@ -38,6 +38,16 @@ const MAX_LAUNCH_SPEED = 22;
 /** Steeper steps than this (the back of a ramp, a platform's side) are walls. */
 const MAX_CLIMB_STEP = 1.2;
 const MAX_TILT = 0.5;
+/**
+ * A grounded tank follows the surface down by up to this much per frame instead of taking off.
+ * Tipping over an edge lowers the lowest point of the tank faster than it falls; without this it
+ * would count as airborne, level out in the "air", land, tip again, and so on, every few frames
+ * (shaking, and flickering the engine and landing sounds). Real drops are much bigger than this.
+ * It doesn't apply while the surface is lifting the tank faster than SNAP_MAX_RISE (driving up
+ * the lip of a ramp), so jumps still launch.
+ */
+const SNAP_DOWN = 0.6;
+const SNAP_MAX_RISE = 4;
 /** How quickly the model's tilt follows the surface (per second). */
 const GROUNDED_TILT_RATE = 14;
 const AIR_PITCH_RATE = 6;
@@ -115,9 +125,10 @@ export function createGroundContact(
         }
 
         const support = supportHeight();
+        const snaps = grounded && verticalSpeed < SNAP_MAX_RISE;
         verticalSpeed -= GRAVITY * deltaSeconds;
         const next = elevation + (verticalSpeed * deltaSeconds);
-        if (next <= support) {
+        if (next <= support || (snaps && next - support < SNAP_DOWN)) {
             // On the surface: move with it, keeping the speed it gives (so the lip of a ramp launches
             // the tank and it stays glued to a downhill slope). A landing never pushes it back up.
             const surfaceSpeed = (support - elevation) / deltaSeconds;

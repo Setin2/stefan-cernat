@@ -6,7 +6,9 @@ import type { TankContext } from "../tank/context";
 import { createMinigameHud } from "../ui/minigameHud";
 import { UI } from "../ui/style";
 import { createArcadeButton, type ArcadeButton } from "./arcadeButton";
+import { canCollect, FLIGHT, launchVelocity, stepFruit } from "./fruitFlight";
 import { keepGroundClear } from "./ground";
+import { formatClock, loadBest, saveBest } from "./minigameScores";
 
 /**
  * Fruit Rush, the Fruit Factory's minigame (Idle Fruit Factory is a game about producing fruit):
@@ -17,8 +19,8 @@ import { keepGroundClear } from "./ground";
  * - Drive into fruit to collect it before it spoils (it shrinks away after a few seconds on the
  *   ground). Golden apples are rare and count GOLDEN_POINTS; quick pickups in a row climb in pitch.
  *
- * Fruit flies on simple hand-made arcs and bounces (no physics bodies), so even a busy round costs
- * little. The best score is remembered in the browser.
+ * Fruit flies on simple hand-made arcs and bounces (no physics bodies, see fruitFlight.ts), so
+ * even a busy round costs little. The best score is remembered in the browser.
  */
 
 const ROUND_SECONDS = 40;
@@ -28,7 +30,6 @@ const FIELD = { x: -118, z: 14, radius: 12 };
 const BUTTON_POSITION = new BABYLON.Vector2(-129, 0);
 /** Fruit launches from here if the factory's sign isn't found. */
 const FALLBACK_LAUNCH = new BABYLON.Vector3(-96, 20, -6);
-const GRAVITY = 40;
 const FLIGHT_SECONDS = { min: 1.1, max: 1.6 };
 /** Seconds between fruit, from the start of the round to the end. */
 const SPAWN_INTERVAL = { start: 0.8, end: 0.38 };
@@ -37,9 +38,6 @@ const BURST_EVERY = 9;
 const BURST_SIZE = 4;
 const GOLDEN_CHANCE = 0.07;
 const GOLDEN_POINTS = 5;
-/** How long fruit lasts on the ground, then how long it takes to shrink away. */
-const LIFETIME = 6;
-const SPOIL_SECONDS = 0.8;
 const FRUIT_SCALE = 3;
 /** The tank picks up fruit this close to its centre (it's about 12 units across). */
 const COLLECT_RADIUS = 7.5;
@@ -105,7 +103,7 @@ export async function createFruitRush(context: TankContext, button: ArcadeButton
     const restY = GROUND_Y + (FRUIT_SCALE * 0.45);
 
     let state: State = "idle";
-    let best = loadBest();
+    let best = loadBest(BEST_KEY);
     let timeLeft = 0;
     let resultsLeft = 0;
     let score = 0;
@@ -155,7 +153,7 @@ export async function createFruitRush(context: TankContext, button: ArcadeButton
         newBest = best === null || score > best;
         if (newBest) {
             best = score;
-            saveBest(score);
+            saveBest(BEST_KEY, score);
         }
         state = "results";
         resultsLeft = RESULTS_SECONDS;
@@ -187,11 +185,8 @@ export async function createFruitRush(context: TankContext, button: ArcadeButton
         const kind: FruitKind = Math.random() < GOLDEN_CHANCE ? "golden" : (["apple", "orange", "pear"] as const)[Math.floor(Math.random() * 3)];
         const from = launch.add(new BABYLON.Vector3((Math.random() - 0.5) * 6, 0, (Math.random() - 0.5) * 2));
         const time = FLIGHT_SECONDS.min + (Math.random() * (FLIGHT_SECONDS.max - FLIGHT_SECONDS.min));
-        const velocity = new BABYLON.Vector3(
-            (target.x - from.x) / time,
-            ((target.y - from.y) + (0.5 * GRAVITY * time * time)) / time,
-            (target.z - from.z) / time,
-        );
+        const thrown = launchVelocity(from, target, time);
+        const velocity = new BABYLON.Vector3(thrown.x, thrown.y, thrown.z);
         const mesh = templates[kind].createInstance(`fruit-rush-${kind}-${fruitCount++}`);
         mesh.isPickable = false;
         mesh.position.copyFrom(from);
@@ -209,60 +204,30 @@ export async function createFruitRush(context: TankContext, button: ArcadeButton
     const updateFruit = (dt: number) => {
         for (let i = fruits.length - 1; i >= 0; i--) {
             const fruit = fruits[i];
-            const { position, velocity } = fruit;
-
-            // Flight and bounces.
-            velocity.y -= GRAVITY * dt;
-            position.addInPlace(velocity.scale(dt));
-            if (position.y <= restY) {
-                position.y = restY;
-                if (fruit.groundTime < 0) {
-                    fruit.groundTime = 0;
-                }
-                if (velocity.y < -5) {
-                    velocity.y *= -0.4;
-                    velocity.x *= 0.6;
-                    velocity.z *= 0.6;
-                } else {
-                    velocity.y = 0;
-                }
-            }
+            const spoil = stepFruit(fruit, dt, restY);
             if (fruit.groundTime >= 0) {
-                fruit.groundTime += dt;
-                // Rolling to a stop.
-                const friction = Math.exp(-2.5 * dt);
-                velocity.x *= friction;
-                velocity.z *= friction;
-                fruit.spin.scaleInPlace(friction);
+                fruit.spin.scaleInPlace(Math.exp(-FLIGHT.rollFriction * dt));
             }
-            fruit.mesh.position.copyFrom(position);
+            fruit.mesh.position.copyFrom(fruit.position);
             fruit.mesh.rotation.addInPlace(fruit.spin.scale(dt));
             if (fruit.kind === "golden") {
                 fruit.mesh.rotation.y += dt * 3;
             }
 
-            // Picked up by the tank?
-            if (position.y < restY + 6 && Math.hypot(position.x - tank.position.x, position.z - tank.position.z) < COLLECT_RADIUS) {
+            if (canCollect(fruit.position, tank.position.x, tank.position.z, restY, COLLECT_RADIUS)) {
                 const golden = fruit.kind === "golden";
                 score += golden ? GOLDEN_POINTS : 1;
                 caught++;
                 streak = clock - lastPickup < STREAK_SECONDS ? streak + 1 : 0;
                 lastPickup = clock;
-                sounds.pickup(golden, streak, position);
+                sounds.pickup(golden, streak, fruit.position);
                 fruit.mesh.dispose();
                 fruits.splice(i, 1);
-                continue;
-            }
-
-            // Spoiling: shrinks away after a while on the ground.
-            const spoil = (fruit.groundTime - LIFETIME) / SPOIL_SECONDS;
-            if (spoil > 0) {
-                if (spoil >= 1) {
-                    missed++;
-                    fruit.mesh.dispose();
-                    fruits.splice(i, 1);
-                    continue;
-                }
+            } else if (spoil >= 1) {
+                missed++;
+                fruit.mesh.dispose();
+                fruits.splice(i, 1);
+            } else if (spoil > 0) {
                 fruit.mesh.scaling.setAll(FRUIT_SCALE * (1 - spoil));
             }
         }
@@ -316,11 +281,11 @@ export async function createFruitRush(context: TankContext, button: ArcadeButton
             hud.set("FRUIT RUSH", UI.navy, "Shoot PLAY to start",
                 `The factory is overflowing! Drive into the fruit to collect it before it spoils. Golden apples count ${GOLDEN_POINTS}.${best !== null ? ` Best: ${best}` : ""}`);
         } else if (state === "playing" && awayFor > 0) {
-            hud.set(`FRUIT RUSH  ${formatTime(timeLeft)}`, UI.pinkDeep, "Come back!",
+            hud.set(`FRUIT RUSH  ${formatClock(timeLeft)}`, UI.pinkDeep, "Come back!",
                 `Leaving the orchard ends the round in ${Math.max(0, LEAVE_GRACE - awayFor).toFixed(1)} s.`, UI.pinkDeep);
         } else if (state === "playing") {
             const streakText = streak >= 2 && clock - lastPickup < STREAK_SECONDS ? `Streak x${streak + 1}!` : "Drive into the fruit before it spoils!";
-            hud.set(`FRUIT RUSH  ${formatTime(timeLeft)}`, timeLeft < 10 ? UI.pinkDeep : UI.gold, `${score} fruit`, streakText, "#3E9C6E");
+            hud.set(`FRUIT RUSH  ${formatClock(timeLeft)}`, timeLeft < 10 ? UI.pinkDeep : UI.gold, `${score} fruit`, streakText, "#3E9C6E");
         } else {
             hud.set(newBest ? "NEW BEST!" : "HARVEST DONE", UI.mint, `${score} fruit`,
                 `Caught ${caught}, ${missed} spoiled.${best !== null ? ` Best ${best}.` : ""} Shoot PLAY to go again.`, "#3E9C6E");
@@ -394,27 +359,4 @@ function createFruitTemplates(scene: BABYLON.Scene): Record<FruitKind, BABYLON.M
         pear: build("fruit-rush-pear", [pearBody, pearNeck, ...stemAndLeaf("fruit-rush-pear", 0.78)], material),
         golden: build("fruit-rush-golden", apple("fruit-rush-golden", COLORS.golden), golden),
     };
-}
-
-function formatTime(seconds: number): string {
-    const whole = Math.max(0, Math.ceil(seconds));
-    return `0:${whole.toString().padStart(2, "0")}`;
-}
-
-function loadBest(): number | null {
-    try {
-        const stored = window.localStorage.getItem(BEST_KEY);
-        const value = stored === null ? NaN : Number(stored);
-        return Number.isFinite(value) ? value : null;
-    } catch {
-        return null;
-    }
-}
-
-function saveBest(value: number): void {
-    try {
-        window.localStorage.setItem(BEST_KEY, String(Math.round(value)));
-    } catch {
-        // Private mode or blocked storage: the best score just isn't remembered.
-    }
 }

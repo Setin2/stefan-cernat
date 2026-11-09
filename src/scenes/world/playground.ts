@@ -34,7 +34,7 @@ export function collideWithRamps(impostor: BABYLON.PhysicsImpostor | null | unde
     }
 }
 
-type Ramp = {
+export type Ramp = {
     name: string;
     /** Centre of the ramp's footprint. */
     x: number;
@@ -56,7 +56,7 @@ type Platform = {
     height: number;
 };
 
-const RAMPS: Ramp[] = [
+export const RAMPS: readonly Ramp[] = [
     // Stunt park: kicker (rising towards +X), a 14-unit gap, then the landing ramp (rising towards
     // -X). At full speed the tank clears the gap and lands about half way down the landing ramp.
     { name: "stunt-kicker", x: 113, z: -25, yaw: Math.PI / 2, length: 18, width: 16, height: 5 },
