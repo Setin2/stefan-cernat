@@ -1,5 +1,7 @@
 # About
 
+[![CI](https://github.com/Setin2/stefan-cernat/actions/workflows/ci.yml/badge.svg)](https://github.com/Setin2/stefan-cernat/actions/workflows/ci.yml)
+
 This is an interactive personal website built with Babylon.js and inspired by Bruno Simon.
 The website is still under development and is available at https://setin2.github.io/stefan-cernat/
 
@@ -17,3 +19,17 @@ Run `npm test` to run the test suite (Jest). The tests live in `tests/`, in fold
 
 - Game rules that don't need Babylon, such as the trading market, the fruit flight, the tank's ground contact, adaptive resolution and text layout, are tested directly.
 - Everything that does need Babylon or physics, such as the friction fix, the tank's barrel collider, the arcade buttons, impact sounds and both minigames from start to finish, runs in a headless scene. That scene uses Babylon's `NullEngine` with the real cannon.js, so nothing is drawn (see `tests/helpers/scene.ts`).
+
+# Deploying
+
+GitHub Pages serves the site straight from `main`, including the built `dist/` folder, so `dist/` has to be rebuilt and committed with every change:
+
+1. Stop `npm run watch` if it's running (it writes a development build into `dist/`).
+2. Run `npm run build` and commit `dist/` together with the source changes.
+
+`npm run verify` runs everything CI checks: typecheck, tests, the production build, and that `dist/` matches the committed one.
+
+# CI
+
+`.github/workflows/ci.yml` runs on every push to `main` and every pull request. It typechecks, runs the tests and builds. It fails if the committed `dist/` isn't the production build of the source, which catches a forgotten `npm run build` before it reaches the live site. The build is reproducible (the same source always builds to the same files), which is what makes that check possible. Dependabot keeps the workflow's actions up to date.
+

@@ -55,3 +55,6 @@ cypress/
 # Generated TypeScript declarations (tsc declarationDir) and local server pid
 /declaration
 server.pid
+
+# Jest's transform cache (CI keeps it between runs)
+/.jest-cache

@@ -47,7 +47,9 @@ module.exports = (_, argv) => {
 		},
 		plugins: [
 			new webpack.BannerPlugin({
-				banner: `${pkg.name} ${pkg.version} ${new Date().toString()}`,
+				// No build date: the same source must build to the same files, so CI can check that
+				// the committed dist/ is up to date (see .github/workflows/ci.yml).
+				banner: `${pkg.name} ${pkg.version}`,
 			}),
 			new webpack.WatchIgnorePlugin({
 				paths: [/\.js$/, /\.d\.ts$/],

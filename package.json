@@ -8,7 +8,10 @@
         "build": "webpack --mode production",
         "watch": "webpack --mode development --watch",
         "webserver": "http-server -p 1338 -c-1",
-        "test": "node --no-deprecation node_modules/jest/bin/jest.js"
+        "test": "node --no-deprecation node_modules/jest/bin/jest.js",
+        "typecheck": "tsc --noEmit -p .",
+        "check:dist": "git diff --quiet -- dist && test -z \"$(git ls-files --others --exclude-standard -- dist)\" && echo 'dist/ is up to date' || (echo 'dist/ differs from the committed build: commit the new dist/' && exit 1)",
+        "verify": "npm run typecheck && npm test && npm run build && npm run check:dist"
     },
     "license": "(Apache-2.0)",
     "devDependencies": {

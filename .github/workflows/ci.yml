@@ -1,0 +1,66 @@
+# Checks every push to main and every pull request:
+#   1. TypeScript compiles (the game and the tests),
+#   2. the tests pass,
+#   3. the production build works, and
+#   4. the committed dist/ is that build. GitHub Pages serves dist/ straight from main, so a push
+#      without a fresh `npm run build` would deploy an old version of the site.
+#
+# Run the same checks locally with `npm run verify`.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# A newer push to the same branch makes an older, still running check pointless.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Typecheck, test, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      # Jest transforms Babylon.js on its first run (slow); keep its cache between runs.
+      - name: Restore Jest cache
+        uses: actions/cache@v4
+        with:
+          path: .jest-cache
+          key: jest-${{ runner.os }}-${{ hashFiles('package-lock.json', 'babel.config.js', 'jest.config.js') }}
+
+      - name: Test
+        run: npm test -- --ci --cacheDirectory=.jest-cache
+
+      - name: Build
+        run: npm run build
+
+      - name: Check that the committed dist/ is up to date
+        run: |
+          if [ -n "$(git status --porcelain -- dist)" ]; then
+            echo "::error title=dist/ is out of date::The committed dist/ isn't the production build of this commit. Run 'npm run build' (with the watcher stopped) and commit dist/."
+            git status --short -- dist
+            exit 1
+          fi
+          echo "dist/ matches the source."
