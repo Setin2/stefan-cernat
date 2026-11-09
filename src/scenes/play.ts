@@ -18,7 +18,7 @@ import { createAiTrophies } from "./world/aiTrophies";
 import { createBrickBuilds } from "./world/bricks";
 import type { ArcadeButton } from "./world/arcadeButton";
 import { createClouds } from "./world/clouds";
-import { createCodeTrophy } from "./world/codeTrophy";
+import { createCSharpTrophy, createPythonTrophy } from "./world/codeTrophies";
 import { restyleFruitFactory } from "./world/fruitFactory";
 import { createFruitFactorySigns } from "./world/fruitFactorySigns";
 import { createFruitRush, createFruitRushButton } from "./world/fruitRush";
@@ -119,10 +119,11 @@ export default class Play extends Node {
         });
         restyleMascots(scene);
         tryTo("AI trophies", () => createAiTrophies(scene));
-        tryTo("C# trophy", () => createCodeTrophy(scene));
+        tryTo("C# trophy", () => createCSharpTrophy(scene));
         tryTo("Work corner", () => {
             this.workCorner = createWorkCorner(scene);
         });
+        tryTo("Python trophy", () => createPythonTrophy(scene));
         createWaypointSigns(scene);
         tryTo("Playground", () => createPlayground(scene));
         createBrickBuilds({ scene, tank: this.tank });

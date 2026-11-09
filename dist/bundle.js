@@ -1,4 +1,4 @@
-/*! babylonjs-editor-generated-template 4.1.0 Fri Nov 06 2026 16:51:45 GMT+0100 (Central European Standard Time) */
+/*! babylonjs-editor-generated-template 4.1.0 */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
 		module.exports = factory();
@@ -107,7 +107,7 @@ return /******/ (() => { // webpackBootstrap
 /******/ 		// This function allow to reference async chunks
 /******/ 		__webpack_require__.u = (chunkId) => {
 /******/ 			// return url for filenames based on template
-/******/ 			return "" + chunkId + "." + {"vendors-node_modules_babylonjs_core_index_js":"6dd4c14b74cc5bdadacb","src_game-runtime_ts":"0d2f61808c3f5234a1cd","vendors-node_modules_cannon_build_cannon_js":"849980e783b37925e48d","src_scenes_tools_ts":"5a3141204e85b65bdc84","vendors-node_modules_babylonjs_gui_index_js":"9ab2c097e5e644b84a48"}[chunkId] + ".js";
+/******/ 			return "" + chunkId + "." + {"vendors-node_modules_babylonjs_core_index_js":"6dd4c14b74cc5bdadacb","src_game-runtime_ts":"42dfd4f924b614536feb","vendors-node_modules_cannon_build_cannon_js":"849980e783b37925e48d","src_scenes_tools_ts":"0cf1da5cdda16ee85c09","vendors-node_modules_babylonjs_gui_index_js":"9ab2c097e5e644b84a48"}[chunkId] + ".js";
 /******/ 		};
 /******/ 	})();
 /******/ 	

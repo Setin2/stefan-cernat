@@ -5,7 +5,7 @@ import { GROUND_Y } from "../core/constants";
 
 /**
  * Rebuilds the Fruit Factory corner (the desk with the PC) as a toy desk setup. The C# trophy next
- * to it is built in codeTrophy.ts.
+ * to it is built in codeTrophies.ts.
  *
  * Every piece of the original desk model is replaced by a toy version built in code at the same
  * place and size: desk, monitor (reusing the Fruit Factory screenshot), PC tower, keyboard, mouse

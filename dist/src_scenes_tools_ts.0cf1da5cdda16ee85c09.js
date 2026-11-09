@@ -1,4 +1,4 @@
-/*! babylonjs-editor-generated-template 4.1.0 Fri Nov 06 2026 16:51:45 GMT+0100 (Central European Standard Time) */
+/*! babylonjs-editor-generated-template 4.1.0 */
 "use strict";
 (self["webpackChunkgame"] = self["webpackChunkgame"] || []).push([["src_scenes_tools_ts"],{
 
@@ -1884,7 +1884,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _world_aiTrophies__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ./world/aiTrophies */ "./src/scenes/world/aiTrophies.ts");
 /* harmony import */ var _world_bricks__WEBPACK_IMPORTED_MODULE_16__ = __webpack_require__(/*! ./world/bricks */ "./src/scenes/world/bricks.ts");
 /* harmony import */ var _world_clouds__WEBPACK_IMPORTED_MODULE_17__ = __webpack_require__(/*! ./world/clouds */ "./src/scenes/world/clouds.ts");
-/* harmony import */ var _world_codeTrophy__WEBPACK_IMPORTED_MODULE_18__ = __webpack_require__(/*! ./world/codeTrophy */ "./src/scenes/world/codeTrophy.ts");
+/* harmony import */ var _world_codeTrophies__WEBPACK_IMPORTED_MODULE_18__ = __webpack_require__(/*! ./world/codeTrophies */ "./src/scenes/world/codeTrophies.ts");
 /* harmony import */ var _world_fruitFactory__WEBPACK_IMPORTED_MODULE_19__ = __webpack_require__(/*! ./world/fruitFactory */ "./src/scenes/world/fruitFactory.ts");
 /* harmony import */ var _world_fruitFactorySigns__WEBPACK_IMPORTED_MODULE_20__ = __webpack_require__(/*! ./world/fruitFactorySigns */ "./src/scenes/world/fruitFactorySigns.ts");
 /* harmony import */ var _world_fruitRush__WEBPACK_IMPORTED_MODULE_21__ = __webpack_require__(/*! ./world/fruitRush */ "./src/scenes/world/fruitRush.ts");
@@ -2019,10 +2019,11 @@ var Play = /** @class */ (function (_super) {
         });
         (0,_world_mascots__WEBPACK_IMPORTED_MODULE_24__.restyleMascots)(scene);
         tryTo("AI trophies", function () { return (0,_world_aiTrophies__WEBPACK_IMPORTED_MODULE_15__.createAiTrophies)(scene); });
-        tryTo("C# trophy", function () { return (0,_world_codeTrophy__WEBPACK_IMPORTED_MODULE_18__.createCodeTrophy)(scene); });
+        tryTo("C# trophy", function () { return (0,_world_codeTrophies__WEBPACK_IMPORTED_MODULE_18__.createCSharpTrophy)(scene); });
         tryTo("Work corner", function () {
             _this.workCorner = (0,_world_workCorner__WEBPACK_IMPORTED_MODULE_29__.createWorkCorner)(scene);
         });
+        tryTo("Python trophy", function () { return (0,_world_codeTrophies__WEBPACK_IMPORTED_MODULE_18__.createPythonTrophy)(scene); });
         (0,_world_waypointSigns__WEBPACK_IMPORTED_MODULE_27__.createWaypointSigns)(scene);
         tryTo("Playground", function () { return (0,_world_playground__WEBPACK_IMPORTED_MODULE_25__.createPlayground)(scene); });
         (0,_world_bricks__WEBPACK_IMPORTED_MODULE_16__.createBrickBuilds)({ scene: scene, tank: this.tank });
@@ -6478,14 +6479,15 @@ function createSoftDiscTexture(scene) {
 
 /***/ },
 
-/***/ "./src/scenes/world/codeTrophy.ts"
-/*!****************************************!*\
-  !*** ./src/scenes/world/codeTrophy.ts ***!
-  \****************************************/
+/***/ "./src/scenes/world/codeTrophies.ts"
+/*!******************************************!*\
+  !*** ./src/scenes/world/codeTrophies.ts ***!
+  \******************************************/
 (__unused_webpack_module, __webpack_exports__, __webpack_require__) {
 
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   createCodeTrophy: () => (/* binding */ createCodeTrophy)
+/* harmony export */   createCSharpTrophy: () => (/* binding */ createCSharpTrophy),
+/* harmony export */   createPythonTrophy: () => (/* binding */ createPythonTrophy)
 /* harmony export */ });
 /* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core */ "./node_modules/@babylonjs/core/index.js");
 /* harmony import */ var _core_constants__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../core/constants */ "./src/scenes/core/constants.ts");
@@ -6514,26 +6516,30 @@ var __spreadArray = (undefined && undefined.__spreadArray) || function (to, from
 
 
 /**
- * The C# trophy: a gold cup with two loop handles on a purple plinth, with a hexagon "C#" badge on
- * the front of the cup. It replaces the imported C# logo model (whose physics box ended up out of
- * step with what was drawn, so the tank drove straight through it).
+ * Programming-language trophies: a gold cup with two loop handles on a plinth, with the language's
+ * badge on the front of the cup.
  *
- * Like the AI trophies it can be pushed around: an invisible box collider carries the visible
+ * - C#, beside the projects desk. It replaces the imported C# logo model (whose physics box ended
+ *   up out of step with what was drawn, so the tank drove straight through it).
+ * - Python, beside the work corner: a blue badge with a yellow "Py", and a toy snake coiled round
+ *   the cup's stem.
+ *
+ * Like the AI trophies they can be pushed around: an invisible box collider carries the visible
  * parts, and its name ends in "-collider" so hits play the trophy sound.
  *
  * Built at size 1 in trophy space: y = 0 is the ground, the front faces -Z.
  */
-var ID = "code-trophy";
-/** Where the C# logo model stood (x, z). */
-var POSITION = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector2(-117.93, -15.92);
 var SCALE = 1.5;
 var PALETTE = {
-    plinth: "#5B3A8C",
     plinthTop: "#E8DCC6",
     gold: "#C9A35B",
-    badge: "#7E57C2",
-    letters: "#FFFFFF",
+    csharp: { plinth: "#5B3A8C", badge: "#7E57C2", letters: "#FFFFFF" },
+    python: { plinth: "#2B5B84", badge: "#3776AB", letters: "#FFD43B", snake: "#FFD43B", eyes: "#22313F" },
 };
+/** Where the C# logo model stood (x, z). */
+var CSHARP_POSITION = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector2(-117.93, -15.92);
+/** Left of the work corner's info stand (on screen), between the path and the brick wall. */
+var PYTHON_POSITION = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector2(4.4, -42.8);
 /** The cup's outline, turned around the Y axis: (radius, height) from the foot up and back down inside. */
 var CUP_PROFILE = [
     [0, 1.6],
@@ -6566,12 +6572,32 @@ var CUP_PROFILE = [
 ];
 /** Collider size (trophy space), covering the plinth, the cup and its handles. */
 var BOX = { width: 5.6, height: 7.4, depth: 4.4 };
-function createCodeTrophy(scene) {
-    var _a;
+function createCSharpTrophy(scene) {
     removeLogoModel(scene);
-    var yaw = _core_constants__WEBPACK_IMPORTED_MODULE_1__.FACE_CAMERA_YAW + 0.1;
-    var collider = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateBox("".concat(ID, "-collider"), { width: BOX.width * SCALE, height: BOX.height * SCALE, depth: BOX.depth * SCALE }, scene);
-    collider.position.set(POSITION.x, _core_constants__WEBPACK_IMPORTED_MODULE_1__.GROUND_Y + (BOX.height * SCALE / 2) + 0.05, POSITION.y);
+    createTrophy(scene, {
+        id: "csharp-trophy",
+        position: CSHARP_POSITION,
+        yawOffset: 0.1,
+        plinth: PALETTE.csharp.plinth,
+        badge: createCSharpBadge,
+    });
+}
+function createPythonTrophy(scene) {
+    createTrophy(scene, {
+        id: "python-trophy",
+        position: PYTHON_POSITION,
+        yawOffset: -0.12,
+        plinth: PALETTE.python.plinth,
+        badge: createPythonBadge,
+        extras: createSnake,
+    });
+}
+function createTrophy(scene, spec) {
+    var _a;
+    var id = spec.id;
+    var yaw = _core_constants__WEBPACK_IMPORTED_MODULE_1__.FACE_CAMERA_YAW + spec.yawOffset;
+    var collider = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateBox("".concat(id, "-collider"), { width: BOX.width * SCALE, height: BOX.height * SCALE, depth: BOX.depth * SCALE }, scene);
+    collider.position.set(spec.position.x, _core_constants__WEBPACK_IMPORTED_MODULE_1__.GROUND_Y + (BOX.height * SCALE / 2) + 0.05, spec.position.y);
     collider.rotation.y = yaw;
     collider.isVisible = false;
     collider.isPickable = false;
@@ -6583,11 +6609,11 @@ function createCodeTrophy(scene) {
         body.linearDamping = 0.15;
         body.angularDamping = 0.3;
     }
-    var root = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.TransformNode(ID, scene);
+    var root = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.TransformNode(id, scene);
     root.parent = collider;
     root.position.y = -BOX.height * SCALE / 2;
     root.scaling.setAll(SCALE);
-    for (var _i = 0, _b = buildModel(scene); _i < _b.length; _i++) {
+    for (var _i = 0, _b = buildModel(scene, spec); _i < _b.length; _i++) {
         var mesh = _b[_i];
         mesh.parent = root;
         mesh.isPickable = false;
@@ -6606,20 +6632,22 @@ function removeLogoModel(scene) {
     (_c = ((_a = logo.physicsImpostor) !== null && _a !== void 0 ? _a : (_b = scene.getPhysicsEngine()) === null || _b === void 0 ? void 0 : _b.getImpostorForPhysicsObject(logo))) === null || _c === void 0 ? void 0 : _c.dispose();
     logo.dispose();
 }
-function buildModel(scene) {
-    var _a;
-    var gold = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "".concat(ID, "-gold"), PALETTE.gold, { roughness: 0.25, metallic: 0.75, clearCoat: 0.6 });
+function buildModel(scene, spec) {
+    var _a, _b, _c, _d, _e;
+    var id = spec.id;
+    var gold = (_a = scene.getMaterialByName("code-trophy-gold")) !== null && _a !== void 0 ? _a : (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "code-trophy-gold", PALETTE.gold, { roughness: 0.25, metallic: 0.75, clearCoat: 0.6 });
+    var plinthTop = (_b = scene.getMaterialByName("code-trophy-plinth-top")) !== null && _b !== void 0 ? _b : (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "code-trophy-plinth-top", PALETTE.plinthTop, { roughness: 0.45, clearCoat: 0.35 });
     var meshes = [];
     // Two-step plinth.
-    var plinth = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("".concat(ID, "-plinth"), 4.4, 1.2, 4.2, 0.3, scene);
-    plinth.material = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "".concat(ID, "-plinth-material"), PALETTE.plinth, { roughness: 0.45, clearCoat: 0.4 });
+    var plinth = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("".concat(id, "-plinth"), 4.4, 1.2, 4.2, 0.3, scene);
+    plinth.material = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "".concat(id, "-plinth-material"), spec.plinth, { roughness: 0.45, clearCoat: 0.4 });
     plinth.position.y = 0.6;
-    var top = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("".concat(ID, "-plinth-top"), 3.6, 0.4, 3.4, 0.15, scene);
-    top.material = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "".concat(ID, "-plinth-top-material"), PALETTE.plinthTop, { roughness: 0.45, clearCoat: 0.35 });
+    var top = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("".concat(id, "-plinth-top"), 3.6, 0.4, 3.4, 0.15, scene);
+    top.material = plinthTop;
     top.position.y = 1.4;
     meshes.push(plinth, top);
     // The cup, with both handles merged in (one draw call).
-    var cup = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateLathe("".concat(ID, "-cup"), {
+    var cup = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateLathe("".concat(id, "-cup"), {
         shape: CUP_PROFILE.map(function (_a) {
             var r = _a[0], y = _a[1];
             return new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(r, y, 0);
@@ -6627,42 +6655,41 @@ function buildModel(scene) {
         tessellation: 40,
         sideOrientation: _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Mesh.DOUBLESIDE,
     }, scene);
-    var handles = [-1, 1].map(function (side) { return createHandle(scene, side); });
-    var goldParts = (_a = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Mesh.MergeMeshes(__spreadArray([cup], handles, true), true, true)) !== null && _a !== void 0 ? _a : cup;
-    goldParts.name = "".concat(ID, "-gold-parts");
+    var handles = [-1, 1].map(function (side) { return createHandle(scene, id, side); });
+    var goldParts = (_c = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Mesh.MergeMeshes(__spreadArray([cup], handles, true), true, true)) !== null && _c !== void 0 ? _c : cup;
+    goldParts.name = "".concat(id, "-gold-parts");
     goldParts.material = gold;
     meshes.push(goldParts);
-    meshes.push.apply(meshes, createBadge(scene));
+    // The badge sits just in front of the bowl's surface.
+    meshes.push.apply(meshes, spec.badge(scene, id, 6.1, -2.06));
+    meshes.push.apply(meshes, ((_e = (_d = spec.extras) === null || _d === void 0 ? void 0 : _d.call(spec, scene, id)) !== null && _e !== void 0 ? _e : []));
     return meshes;
 }
 /** A loop handle on one side of the bowl, from just under the rim curling out and back in lower down. */
-function createHandle(scene, side) {
+function createHandle(scene, id, side) {
     var from = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(2.05, 6.6, 0);
     var out1 = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(3.3, 6.9, 0);
     var out2 = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(3.2, 5.0, 0);
     var to = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(1.55, 4.95, 0);
     var curve = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Curve3.CreateCubicBezier(from, out1, out2, to, 24).getPoints();
     var path = curve.map(function (point) { return new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(point.x * side, point.y, point.z); });
-    return _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateTube("".concat(ID, "-handle-").concat(side), {
+    return _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateTube("".concat(id, "-handle-").concat(side), {
         path: path,
         radiusFunction: function (i) { return 0.2 + (0.06 * Math.sin((i / (path.length - 1)) * Math.PI)); },
         tessellation: 14,
         cap: _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Mesh.CAP_ALL,
     }, scene);
 }
-/** A purple hexagon on the front of the bowl with a white "C#" on it. */
-function createBadge(scene) {
-    var centerY = 6.1;
-    // Just in front of the bowl's surface at that height.
-    var frontZ = -2.06;
+/** A purple hexagon with a white "C#" on it. */
+function createCSharpBadge(scene, id, centerY, frontZ) {
     var hexagon = [];
     for (var i = 0; i < 6; i++) {
         var angle = (Math.PI / 6) + (i * Math.PI / 3);
         hexagon.push([Math.cos(angle) * 0.95, Math.sin(angle) * 0.95]);
     }
-    var badge = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.extrudeOutline)("".concat(ID, "-badge"), hexagon, 0.3, 0.08, scene);
+    var badge = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.extrudeOutline)("".concat(id, "-badge"), hexagon, 0.3, 0.08, scene);
     badge.position.set(0, centerY, frontZ);
-    badge.material = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "".concat(ID, "-badge-material"), PALETTE.badge, { roughness: 0.35, clearCoat: 0.7 });
+    badge.material = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "".concat(id, "-badge-material"), PALETTE.csharp.badge, { roughness: 0.35, clearCoat: 0.7 });
     // The letters are built around the origin and then moved onto the badge.
     // "C": an open ring.
     var arc = [];
@@ -6670,7 +6697,7 @@ function createBadge(scene) {
         var angle = 0.75 + ((i / 20) * (Math.PI * 2 - 1.5));
         arc.push(new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(-0.28 + (Math.cos(angle) * 0.45), Math.sin(angle) * 0.45, 0));
     }
-    var letterC = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateTube("".concat(ID, "-c"), { path: arc, radius: 0.11, tessellation: 10, cap: _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Mesh.CAP_ALL }, scene);
+    var letterC = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateTube("".concat(id, "-c"), { path: arc, radius: 0.11, tessellation: 10, cap: _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Mesh.CAP_ALL }, scene);
     // "#": two slanted uprights and two crossbars (tubes, so they merge with the "C").
     var stroke = function (name, x1, y1, x2, y2) { return _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateTube(name, {
         path: [new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(x1, y1, 0), new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(x2, y2, 0)],
@@ -6681,18 +6708,109 @@ function createBadge(scene) {
     var sharpParts = [];
     for (var _i = 0, _a = [-0.13, 0.13]; _i < _a.length; _i++) {
         var offset = _a[_i];
-        sharpParts.push(stroke("".concat(ID, "-sharp-v"), 0.52 + offset - 0.05, -0.3, 0.52 + offset + 0.05, 0.3));
-        sharpParts.push(stroke("".concat(ID, "-sharp-h"), 0.27, offset, 0.77, offset));
+        sharpParts.push(stroke("".concat(id, "-sharp-v"), 0.52 + offset - 0.05, -0.3, 0.52 + offset + 0.05, 0.3));
+        sharpParts.push(stroke("".concat(id, "-sharp-h"), 0.27, offset, 0.77, offset));
     }
     var letters = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Mesh.MergeMeshes(__spreadArray([letterC], sharpParts, true), true, true);
     if (!letters) {
         return [badge];
     }
-    letters.name = "".concat(ID, "-letters");
+    letters.name = "".concat(id, "-letters");
     letters.position.set(0, centerY, frontZ - 0.18);
     letters.scaling.setAll(0.82);
-    letters.material = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "".concat(ID, "-letters-material"), PALETTE.letters, { roughness: 0.35, clearCoat: 0.6 });
+    letters.material = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "".concat(id, "-letters-material"), PALETTE.csharp.letters, { roughness: 0.35, clearCoat: 0.6 });
     return [badge, letters];
+}
+/** A blue rounded square with a yellow "Py" on it. */
+function createPythonBadge(scene, id, centerY, frontZ) {
+    var half = 0.82;
+    var corner = 0.3;
+    var square = [];
+    for (var _i = 0, _a = [[half - corner, half - corner, 0], [-(half - corner), half - corner, 0.5], [-(half - corner), -(half - corner), 1], [half - corner, -(half - corner), 1.5]]; _i < _a.length; _i++) {
+        var _b = _a[_i], cx = _b[0], cy_1 = _b[1], start = _b[2];
+        for (var i = 0; i <= 6; i++) {
+            var angle = (start + (i / 12)) * Math.PI;
+            square.push([cx + (Math.cos(angle) * corner), cy_1 + (Math.sin(angle) * corner)]);
+        }
+    }
+    var badge = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.extrudeOutline)("".concat(id, "-badge"), square, 0.3, 0.08, scene);
+    badge.position.set(0, centerY, frontZ);
+    badge.material = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "".concat(id, "-badge-material"), PALETTE.python.badge, { roughness: 0.35, clearCoat: 0.7 });
+    // The letters are built around the origin as tubes, then moved onto the badge.
+    var stroke = function (name, points, radius) {
+        if (radius === void 0) { radius = 0.09; }
+        return _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateTube(name, {
+            path: points.map(function (_a) {
+                var x = _a[0], y = _a[1];
+                return new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(x, y, 0);
+            }),
+            radius: radius,
+            tessellation: 8,
+            cap: _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Mesh.CAP_ALL,
+        }, scene);
+    };
+    // "P": an upright and a rounded bowl at the top.
+    var bowl = [[-0.45, 0.42]];
+    for (var i = 0; i <= 12; i++) {
+        var angle = (Math.PI / 2) - ((i / 12) * Math.PI);
+        bowl.push([-0.3 + (Math.cos(angle) * 0.24), 0.21 + (Math.sin(angle) * 0.21)]);
+    }
+    bowl.push([-0.45, 0]);
+    var parts = [
+        stroke("".concat(id, "-p-stem"), [[-0.45, -0.42], [-0.45, 0.42]]),
+        stroke("".concat(id, "-p-bowl"), bowl),
+        // "y": a short arm and a long one that drops below the line.
+        stroke("".concat(id, "-y-left"), [[0.08, 0.14], [0.27, -0.16]]),
+        stroke("".concat(id, "-y-right"), [[0.48, 0.14], [0.2, -0.46], [0.08, -0.5]]),
+    ];
+    var letters = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Mesh.MergeMeshes(parts, true, true);
+    if (!letters) {
+        return [badge];
+    }
+    letters.name = "".concat(id, "-letters");
+    letters.position.set(0, centerY, frontZ - 0.18);
+    letters.material = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "".concat(id, "-letters-material"), PALETTE.python.letters, { roughness: 0.35, clearCoat: 0.6 });
+    return [badge, letters];
+}
+/** A toy snake coiled twice round the cup's stem, its head raised at the front. */
+function createSnake(scene, id) {
+    var _a, _b;
+    var turns = 2.1;
+    var steps = 60;
+    var bottom = 1.82;
+    var top = 3.5;
+    var path = [];
+    for (var i = 0; i <= steps; i++) {
+        var t = i / steps;
+        // Ends at the front (-Z), facing the camera.
+        var angle = (-Math.PI / 2) - ((1 - t) * turns * Math.PI * 2);
+        var radius = 0.78 + (0.12 * Math.sin(t * Math.PI));
+        path.push(new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(Math.cos(angle) * radius, bottom + ((top - bottom) * t), Math.sin(angle) * radius));
+    }
+    var body = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateTube("".concat(id, "-snake-body"), {
+        path: path,
+        // A thin tail growing to a thick neck.
+        radiusFunction: function (i) { return 0.06 + (0.16 * Math.min(1, (i / steps) * 1.6)); },
+        tessellation: 12,
+        cap: _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Mesh.CAP_ALL,
+    }, scene);
+    // The head: a slightly flattened ball, raised out in front of the stem.
+    var neck = path[path.length - 1];
+    var head = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateSphere("".concat(id, "-snake-head"), { diameter: 0.62, segments: 14 }, scene);
+    head.scaling.set(1, 0.75, 1.25);
+    head.position.set(neck.x, neck.y + 0.12, neck.z - 0.22);
+    var snake = (_a = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Mesh.MergeMeshes([body, head], true, true)) !== null && _a !== void 0 ? _a : body;
+    snake.name = "".concat(id, "-snake");
+    snake.material = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "".concat(id, "-snake-material"), PALETTE.python.snake, { roughness: 0.35, clearCoat: 0.7 });
+    var eyes = [-1, 1].map(function (side) {
+        var eye = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateSphere("".concat(id, "-snake-eye-").concat(side), { diameter: 0.12, segments: 8 }, scene);
+        eye.position.set(neck.x + (side * 0.15), neck.y + 0.25, neck.z - 0.42);
+        return eye;
+    });
+    var eyeMesh = (_b = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Mesh.MergeMeshes(eyes, true, true)) !== null && _b !== void 0 ? _b : eyes[0];
+    eyeMesh.name = "".concat(id, "-snake-eyes");
+    eyeMesh.material = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "".concat(id, "-snake-eyes-material"), PALETTE.python.eyes, { roughness: 0.25, clearCoat: 0.8 });
+    return [snake, eyeMesh];
 }
 
 
@@ -6726,7 +6844,7 @@ var __assign = (undefined && undefined.__assign) || function () {
 
 /**
  * Rebuilds the Fruit Factory corner (the desk with the PC) as a toy desk setup. The C# trophy next
- * to it is built in codeTrophy.ts.
+ * to it is built in codeTrophies.ts.
  *
  * Every piece of the original desk model is replaced by a toy version built in code at the same
  * place and size: desk, monitor (reusing the Fruit Factory screenshot), PC tower, keyboard, mouse
@@ -11509,4 +11627,4 @@ function createStamp(scene) {
 /***/ }
 
 }]);
-//# sourceMappingURL=src_scenes_tools_ts.5a3141204e85b65bdc84.js.map
+//# sourceMappingURL=src_scenes_tools_ts.0cf1da5cdda16ee85c09.js.map
