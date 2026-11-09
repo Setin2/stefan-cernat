@@ -16,10 +16,12 @@ import { ControlOverlay } from "./ui/controlsOverlay";
 import { attachFpsCounter } from "./ui/fpsCounter";
 import { createAiTrophies } from "./world/aiTrophies";
 import { createBrickBuilds } from "./world/bricks";
+import type { ArcadeButton } from "./world/arcadeButton";
 import { createClouds } from "./world/clouds";
 import { createCodeTrophy } from "./world/codeTrophy";
 import { restyleFruitFactory } from "./world/fruitFactory";
 import { createFruitFactorySigns } from "./world/fruitFactorySigns";
+import { createFruitRush, createFruitRushButton } from "./world/fruitRush";
 import { decorateGround } from "./world/ground";
 import { restyleLandmarks } from "./world/landmarks";
 import { restyleMascots } from "./world/mascots";
@@ -44,6 +46,7 @@ export default class Play extends Node {
     private tank!: BABYLON.AbstractMesh;
     private toyTank: ToyTank | null = null;
     private workCorner: WorkCorner | null = null;
+    private fruitRushButton: ArcadeButton | null = null;
 
     // @ts-ignore Babylon attaches script classes without calling Node's public constructor shape.
     protected constructor() {}
@@ -109,6 +112,9 @@ export default class Play extends Node {
         restyleLandmarks(scene);
         restyleFruitFactory(scene);
         createFruitFactorySigns(scene);
+        tryTo("Fruit Rush", () => {
+            this.fruitRushButton = createFruitRushButton(scene);
+        });
         restyleMascots(scene);
         tryTo("AI trophies", () => createAiTrophies(scene));
         tryTo("C# trophy", () => createCodeTrophy(scene));
@@ -144,7 +150,7 @@ export default class Play extends Node {
         }
     }
 
-    /** Driving, shooting, the work corner's minigame and all the sounds (synthesised, see audio/). After the world is built. */
+    /** Driving, shooting, the minigames and all the sounds (synthesised, see audio/). After the world is built. */
     private initializeTank(): void {
         const sounds = new SoundBoard(this.scene, this.tank, this.camera);
         const context = {
@@ -160,6 +166,9 @@ export default class Play extends Node {
         registerLoadingTask(initializeShooting(context, new BABYLON.Vector3(0, 0, 1)));
         if (this.workCorner) {
             registerLoadingTask(createTradingGame(context, this.workCorner).catch((error) => console.error("Trading game failed", error)));
+        }
+        if (this.fruitRushButton) {
+            registerLoadingTask(createFruitRush(context, this.fruitRushButton).catch((error) => console.error("Fruit Rush failed", error)));
         }
     }
 }

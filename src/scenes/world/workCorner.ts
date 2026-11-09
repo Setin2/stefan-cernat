@@ -1,10 +1,10 @@
 import * as BABYLON from "@babylonjs/core";
 
-import { getSoundMaterial } from "../audio/soundMaterials";
 import { addStaticBox } from "../core/staticBodies";
 import { createRoundedBox, createToyMaterial } from "../core/toyStyle";
 import { GROUND_Y, FACE_CAMERA_YAW } from "../core/constants";
 import { UI } from "../ui/style";
+import { createArcadeButton, type ArcadeButton } from "./arcadeButton";
 import { createInfoStand, drawInfoText, roundRect } from "./infoStand";
 
 /**
@@ -61,21 +61,12 @@ type Frame = {
 /** A "signal" shown by the quantum core: which way it expects the market to go next. */
 export type CoreSignal = "up" | "down" | "none";
 
-export type TradeButton = {
-    /** World position of the button's face. */
-    position: BABYLON.Vector3;
-    /** Fires when a shot hits the button. */
-    onHit: BABYLON.Observable<void>;
-    /** Plays the press animation. */
-    press: () => void;
-};
-
 /** What the minigame uses. */
 export type WorkCorner = {
     center: BABYLON.Vector3;
     setSignal: (signal: CoreSignal) => void;
     board: TradingBoard;
-    buttons: { buy: TradeButton; sell: TradeButton };
+    buttons: { buy: ArcadeButton; sell: ArcadeButton };
 };
 
 export function createWorkCorner(scene: BABYLON.Scene): WorkCorner | null {
@@ -94,7 +85,7 @@ export function createWorkCorner(scene: BABYLON.Scene): WorkCorner | null {
     const animations: ((dt: number) => void)[] = [];
     let setSignal: ((signal: CoreSignal) => void) | null = null;
     let board: TradingBoard | null = null;
-    let buttons: { buy: ReturnType<typeof createTradeButton>; sell: ReturnType<typeof createTradeButton> } | null = null;
+    let buttons: { buy: ArcadeButton; sell: ArcadeButton } | null = null;
 
     const parts: [string, () => void][] = [
         ["info stand", () => createWorkInfoStand(scene, frame)],
@@ -108,14 +99,19 @@ export function createWorkCorner(scene: BABYLON.Scene): WorkCorner | null {
             animations.push(board.animate);
         }],
         ["trade buttons", () => {
-            buttons = {
-                buy: createTradeButton(scene, frame, materials, "buy", 16, -8),
-                sell: createTradeButton(scene, frame, materials, "sell", 30, -8),
+            const button = (kind: "buy" | "sell", x: number) => {
+                const position = frame.toWorld(x, 0, -8);
+                return createArcadeButton(scene, {
+                    id: `work-button-${kind}`,
+                    x: position.x,
+                    z: position.z,
+                    yaw: frame.yaw,
+                    color: kind === "buy" ? PALETTE.mint : PALETTE.pink,
+                    symbol: kind === "buy" ? "\u25B2" : "\u25BC",
+                    label: kind === "buy" ? "BUY" : "SELL",
+                });
             };
-            animations.push((dt) => {
-                buttons?.buy.animate(dt);
-                buttons?.sell.animate(dt);
-            });
+            buttons = { buy: button("buy", 16), sell: button("sell", 30) };
         }],
         ["briefcase", () => createBriefcase(scene, frame, materials)],
     ];
@@ -582,112 +578,6 @@ function createTicker(scene: BABYLON.Scene, width: number, height: number): { me
         }
     };
     return { mesh, texture, setText };
-}
-
-// ==================================================================== Trade buttons
-
-const BUTTON_STYLE = {
-    buy: { label: "BUY", arrow: "\u25B2", color: PALETTE.mint },
-    sell: { label: "SELL", arrow: "\u25BC", color: PALETTE.pink },
-};
-
-/**
- * A big round arcade button on a post, facing the camera, for the minigame: shoot it to press it.
- * Built at (x, z) in the corner's frame.
- */
-function createTradeButton(scene: BABYLON.Scene, frame: Frame, materials: Materials, kind: "buy" | "sell", x: number, z: number): TradeButton & { animate: (dt: number) => void } {
-    const style = BUTTON_STYLE[kind];
-    const id = `work-button-${kind}`;
-    const root = createAnchor(scene, id, frame, x, z, 1.2);
-    const discY = 6.2;
-
-    attach(createRoundedBox(`${id}-base`, 2.8, 0.6, 2.8, 0.25, scene), root, materials.sand).position.y = 0.3;
-    const post = attach(createRoundedBox(`${id}-post`, 0.8, discY, 0.8, 0.3, scene), root, materials.wood);
-    post.position.set(0, (discY / 2) + 0.3, 0.6);
-
-    // Cylinders stand along Y; tip them so their faces point at the camera (-Z).
-    const holder = new BABYLON.TransformNode(`${id}-holder`, scene);
-    holder.parent = root;
-    holder.position.set(0, discY, 0);
-    holder.rotation.x = -Math.PI / 2;
-    const rim = attach(BABYLON.MeshBuilder.CreateCylinder(`${id}-rim`, { diameter: 5, height: 0.8, tessellation: 40 }, scene), holder, materials.navy);
-    rim.position.y = 0.1;
-
-    // The cap is what moves in when the button is pressed.
-    const cap = new BABYLON.TransformNode(`${id}-cap`, scene);
-    cap.parent = holder;
-    const face = attach(BABYLON.MeshBuilder.CreateCylinder(`${id}-face`, { diameter: 4.1, height: 0.7, tessellation: 40 }, scene), cap, kind === "buy" ? materials.mint : materials.pink, true);
-    face.position.y = 0.6;
-    const label = createButtonLabel(scene, `${id}-label`, style.arrow, style.label);
-    label.parent = cap;
-    label.position.y = 0.97;
-    label.rotation.x = Math.PI / 2;
-    label.metadata = { keepUnfrozen: true };
-
-    const onHit = new BABYLON.Observable<void>();
-    root.computeWorldMatrix(true);
-    const scale = root.scaling.x;
-    const position = BABYLON.Vector3.TransformCoordinates(new BABYLON.Vector3(0, discY, -0.5), root.getWorldMatrix());
-    const rotation = BABYLON.Quaternion.RotationYawPitchRoll(root.rotation.y, 0, 0);
-    // Only shots press it; the tank driving into it just bumps.
-    addStaticBox(scene, position, 5 * scale, 5 * scale, 1.6 * scale, {
-        rotation,
-        sound: "post",
-        onHit: (body) => {
-            if (getSoundMaterial(body) === "ball") {
-                onHit.notifyObservers();
-            }
-        },
-    });
-    addStaticBox(scene, BABYLON.Vector3.TransformCoordinates(new BABYLON.Vector3(0, discY / 2, 0.6), root.getWorldMatrix()), 1.2 * scale, discY * scale, 1.2 * scale, { rotation, sound: "post" });
-
-    let pressed = 0;
-    return {
-        position,
-        onHit,
-        press: () => {
-            pressed = 1;
-        },
-        animate: (dt) => {
-            if (pressed <= 0 && cap.position.y === 0) {
-                return;
-            }
-            pressed = Math.max(0, pressed - (dt * 3));
-            // In fast, back out slowly.
-            cap.position.y = -0.45 * Math.sin(Math.min(1, pressed) * Math.PI * 0.5);
-        },
-    };
-}
-
-function createButtonLabel(scene: BABYLON.Scene, name: string, arrow: string, text: string): BABYLON.Mesh {
-    const size = 256;
-    const texture = new BABYLON.DynamicTexture(`${name}-texture`, { width: size, height: size }, scene, true);
-    texture.hasAlpha = true;
-    const context = texture.getContext() as CanvasRenderingContext2D;
-    const draw = () => {
-        context.clearRect(0, 0, size, size);
-        context.fillStyle = PALETTE.navyDeep;
-        context.textAlign = "center";
-        context.textBaseline = "middle";
-        context.font = `900 54px ${FONT}`;
-        context.fillText(arrow, size / 2, size * 0.32);
-        context.font = `900 ${text.length > 3 ? 70 : 80}px ${FONT}`;
-        context.fillText(text, size / 2, size * 0.64);
-        texture.update();
-    };
-    draw();
-    if ("fonts" in document) {
-        void document.fonts.load("900 40px Nunito").then(draw).catch(() => undefined);
-    }
-    const material = new BABYLON.StandardMaterial(`${name}-material`, scene);
-    material.diffuseTexture = texture;
-    material.useAlphaFromDiffuseTexture = true;
-    material.specularColor = new BABYLON.Color3(0.1, 0.1, 0.1);
-    material.emissiveColor = new BABYLON.Color3(0.3, 0.3, 0.3);
-    const plane = BABYLON.MeshBuilder.CreatePlane(name, { size: 3.4 }, scene);
-    plane.material = material;
-    plane.isPickable = false;
-    return plane;
 }
 
 // ==================================================================== Briefcase

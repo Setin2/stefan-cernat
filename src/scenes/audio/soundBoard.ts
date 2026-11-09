@@ -218,6 +218,25 @@ export class SoundBoard {
         }
     }
 
+    /**
+     * Fruit Rush: picking up a fruit is a juicy little "plop" that climbs in pitch with each pickup
+     * in a quick streak (`streak`), and a golden one adds a sparkle.
+     */
+    public pickup(golden: boolean, streak: number, position: BABYLON.Vector3): void {
+        const voice = this.createVoice(position, 1, 0.6);
+        if (!voice) {
+            return;
+        }
+        const pitch = Math.pow(2, Math.min(streak, 12) / 12);
+        this.tone(voice, { type: "sine", from: 420 * pitch, to: 880 * pitch, glide: 0.07, attack: 0.002, decay: 0.12, gain: 0.22 });
+        this.noiseBurst(voice, { filter: "bandpass", frequency: 2400 * pitch, q: 2, attack: 0.001, decay: 0.03, gain: 0.08 });
+        if (golden) {
+            [[1568, 0.06], [2093, 0.12], [2637, 0.18]].forEach(([frequency, delay]) => {
+                this.tone(voice, { type: "triangle", from: frequency, attack: 0.002, decay: 0.3, gain: 0.07, delay });
+            });
+        }
+    }
+
     /** The tank landing after a jump; `speed` is how fast it was falling. */
     public land(speed: number): void {
         const strength = clamp((speed - 4) / 22, 0, 1);

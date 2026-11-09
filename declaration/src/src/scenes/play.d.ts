@@ -14,6 +14,7 @@ export default class Play extends Node {
     private tank;
     private toyTank;
     private workCorner;
+    private fruitRushButton;
     protected constructor();
     /**
      * Called when the node is being initialized.
@@ -30,6 +31,6 @@ export default class Play extends Node {
      * to get the original model back for comparison.
      */
     private createToyTankModel;
-    /** Driving, shooting, the work corner's minigame and all the sounds (synthesised, see audio/). After the world is built. */
+    /** Driving, shooting, the minigames and all the sounds (synthesised, see audio/). After the world is built. */
     private initializeTank;
 }

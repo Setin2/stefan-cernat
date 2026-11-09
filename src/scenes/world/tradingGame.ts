@@ -1,6 +1,6 @@
 import type { TankContext } from "../tank/context";
 import { UI } from "../ui/style";
-import { createTradingHud } from "../ui/tradingHud";
+import { createMinigameHud } from "../ui/minigameHud";
 import { roundRect } from "./infoStand";
 import { TICKER_TEXT, type CoreSignal, type WorkCorner } from "./workCorner";
 
@@ -33,7 +33,7 @@ const SIGNAL_ACCURACY = 0.8;
 /** The forecast stays on this long into the new trend. */
 const SIGNAL_LINGER = 0.6;
 /** The card shows up this close to the corner. */
-const HUD_DISTANCE = 75;
+const HUD_DISTANCE = 50;
 /**
  * The trading floor: during a round, driving further than this from the corner's centre starts a
  * short countdown (LEAVE_GRACE seconds), and the round is called off unless you come back.
@@ -69,8 +69,7 @@ export async function createTradingGame(context: TankContext, corner: WorkCorner
     if (scene.isDisposed) {
         return;
     }
-    const ui = gui.AdvancedDynamicTexture.CreateFullscreenUI("trading-ui", true, scene);
-    const hud = createTradingHud(gui, ui);
+    const hud = createMinigameHud(gui, scene, "trading");
     const { board, buttons, setSignal } = corner;
     const soundAt = corner.center;
 
@@ -457,7 +456,6 @@ export async function createTradingGame(context: TankContext, corner: WorkCorner
         }
     });
 
-    scene.onDisposeObservable.addOnce(() => ui.dispose());
 }
 
 function positionText(position: number, entry: number): string {

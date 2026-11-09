@@ -35,7 +35,14 @@ const PALETTE = {
     boulders: ["#B8B1A3", "#9C968A", "#CFC7B8"],
 };
 
-type Area = { minX: number; maxX: number; minZ: number; maxZ: number };
+export type Area = { minX: number; maxX: number; minZ: number; maxZ: number };
+
+const extraClearAreas: Area[] = [];
+
+/** Keeps an area free of decorations (bushes, boulders, flowers), e.g. a minigame's playing field. Call before decorateGround. */
+export function keepGroundClear(area: Area): void {
+    extraClearAreas.push(area);
+}
 
 export function decorateGround(scene: BABYLON.Scene, treePositions: BABYLON.Vector3[]): void {
     try {
@@ -280,7 +287,7 @@ function collectBlockedAreas(scene: BABYLON.Scene): Area[] {
     // too much).
     const ignored = /^(ground|tank_holder|splatter\d*|ball|deco-|ground-petal|road-)/;
     // The ramps' run-up lanes and the roads stay clear too.
-    const areas: Area[] = [...PLAYGROUND_LANES, ...getRoadClearAreas()].map((lane) => ({ ...lane }));
+    const areas: Area[] = [...PLAYGROUND_LANES, ...getRoadClearAreas(), ...extraClearAreas].map((lane) => ({ ...lane }));
     for (const mesh of scene.meshes) {
         if (!mesh.isEnabled() || ignored.test(mesh.name) || (tank && mesh.isDescendantOf(tank))) {
             continue;

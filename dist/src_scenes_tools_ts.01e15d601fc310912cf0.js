@@ -402,6 +402,26 @@ var SoundBoard = /** @class */ (function () {
                 break;
         }
     };
+    /**
+     * Fruit Rush: picking up a fruit is a juicy little "plop" that climbs in pitch with each pickup
+     * in a quick streak (`streak`), and a golden one adds a sparkle.
+     */
+    SoundBoard.prototype.pickup = function (golden, streak, position) {
+        var _this = this;
+        var voice = this.createVoice(position, 1, 0.6);
+        if (!voice) {
+            return;
+        }
+        var pitch = Math.pow(2, Math.min(streak, 12) / 12);
+        this.tone(voice, { type: "sine", from: 420 * pitch, to: 880 * pitch, glide: 0.07, attack: 0.002, decay: 0.12, gain: 0.22 });
+        this.noiseBurst(voice, { filter: "bandpass", frequency: 2400 * pitch, q: 2, attack: 0.001, decay: 0.03, gain: 0.08 });
+        if (golden) {
+            [[1568, 0.06], [2093, 0.12], [2637, 0.18]].forEach(function (_a) {
+                var frequency = _a[0], delay = _a[1];
+                _this.tone(voice, { type: "triangle", from: frequency, attack: 0.002, decay: 0.3, gain: 0.07, delay: delay });
+            });
+        }
+    };
     /** The tank landing after a jump; `speed` is how fast it was falling. */
     SoundBoard.prototype.land = function (speed) {
         var strength = (0,_core_math__WEBPACK_IMPORTED_MODULE_1__.clamp)((speed - 4) / 22, 0, 1);
@@ -1831,14 +1851,15 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _world_codeTrophy__WEBPACK_IMPORTED_MODULE_18__ = __webpack_require__(/*! ./world/codeTrophy */ "./src/scenes/world/codeTrophy.ts");
 /* harmony import */ var _world_fruitFactory__WEBPACK_IMPORTED_MODULE_19__ = __webpack_require__(/*! ./world/fruitFactory */ "./src/scenes/world/fruitFactory.ts");
 /* harmony import */ var _world_fruitFactorySigns__WEBPACK_IMPORTED_MODULE_20__ = __webpack_require__(/*! ./world/fruitFactorySigns */ "./src/scenes/world/fruitFactorySigns.ts");
-/* harmony import */ var _world_ground__WEBPACK_IMPORTED_MODULE_21__ = __webpack_require__(/*! ./world/ground */ "./src/scenes/world/ground.ts");
-/* harmony import */ var _world_landmarks__WEBPACK_IMPORTED_MODULE_22__ = __webpack_require__(/*! ./world/landmarks */ "./src/scenes/world/landmarks.ts");
-/* harmony import */ var _world_mascots__WEBPACK_IMPORTED_MODULE_23__ = __webpack_require__(/*! ./world/mascots */ "./src/scenes/world/mascots.ts");
-/* harmony import */ var _world_playground__WEBPACK_IMPORTED_MODULE_24__ = __webpack_require__(/*! ./world/playground */ "./src/scenes/world/playground.ts");
-/* harmony import */ var _world_trees__WEBPACK_IMPORTED_MODULE_25__ = __webpack_require__(/*! ./world/trees */ "./src/scenes/world/trees.ts");
-/* harmony import */ var _world_waypointSigns__WEBPACK_IMPORTED_MODULE_26__ = __webpack_require__(/*! ./world/waypointSigns */ "./src/scenes/world/waypointSigns.ts");
-/* harmony import */ var _world_tradingGame__WEBPACK_IMPORTED_MODULE_27__ = __webpack_require__(/*! ./world/tradingGame */ "./src/scenes/world/tradingGame.ts");
-/* harmony import */ var _world_workCorner__WEBPACK_IMPORTED_MODULE_28__ = __webpack_require__(/*! ./world/workCorner */ "./src/scenes/world/workCorner.ts");
+/* harmony import */ var _world_fruitRush__WEBPACK_IMPORTED_MODULE_21__ = __webpack_require__(/*! ./world/fruitRush */ "./src/scenes/world/fruitRush.ts");
+/* harmony import */ var _world_ground__WEBPACK_IMPORTED_MODULE_22__ = __webpack_require__(/*! ./world/ground */ "./src/scenes/world/ground.ts");
+/* harmony import */ var _world_landmarks__WEBPACK_IMPORTED_MODULE_23__ = __webpack_require__(/*! ./world/landmarks */ "./src/scenes/world/landmarks.ts");
+/* harmony import */ var _world_mascots__WEBPACK_IMPORTED_MODULE_24__ = __webpack_require__(/*! ./world/mascots */ "./src/scenes/world/mascots.ts");
+/* harmony import */ var _world_playground__WEBPACK_IMPORTED_MODULE_25__ = __webpack_require__(/*! ./world/playground */ "./src/scenes/world/playground.ts");
+/* harmony import */ var _world_trees__WEBPACK_IMPORTED_MODULE_26__ = __webpack_require__(/*! ./world/trees */ "./src/scenes/world/trees.ts");
+/* harmony import */ var _world_waypointSigns__WEBPACK_IMPORTED_MODULE_27__ = __webpack_require__(/*! ./world/waypointSigns */ "./src/scenes/world/waypointSigns.ts");
+/* harmony import */ var _world_tradingGame__WEBPACK_IMPORTED_MODULE_28__ = __webpack_require__(/*! ./world/tradingGame */ "./src/scenes/world/tradingGame.ts");
+/* harmony import */ var _world_workCorner__WEBPACK_IMPORTED_MODULE_29__ = __webpack_require__(/*! ./world/workCorner */ "./src/scenes/world/workCorner.ts");
 var __extends = (undefined && undefined.__extends) || (function () {
     var extendStatics = function (d, b) {
         extendStatics = Object.setPrototypeOf ||
@@ -1854,6 +1875,7 @@ var __extends = (undefined && undefined.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
+
 
 
 
@@ -1899,6 +1921,7 @@ var Play = /** @class */ (function (_super) {
         var _this = this;
         _this.toyTank = null;
         _this.workCorner = null;
+        _this.fruitRushButton = null;
         return _this;
     }
     /**
@@ -1949,21 +1972,24 @@ var Play = /** @class */ (function (_super) {
         var scene = this.scene;
         this.createToyTankModel();
         (0,_tank_tankTrail__WEBPACK_IMPORTED_MODULE_11__.createTankTrail)(scene, this.tank);
-        (0,_world_trees__WEBPACK_IMPORTED_MODULE_25__.instantiateTrees)({ scene: scene });
-        (0,_world_landmarks__WEBPACK_IMPORTED_MODULE_22__.restyleLandmarks)(scene);
+        (0,_world_trees__WEBPACK_IMPORTED_MODULE_26__.instantiateTrees)({ scene: scene });
+        (0,_world_landmarks__WEBPACK_IMPORTED_MODULE_23__.restyleLandmarks)(scene);
         (0,_world_fruitFactory__WEBPACK_IMPORTED_MODULE_19__.restyleFruitFactory)(scene);
         (0,_world_fruitFactorySigns__WEBPACK_IMPORTED_MODULE_20__.createFruitFactorySigns)(scene);
-        (0,_world_mascots__WEBPACK_IMPORTED_MODULE_23__.restyleMascots)(scene);
+        tryTo("Fruit Rush", function () {
+            _this.fruitRushButton = (0,_world_fruitRush__WEBPACK_IMPORTED_MODULE_21__.createFruitRushButton)(scene);
+        });
+        (0,_world_mascots__WEBPACK_IMPORTED_MODULE_24__.restyleMascots)(scene);
         tryTo("AI trophies", function () { return (0,_world_aiTrophies__WEBPACK_IMPORTED_MODULE_15__.createAiTrophies)(scene); });
         tryTo("C# trophy", function () { return (0,_world_codeTrophy__WEBPACK_IMPORTED_MODULE_18__.createCodeTrophy)(scene); });
         tryTo("Work corner", function () {
-            _this.workCorner = (0,_world_workCorner__WEBPACK_IMPORTED_MODULE_28__.createWorkCorner)(scene);
+            _this.workCorner = (0,_world_workCorner__WEBPACK_IMPORTED_MODULE_29__.createWorkCorner)(scene);
         });
-        (0,_world_waypointSigns__WEBPACK_IMPORTED_MODULE_26__.createWaypointSigns)(scene);
-        tryTo("Playground", function () { return (0,_world_playground__WEBPACK_IMPORTED_MODULE_24__.createPlayground)(scene); });
+        (0,_world_waypointSigns__WEBPACK_IMPORTED_MODULE_27__.createWaypointSigns)(scene);
+        tryTo("Playground", function () { return (0,_world_playground__WEBPACK_IMPORTED_MODULE_25__.createPlayground)(scene); });
         (0,_world_bricks__WEBPACK_IMPORTED_MODULE_16__.createBrickBuilds)({ scene: scene, tank: this.tank });
         // After the bricks: walls measure the ground height with a ray, and decorations avoid them.
-        (0,_world_ground__WEBPACK_IMPORTED_MODULE_21__.decorateGround)(scene, _world_trees__WEBPACK_IMPORTED_MODULE_25__.TREE_POSITIONS);
+        (0,_world_ground__WEBPACK_IMPORTED_MODULE_22__.decorateGround)(scene, _world_trees__WEBPACK_IMPORTED_MODULE_26__.TREE_POSITIONS);
         tryTo("Clouds", function () { return (0,_world_clouds__WEBPACK_IMPORTED_MODULE_17__.createClouds)(scene, _this.tank, _this.camera); });
         // After everything else, so every mesh is considered as a shadow caster.
         tryTo("Shadows", function () { return (0,_core_shadows__WEBPACK_IMPORTED_MODULE_7__.initializeShadows)(scene, { camera: _this.camera, focus: function () { return _this.tank.position; } }); });
@@ -1987,7 +2013,7 @@ var Play = /** @class */ (function (_super) {
             this.toyTank = null;
         }
     };
-    /** Driving, shooting, the work corner's minigame and all the sounds (synthesised, see audio/). After the world is built. */
+    /** Driving, shooting, the minigames and all the sounds (synthesised, see audio/). After the world is built. */
     Play.prototype.initializeTank = function () {
         var _this = this;
         var _a;
@@ -2004,7 +2030,10 @@ var Play = /** @class */ (function (_super) {
         (0,_tank_movement__WEBPACK_IMPORTED_MODULE_9__.initializeTankMovement)(context, 0.07);
         (0,_core_warmUp__WEBPACK_IMPORTED_MODULE_8__.registerLoadingTask)((0,_tank_shooting__WEBPACK_IMPORTED_MODULE_10__.initializeShooting)(context, new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, 0, 1)));
         if (this.workCorner) {
-            (0,_core_warmUp__WEBPACK_IMPORTED_MODULE_8__.registerLoadingTask)((0,_world_tradingGame__WEBPACK_IMPORTED_MODULE_27__.createTradingGame)(context, this.workCorner).catch(function (error) { return console.error("Trading game failed", error); }));
+            (0,_core_warmUp__WEBPACK_IMPORTED_MODULE_8__.registerLoadingTask)((0,_world_tradingGame__WEBPACK_IMPORTED_MODULE_28__.createTradingGame)(context, this.workCorner).catch(function (error) { return console.error("Trading game failed", error); }));
+        }
+        if (this.fruitRushButton) {
+            (0,_core_warmUp__WEBPACK_IMPORTED_MODULE_8__.registerLoadingTask)((0,_world_fruitRush__WEBPACK_IMPORTED_MODULE_21__.createFruitRush)(context, this.fruitRushButton).catch(function (error) { return console.error("Fruit Rush failed", error); }));
         }
     };
     return Play;
@@ -4978,6 +5007,110 @@ function attachFpsCounter(scene) {
 
 /***/ },
 
+/***/ "./src/scenes/ui/minigameHud.ts"
+/*!**************************************!*\
+  !*** ./src/scenes/ui/minigameHud.ts ***!
+  \**************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   createMinigameHud: () => (/* binding */ createMinigameHud)
+/* harmony export */ });
+/* harmony import */ var _style__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./style */ "./src/scenes/ui/style.ts");
+
+var layers = new WeakMap();
+function getLayer(gui, scene) {
+    var layer = layers.get(scene);
+    if (!layer) {
+        var ui_1 = gui.AdvancedDynamicTexture.CreateFullscreenUI("minigame-ui", true, scene);
+        if (ui_1.layer) {
+            ui_1.layer.isEnabled = false;
+        }
+        (0,_style__WEBPACK_IMPORTED_MODULE_0__.refreshWhenFontLoaded)(ui_1);
+        layer = { ui: ui_1, visible: new Set() };
+        layers.set(scene, layer);
+        scene.onDisposeObservable.addOnce(function () { return ui_1.dispose(); });
+    }
+    return layer;
+}
+function createMinigameHud(gui, scene, name) {
+    var layer = getLayer(gui, scene);
+    var ui = layer.ui;
+    var card = (0,_style__WEBPACK_IMPORTED_MODULE_0__.createCard)(gui, "".concat(name, "-hud"));
+    card.width = "340px";
+    card.height = "1px";
+    card.adaptHeightToChildren = true;
+    card.horizontalAlignment = gui.Control.HORIZONTAL_ALIGNMENT_CENTER;
+    card.verticalAlignment = gui.Control.VERTICAL_ALIGNMENT_TOP;
+    card.top = "18px";
+    card.zIndex = 2;
+    card.isPointerBlocker = false;
+    card.isVisible = false;
+    var stack = new gui.StackPanel("".concat(name, "-hud-stack"));
+    stack.isVertical = true;
+    stack.paddingTop = "10px";
+    stack.paddingBottom = "12px";
+    card.addControl(stack);
+    var badge = new gui.Rectangle("".concat(name, "-hud-badge"));
+    badge.height = "24px";
+    badge.width = "1px";
+    badge.adaptWidthToChildren = true;
+    badge.thickness = 0;
+    badge.cornerRadius = 12;
+    var badgeText = (0,_style__WEBPACK_IMPORTED_MODULE_0__.createText)(gui, "".concat(name, "-hud-badge-text"), "", { size: 12, weight: "900", color: _style__WEBPACK_IMPORTED_MODULE_0__.UI.cream, align: "center" });
+    badgeText.resizeToFit = true;
+    badgeText.paddingLeft = "10px";
+    badgeText.paddingRight = "10px";
+    badge.addControl(badgeText);
+    stack.addControl(badge);
+    var main = (0,_style__WEBPACK_IMPORTED_MODULE_0__.createText)(gui, "".concat(name, "-hud-main"), "", { size: 20, weight: "900", color: _style__WEBPACK_IMPORTED_MODULE_0__.UI.navy, align: "center" });
+    main.height = "32px";
+    main.paddingTop = "6px";
+    stack.addControl(main);
+    var detail = (0,_style__WEBPACK_IMPORTED_MODULE_0__.createText)(gui, "".concat(name, "-hud-detail"), "", { size: 14, weight: "800", color: _style__WEBPACK_IMPORTED_MODULE_0__.UI.muted, align: "center" });
+    detail.textWrapping = true;
+    detail.resizeToFit = true;
+    detail.paddingLeft = "14px";
+    detail.paddingRight = "14px";
+    detail.paddingTop = "2px";
+    stack.addControl(detail);
+    ui.addControl(card);
+    var last = "";
+    return {
+        setVisible: function (visible) {
+            if (card.isVisible === visible) {
+                return;
+            }
+            card.isVisible = visible;
+            if (visible) {
+                layer.visible.add(name);
+            }
+            else {
+                layer.visible.delete(name);
+            }
+            if (ui.layer) {
+                ui.layer.isEnabled = layer.visible.size > 0;
+            }
+        },
+        set: function (badgeLabel, badgeColor, mainText, detailText, mainColor) {
+            if (mainColor === void 0) { mainColor = _style__WEBPACK_IMPORTED_MODULE_0__.UI.navy; }
+            var key = [badgeLabel, badgeColor, mainText, detailText, mainColor].join("|");
+            if (key === last) {
+                return;
+            }
+            last = key;
+            badgeText.text = badgeLabel;
+            badge.background = badgeColor;
+            main.text = mainText;
+            main.color = mainColor;
+            detail.text = detailText;
+        },
+    };
+}
+
+
+/***/ },
+
 /***/ "./src/scenes/ui/style.ts"
 /*!********************************!*\
   !*** ./src/scenes/ui/style.ts ***!
@@ -5314,82 +5447,6 @@ function createTargetLabel(gui, ui, mesh, label) {
     ui.addControl(container);
     container.linkWithMesh(mesh);
     return container;
-}
-
-
-/***/ },
-
-/***/ "./src/scenes/ui/tradingHud.ts"
-/*!*************************************!*\
-  !*** ./src/scenes/ui/tradingHud.ts ***!
-  \*************************************/
-(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
-
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   createTradingHud: () => (/* binding */ createTradingHud)
-/* harmony export */ });
-/* harmony import */ var _style__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./style */ "./src/scenes/ui/style.ts");
-
-function createTradingHud(gui, ui) {
-    var card = (0,_style__WEBPACK_IMPORTED_MODULE_0__.createCard)(gui, "trading-hud");
-    card.width = "340px";
-    card.height = "1px";
-    card.adaptHeightToChildren = true;
-    card.horizontalAlignment = gui.Control.HORIZONTAL_ALIGNMENT_CENTER;
-    card.verticalAlignment = gui.Control.VERTICAL_ALIGNMENT_TOP;
-    card.top = "18px";
-    card.zIndex = 2;
-    card.isPointerBlocker = false;
-    card.isVisible = false;
-    var stack = new gui.StackPanel("trading-hud-stack");
-    stack.isVertical = true;
-    stack.paddingTop = "10px";
-    stack.paddingBottom = "12px";
-    card.addControl(stack);
-    var badge = new gui.Rectangle("trading-hud-badge");
-    badge.height = "24px";
-    badge.width = "1px";
-    badge.adaptWidthToChildren = true;
-    badge.thickness = 0;
-    badge.cornerRadius = 12;
-    var badgeText = (0,_style__WEBPACK_IMPORTED_MODULE_0__.createText)(gui, "trading-hud-badge-text", "", { size: 12, weight: "900", color: _style__WEBPACK_IMPORTED_MODULE_0__.UI.cream, align: "center" });
-    badgeText.resizeToFit = true;
-    badgeText.paddingLeft = "10px";
-    badgeText.paddingRight = "10px";
-    badge.addControl(badgeText);
-    stack.addControl(badge);
-    var main = (0,_style__WEBPACK_IMPORTED_MODULE_0__.createText)(gui, "trading-hud-main", "", { size: 20, weight: "900", color: _style__WEBPACK_IMPORTED_MODULE_0__.UI.navy, align: "center" });
-    main.height = "32px";
-    main.paddingTop = "6px";
-    stack.addControl(main);
-    var detail = (0,_style__WEBPACK_IMPORTED_MODULE_0__.createText)(gui, "trading-hud-detail", "", { size: 14, weight: "800", color: _style__WEBPACK_IMPORTED_MODULE_0__.UI.muted, align: "center" });
-    detail.textWrapping = true;
-    detail.resizeToFit = true;
-    detail.paddingLeft = "14px";
-    detail.paddingRight = "14px";
-    detail.paddingTop = "2px";
-    stack.addControl(detail);
-    ui.addControl(card);
-    (0,_style__WEBPACK_IMPORTED_MODULE_0__.refreshWhenFontLoaded)(ui);
-    var last = "";
-    return {
-        setVisible: function (visible) {
-            card.isVisible = visible;
-        },
-        set: function (badgeLabel, badgeColor, mainText, detailText, mainColor) {
-            if (mainColor === void 0) { mainColor = _style__WEBPACK_IMPORTED_MODULE_0__.UI.navy; }
-            var key = [badgeLabel, badgeColor, mainText, detailText, mainColor].join("|");
-            if (key === last) {
-                return;
-            }
-            last = key;
-            badgeText.text = badgeLabel;
-            badge.background = badgeColor;
-            main.text = mainText;
-            main.color = mainColor;
-            detail.text = detailText;
-        },
-    };
 }
 
 
@@ -5842,6 +5899,154 @@ function paintVertices(mesh, color) {
         colors.push(c.r, c.g, c.b, 1);
     }
     mesh.setVerticesData(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.VertexBuffer.ColorKind, colors);
+}
+
+
+/***/ },
+
+/***/ "./src/scenes/world/arcadeButton.ts"
+/*!******************************************!*\
+  !*** ./src/scenes/world/arcadeButton.ts ***!
+  \******************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   createArcadeButton: () => (/* binding */ createArcadeButton)
+/* harmony export */ });
+/* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core */ "./node_modules/@babylonjs/core/index.js");
+/* harmony import */ var _audio_soundMaterials__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../audio/soundMaterials */ "./src/scenes/audio/soundMaterials.ts");
+/* harmony import */ var _core_staticBodies__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../core/staticBodies */ "./src/scenes/core/staticBodies.ts");
+/* harmony import */ var _core_toyStyle__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../core/toyStyle */ "./src/scenes/core/toyStyle.ts");
+/* harmony import */ var _core_constants__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../core/constants */ "./src/scenes/core/constants.ts");
+/* harmony import */ var _ui_style__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../ui/style */ "./src/scenes/ui/style.ts");
+var __assign = (undefined && undefined.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
+
+
+
+
+
+
+var PALETTE = {
+    rim: "#344B63",
+    base: "#E8DCC6",
+    post: "#8B6A50",
+    letters: "#22313F",
+};
+var DISC_Y = 6.2;
+function createArcadeButton(scene, options) {
+    var _a;
+    var id = options.id;
+    var shared = function (name, hex) { var _a; return (_a = scene.getMaterialByName(name)) !== null && _a !== void 0 ? _a : (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createToyMaterial)(scene, name, hex, { roughness: 0.45, clearCoat: 0.4 }); };
+    var root = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.TransformNode(id, scene);
+    root.position.set(options.x, _core_constants__WEBPACK_IMPORTED_MODULE_4__.GROUND_Y, options.z);
+    root.rotation.y = options.yaw;
+    root.scaling.setAll((_a = options.scale) !== null && _a !== void 0 ? _a : 1.2);
+    var add = function (mesh, parent, material, moving) {
+        var _a;
+        if (moving === void 0) { moving = false; }
+        mesh.parent = parent;
+        mesh.material = material;
+        mesh.isPickable = false;
+        if (moving) {
+            mesh.metadata = __assign(__assign({}, ((_a = mesh.metadata) !== null && _a !== void 0 ? _a : {})), { keepUnfrozen: true });
+        }
+        return mesh;
+    };
+    add((0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createRoundedBox)("".concat(id, "-base"), 2.8, 0.6, 2.8, 0.25, scene), root, shared("arcade-button-base", PALETTE.base)).position.y = 0.3;
+    add((0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createRoundedBox)("".concat(id, "-post"), 0.8, DISC_Y, 0.8, 0.3, scene), root, shared("arcade-button-post", PALETTE.post)).position.set(0, (DISC_Y / 2) + 0.3, 0.6);
+    // Cylinders stand along Y; tip them so their faces point at the camera (-Z).
+    var holder = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.TransformNode("".concat(id, "-holder"), scene);
+    holder.parent = root;
+    holder.position.set(0, DISC_Y, 0);
+    holder.rotation.x = -Math.PI / 2;
+    add(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder("".concat(id, "-rim"), { diameter: 5, height: 0.8, tessellation: 40 }, scene), holder, shared("arcade-button-rim", PALETTE.rim)).position.y = 0.1;
+    // The cap is what moves in when the button is pressed.
+    var cap = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.TransformNode("".concat(id, "-cap"), scene);
+    cap.parent = holder;
+    var faceMaterial = shared("arcade-button-face-".concat(options.color), options.color);
+    add(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder("".concat(id, "-face"), { diameter: 4.1, height: 0.7, tessellation: 40 }, scene), cap, faceMaterial, true).position.y = 0.6;
+    var label = createLabel(scene, "".concat(id, "-label"), options.symbol, options.label);
+    label.parent = cap;
+    label.position.y = 0.97;
+    label.rotation.x = Math.PI / 2;
+    label.metadata = { keepUnfrozen: true };
+    var onHit = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Observable();
+    root.computeWorldMatrix(true);
+    var scale = root.scaling.x;
+    var world = root.getWorldMatrix();
+    var position = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.TransformCoordinates(new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, DISC_Y, -0.5), world);
+    var rotation = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Quaternion.RotationYawPitchRoll(options.yaw, 0, 0);
+    (0,_core_staticBodies__WEBPACK_IMPORTED_MODULE_2__.addStaticBox)(scene, position, 5 * scale, 5 * scale, 1.6 * scale, {
+        rotation: rotation,
+        sound: "post",
+        onHit: function (body) {
+            if ((0,_audio_soundMaterials__WEBPACK_IMPORTED_MODULE_1__.getSoundMaterial)(body) === "ball") {
+                onHit.notifyObservers();
+            }
+        },
+    });
+    (0,_core_staticBodies__WEBPACK_IMPORTED_MODULE_2__.addStaticBox)(scene, _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.TransformCoordinates(new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, DISC_Y / 2, 0.6), world), 1.2 * scale, DISC_Y * scale, 1.2 * scale, { rotation: rotation, sound: "post" });
+    // The press animation only runs while the cap is moving.
+    var pressed = 0;
+    var observer = null;
+    var animate = function () {
+        var dt = Math.min(scene.getEngine().getDeltaTime() / 1000, 0.1);
+        pressed = Math.max(0, pressed - (dt * 3));
+        // In fast, back out slowly.
+        cap.position.y = -0.45 * Math.sin(Math.min(1, pressed) * Math.PI * 0.5);
+        if (pressed <= 0) {
+            scene.onBeforeRenderObservable.remove(observer);
+            observer = null;
+        }
+    };
+    return {
+        position: position,
+        onHit: onHit,
+        press: function () {
+            pressed = 1;
+            observer !== null && observer !== void 0 ? observer : (observer = scene.onBeforeRenderObservable.add(animate));
+        },
+    };
+}
+function createLabel(scene, name, symbol, text) {
+    var size = 256;
+    var texture = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.DynamicTexture("".concat(name, "-texture"), { width: size, height: size }, scene, true);
+    texture.hasAlpha = true;
+    var context = texture.getContext();
+    var draw = function () {
+        context.clearRect(0, 0, size, size);
+        context.fillStyle = PALETTE.letters;
+        context.textAlign = "center";
+        context.textBaseline = "middle";
+        context.font = "900 54px ".concat(_ui_style__WEBPACK_IMPORTED_MODULE_5__.UI.font);
+        context.fillText(symbol, size / 2, size * 0.32);
+        context.font = "900 ".concat(text.length > 3 ? 70 : 80, "px ").concat(_ui_style__WEBPACK_IMPORTED_MODULE_5__.UI.font);
+        context.fillText(text, size / 2, size * 0.64);
+        texture.update();
+    };
+    draw();
+    if ("fonts" in document) {
+        void document.fonts.load("900 40px Nunito").then(draw).catch(function () { return undefined; });
+    }
+    var material = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.StandardMaterial("".concat(name, "-material"), scene);
+    material.diffuseTexture = texture;
+    material.useAlphaFromDiffuseTexture = true;
+    material.specularColor = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3(0.1, 0.1, 0.1);
+    material.emissiveColor = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3(0.3, 0.3, 0.3);
+    var plane = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreatePlane(name, { size: 3.4 }, scene);
+    plane.material = material;
+    plane.isPickable = false;
+    return plane;
 }
 
 
@@ -7346,6 +7551,470 @@ function drawCherries(context, x, y) {
 
 /***/ },
 
+/***/ "./src/scenes/world/fruitRush.ts"
+/*!***************************************!*\
+  !*** ./src/scenes/world/fruitRush.ts ***!
+  \***************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   createFruitRush: () => (/* binding */ createFruitRush),
+/* harmony export */   createFruitRushButton: () => (/* binding */ createFruitRushButton)
+/* harmony export */ });
+/* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core */ "./node_modules/@babylonjs/core/index.js");
+/* harmony import */ var _core_constants__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../core/constants */ "./src/scenes/core/constants.ts");
+/* harmony import */ var _core_toyStyle__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../core/toyStyle */ "./src/scenes/core/toyStyle.ts");
+/* harmony import */ var _ui_minigameHud__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../ui/minigameHud */ "./src/scenes/ui/minigameHud.ts");
+/* harmony import */ var _ui_style__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../ui/style */ "./src/scenes/ui/style.ts");
+/* harmony import */ var _arcadeButton__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./arcadeButton */ "./src/scenes/world/arcadeButton.ts");
+/* harmony import */ var _ground__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./ground */ "./src/scenes/world/ground.ts");
+var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __generator = (undefined && undefined.__generator) || function (thisArg, body) {
+    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
+    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    function verb(n) { return function (v) { return step([n, v]); }; }
+    function step(op) {
+        if (f) throw new TypeError("Generator is already executing.");
+        while (g && (g = 0, op[0] && (_ = 0)), _) try {
+            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
+            if (y = 0, t) op = [op[0] & 2, t.value];
+            switch (op[0]) {
+                case 0: case 1: t = op; break;
+                case 4: _.label++; return { value: op[1], done: false };
+                case 5: _.label++; y = op[1]; op = [0]; continue;
+                case 7: op = _.ops.pop(); _.trys.pop(); continue;
+                default:
+                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
+                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
+                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
+                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
+                    if (t[2]) _.ops.pop();
+                    _.trys.pop(); continue;
+            }
+            op = body.call(thisArg, _);
+        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
+        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
+    }
+};
+var __spreadArray = (undefined && undefined.__spreadArray) || function (to, from, pack) {
+    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
+        if (ar || !(i in from)) {
+            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
+            ar[i] = from[i];
+        }
+    }
+    return to.concat(ar || Array.prototype.slice.call(from));
+};
+
+
+
+
+
+
+
+/**
+ * Fruit Rush, the Fruit Factory's minigame (Idle Fruit Factory is a game about producing fruit):
+ *
+ * - Shoot the PLAY button beside the desk to start a ROUND_SECONDS round.
+ * - The factory's sign shoots toy fruit in arcs onto the grass in front of the desk, faster and
+ *   faster as the round goes on.
+ * - Drive into fruit to collect it before it spoils (it shrinks away after a few seconds on the
+ *   ground). Golden apples are rare and count GOLDEN_POINTS; quick pickups in a row climb in pitch.
+ *
+ * Fruit flies on simple hand-made arcs and bounces (no physics bodies), so even a busy round costs
+ * little. The best score is remembered in the browser.
+ */
+var ROUND_SECONDS = 40;
+/** Where the fruit lands: a disc on the grass in front of the desk (toward the camera). */
+var FIELD = { x: -118, z: 14, radius: 12 };
+/** To the side of the field (on screen), not between it and the camera. */
+var BUTTON_POSITION = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector2(-129, 0);
+/** Fruit launches from here if the factory's sign isn't found. */
+var FALLBACK_LAUNCH = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(-96, 20, -6);
+var GRAVITY = 40;
+var FLIGHT_SECONDS = { min: 1.1, max: 1.6 };
+/** Seconds between fruit, from the start of the round to the end. */
+var SPAWN_INTERVAL = { start: 0.8, end: 0.38 };
+/** Every so often the factory "overflows" and throws a handful at once. */
+var BURST_EVERY = 9;
+var BURST_SIZE = 4;
+var GOLDEN_CHANCE = 0.07;
+var GOLDEN_POINTS = 5;
+/** How long fruit lasts on the ground, then how long it takes to shrink away. */
+var LIFETIME = 6;
+var SPOIL_SECONDS = 0.8;
+var FRUIT_SCALE = 3;
+/** The tank picks up fruit this close to its centre (it's about 12 units across). */
+var COLLECT_RADIUS = 7.5;
+/** Pickups closer together than this count as a streak. */
+var STREAK_SECONDS = 1.3;
+var HUD_DISTANCE = 45;
+var LEAVE_DISTANCE = 55;
+var LEAVE_GRACE = 2;
+var RESULTS_SECONDS = 7;
+var PRESS_COOLDOWN = 0.5;
+var BEST_KEY = "fruit-rush-best";
+var COLORS = {
+    apple: "#D9534F",
+    orange: "#F0913A",
+    pear: "#C9CF62",
+    golden: "#F2C230",
+    stem: "#6B4F3A",
+    leaf: "#6E9F7E",
+};
+/** The PLAY button, built with the world (so ground decorations keep clear of it and the field). */
+function createFruitRushButton(scene) {
+    (0,_ground__WEBPACK_IMPORTED_MODULE_6__.keepGroundClear)({ minX: FIELD.x - FIELD.radius - 3, maxX: FIELD.x + FIELD.radius + 3, minZ: FIELD.z - FIELD.radius - 3, maxZ: FIELD.z + FIELD.radius + 3 });
+    return (0,_arcadeButton__WEBPACK_IMPORTED_MODULE_5__.createArcadeButton)(scene, {
+        id: "fruit-rush-button",
+        x: BUTTON_POSITION.x,
+        z: BUTTON_POSITION.y,
+        yaw: _core_constants__WEBPACK_IMPORTED_MODULE_1__.FACE_CAMERA_YAW,
+        color: COLORS.apple,
+        symbol: "▶",
+        label: "PLAY",
+    });
+}
+function createFruitRush(context, button) {
+    return __awaiter(this, void 0, void 0, function () {
+        var scene, tank, sounds, gui, hud, templates, launch, fieldCenter, restY, state, best, timeLeft, resultsLeft, score, caught, missed, spawnTimer, burstTimer, streak, lastPickup, newBest, clock, pressedAt, awayFor, message, messageLeft, fruits, fruitCount, clearFruit, startRound, endRound, spawn, updateFruit;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    scene = context.scene, tank = context.tank, sounds = context.sounds;
+                    return [4 /*yield*/, __webpack_require__.e(/*! import() */ "vendors-node_modules_babylonjs_gui_index_js").then(__webpack_require__.bind(__webpack_require__, /*! @babylonjs/gui */ "./node_modules/@babylonjs/gui/index.js"))];
+                case 1:
+                    gui = _a.sent();
+                    if (scene.isDisposed) {
+                        return [2 /*return*/];
+                    }
+                    hud = (0,_ui_minigameHud__WEBPACK_IMPORTED_MODULE_3__.createMinigameHud)(gui, scene, "fruit-rush");
+                    templates = createFruitTemplates(scene);
+                    // Compile the fruit's shaders now (during loading), not when the first one flies out.
+                    return [4 /*yield*/, Promise.all(Object.values(templates).map(function (template) { var _a; return (_a = template.material) === null || _a === void 0 ? void 0 : _a.forceCompilationAsync(template, { useInstances: true }).catch(function () { return undefined; }); }))];
+                case 2:
+                    // Compile the fruit's shaders now (during loading), not when the first one flies out.
+                    _a.sent();
+                    if (scene.isDisposed) {
+                        return [2 /*return*/];
+                    }
+                    launch = findLaunchPoint(scene);
+                    fieldCenter = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(FIELD.x, _core_constants__WEBPACK_IMPORTED_MODULE_1__.GROUND_Y, FIELD.z);
+                    restY = _core_constants__WEBPACK_IMPORTED_MODULE_1__.GROUND_Y + (FRUIT_SCALE * 0.45);
+                    state = "idle";
+                    best = loadBest();
+                    timeLeft = 0;
+                    resultsLeft = 0;
+                    score = 0;
+                    caught = 0;
+                    missed = 0;
+                    spawnTimer = 0;
+                    burstTimer = 0;
+                    streak = 0;
+                    lastPickup = -Infinity;
+                    newBest = false;
+                    clock = 0;
+                    pressedAt = -Infinity;
+                    awayFor = 0;
+                    message = "";
+                    messageLeft = 0;
+                    fruits = [];
+                    fruitCount = 0;
+                    clearFruit = function () {
+                        for (var _i = 0, fruits_1 = fruits; _i < fruits_1.length; _i++) {
+                            var fruit = fruits_1[_i];
+                            fruit.mesh.dispose();
+                        }
+                        fruits.length = 0;
+                    };
+                    startRound = function () {
+                        clearFruit();
+                        state = "playing";
+                        timeLeft = ROUND_SECONDS;
+                        score = 0;
+                        caught = 0;
+                        missed = 0;
+                        spawnTimer = 0.6;
+                        burstTimer = BURST_EVERY;
+                        streak = 0;
+                        sounds.trade("start", fieldCenter);
+                    };
+                    endRound = function (cancelled) {
+                        clearFruit();
+                        if (cancelled) {
+                            state = "idle";
+                            message = "You drove off. Come back and shoot PLAY to try again.";
+                            messageLeft = 3.5;
+                            return;
+                        }
+                        newBest = best === null || score > best;
+                        if (newBest) {
+                            best = score;
+                            saveBest(score);
+                        }
+                        state = "results";
+                        resultsLeft = RESULTS_SECONDS;
+                        sounds.trade("end", fieldCenter);
+                    };
+                    button.onHit.add(function () {
+                        if (clock - pressedAt < PRESS_COOLDOWN) {
+                            return;
+                        }
+                        pressedAt = clock;
+                        button.press();
+                        if (state !== "playing" && (state === "idle" || resultsLeft < RESULTS_SECONDS - 1.5)) {
+                            startRound();
+                        }
+                    });
+                    spawn = function () {
+                        // Somewhere in the field, not right on the button.
+                        var target = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3();
+                        for (var attempt = 0; attempt < 8; attempt++) {
+                            var angle = Math.random() * Math.PI * 2;
+                            var distance = Math.sqrt(Math.random()) * FIELD.radius;
+                            target.set(FIELD.x + (Math.cos(angle) * distance), restY, FIELD.z + (Math.sin(angle) * distance));
+                            if (Math.hypot(target.x - BUTTON_POSITION.x, target.z - BUTTON_POSITION.y) > 7) {
+                                break;
+                            }
+                        }
+                        var kind = Math.random() < GOLDEN_CHANCE ? "golden" : ["apple", "orange", "pear"][Math.floor(Math.random() * 3)];
+                        var from = launch.add(new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3((Math.random() - 0.5) * 6, 0, (Math.random() - 0.5) * 2));
+                        var time = FLIGHT_SECONDS.min + (Math.random() * (FLIGHT_SECONDS.max - FLIGHT_SECONDS.min));
+                        var velocity = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3((target.x - from.x) / time, ((target.y - from.y) + (0.5 * GRAVITY * time * time)) / time, (target.z - from.z) / time);
+                        var mesh = templates[kind].createInstance("fruit-rush-".concat(kind, "-").concat(fruitCount++));
+                        mesh.isPickable = false;
+                        mesh.position.copyFrom(from);
+                        mesh.scaling.setAll(FRUIT_SCALE);
+                        fruits.push({
+                            mesh: mesh,
+                            kind: kind,
+                            position: from,
+                            velocity: velocity,
+                            groundTime: -1,
+                            spin: new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(Math.random() * 6 - 3, Math.random() * 6 - 3, Math.random() * 6 - 3),
+                        });
+                    };
+                    updateFruit = function (dt) {
+                        for (var i = fruits.length - 1; i >= 0; i--) {
+                            var fruit = fruits[i];
+                            var position = fruit.position, velocity = fruit.velocity;
+                            // Flight and bounces.
+                            velocity.y -= GRAVITY * dt;
+                            position.addInPlace(velocity.scale(dt));
+                            if (position.y <= restY) {
+                                position.y = restY;
+                                if (fruit.groundTime < 0) {
+                                    fruit.groundTime = 0;
+                                }
+                                if (velocity.y < -5) {
+                                    velocity.y *= -0.4;
+                                    velocity.x *= 0.6;
+                                    velocity.z *= 0.6;
+                                }
+                                else {
+                                    velocity.y = 0;
+                                }
+                            }
+                            if (fruit.groundTime >= 0) {
+                                fruit.groundTime += dt;
+                                // Rolling to a stop.
+                                var friction = Math.exp(-2.5 * dt);
+                                velocity.x *= friction;
+                                velocity.z *= friction;
+                                fruit.spin.scaleInPlace(friction);
+                            }
+                            fruit.mesh.position.copyFrom(position);
+                            fruit.mesh.rotation.addInPlace(fruit.spin.scale(dt));
+                            if (fruit.kind === "golden") {
+                                fruit.mesh.rotation.y += dt * 3;
+                            }
+                            // Picked up by the tank?
+                            if (position.y < restY + 6 && Math.hypot(position.x - tank.position.x, position.z - tank.position.z) < COLLECT_RADIUS) {
+                                var golden = fruit.kind === "golden";
+                                score += golden ? GOLDEN_POINTS : 1;
+                                caught++;
+                                streak = clock - lastPickup < STREAK_SECONDS ? streak + 1 : 0;
+                                lastPickup = clock;
+                                sounds.pickup(golden, streak, position);
+                                fruit.mesh.dispose();
+                                fruits.splice(i, 1);
+                                continue;
+                            }
+                            // Spoiling: shrinks away after a while on the ground.
+                            var spoil = (fruit.groundTime - LIFETIME) / SPOIL_SECONDS;
+                            if (spoil > 0) {
+                                if (spoil >= 1) {
+                                    missed++;
+                                    fruit.mesh.dispose();
+                                    fruits.splice(i, 1);
+                                    continue;
+                                }
+                                fruit.mesh.scaling.setAll(FRUIT_SCALE * (1 - spoil));
+                            }
+                        }
+                    };
+                    scene.onBeforeRenderObservable.add(function () {
+                        var dt = Math.min(scene.getEngine().getDeltaTime() / 1000, 0.1);
+                        clock += dt;
+                        messageLeft -= dt;
+                        var distance = Math.hypot(tank.position.x - FIELD.x, tank.position.z - FIELD.z);
+                        awayFor = distance > LEAVE_DISTANCE ? awayFor + dt : 0;
+                        if (state === "playing") {
+                            if (awayFor > LEAVE_GRACE) {
+                                endRound(true);
+                            }
+                            else {
+                                timeLeft -= dt;
+                                var progress = 1 - Math.max(0, timeLeft / ROUND_SECONDS);
+                                spawnTimer -= dt;
+                                if (spawnTimer <= 0 && timeLeft > 1.2) {
+                                    spawn();
+                                    spawnTimer = SPAWN_INTERVAL.start + ((SPAWN_INTERVAL.end - SPAWN_INTERVAL.start) * progress);
+                                }
+                                burstTimer -= dt;
+                                if (burstTimer <= 0 && timeLeft > 2) {
+                                    burstTimer = BURST_EVERY;
+                                    for (var i = 0; i < BURST_SIZE; i++) {
+                                        spawn();
+                                    }
+                                }
+                                updateFruit(dt);
+                                if (timeLeft <= 0) {
+                                    endRound(false);
+                                }
+                            }
+                        }
+                        else if (state === "results") {
+                            resultsLeft -= dt;
+                            if (resultsLeft <= 0 || awayFor > LEAVE_GRACE) {
+                                state = "idle";
+                            }
+                        }
+                        var showHud = state !== "idle" || distance < HUD_DISTANCE || messageLeft > 0;
+                        hud.setVisible(showHud);
+                        if (!showHud) {
+                            return;
+                        }
+                        if (state === "idle" && messageLeft > 0) {
+                            hud.set("FRUIT RUSH", _ui_style__WEBPACK_IMPORTED_MODULE_4__.UI.pinkDeep, "Round called off", message);
+                        }
+                        else if (state === "idle") {
+                            hud.set("FRUIT RUSH", _ui_style__WEBPACK_IMPORTED_MODULE_4__.UI.navy, "Shoot PLAY to start", "The factory is overflowing! Drive into the fruit to collect it before it spoils. Golden apples count ".concat(GOLDEN_POINTS, ".").concat(best !== null ? " Best: ".concat(best) : ""));
+                        }
+                        else if (state === "playing" && awayFor > 0) {
+                            hud.set("FRUIT RUSH  ".concat(formatTime(timeLeft)), _ui_style__WEBPACK_IMPORTED_MODULE_4__.UI.pinkDeep, "Come back!", "Leaving the orchard ends the round in ".concat(Math.max(0, LEAVE_GRACE - awayFor).toFixed(1), " s."), _ui_style__WEBPACK_IMPORTED_MODULE_4__.UI.pinkDeep);
+                        }
+                        else if (state === "playing") {
+                            var streakText = streak >= 2 && clock - lastPickup < STREAK_SECONDS ? "Streak x".concat(streak + 1, "!") : "Drive into the fruit before it spoils!";
+                            hud.set("FRUIT RUSH  ".concat(formatTime(timeLeft)), timeLeft < 10 ? _ui_style__WEBPACK_IMPORTED_MODULE_4__.UI.pinkDeep : _ui_style__WEBPACK_IMPORTED_MODULE_4__.UI.gold, "".concat(score, " fruit"), streakText, "#3E9C6E");
+                        }
+                        else {
+                            hud.set(newBest ? "NEW BEST!" : "HARVEST DONE", _ui_style__WEBPACK_IMPORTED_MODULE_4__.UI.mint, "".concat(score, " fruit"), "Caught ".concat(caught, ", ").concat(missed, " spoiled.").concat(best !== null ? " Best ".concat(best, ".") : "", " Shoot PLAY to go again."), "#3E9C6E");
+                        }
+                    });
+                    scene.onDisposeObservable.addOnce(clearFruit);
+                    return [2 /*return*/];
+            }
+        });
+    });
+}
+/** The top of the factory's title sign (with the toy fruit on it), where fruit comes flying out. */
+function findLaunchPoint(scene) {
+    var board = scene.getMeshByName("ff-title-board");
+    if (!board) {
+        return FALLBACK_LAUNCH.clone();
+    }
+    board.computeWorldMatrix(true);
+    var box = board.getBoundingInfo().boundingBox;
+    return new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(box.centerWorld.x, box.maximumWorld.y + 2, box.centerWorld.z);
+}
+/**
+ * One hidden template per kind of fruit, each a single mesh (body, stem and leaf merged, coloured
+ * with vertex colours), so every fruit in flight is just an instance.
+ */
+function createFruitTemplates(scene) {
+    var material = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "fruit-rush-material", "#FFFFFF", { roughness: 0.35, clearCoat: 0.7 });
+    var golden = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "fruit-rush-golden", "#FFFFFF", { roughness: 0.2, metallic: 0.6, clearCoat: 0.8 });
+    golden.emissiveColor = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.FromHexString(COLORS.golden).toLinearSpace().scale(0.25);
+    var colored = function (mesh, hex) {
+        var color = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.FromHexString(hex).toLinearSpace();
+        var count = mesh.getTotalVertices();
+        var colors = [];
+        for (var i = 0; i < count; i++) {
+            colors.push(color.r, color.g, color.b, 1);
+        }
+        mesh.setVerticesData(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.VertexBuffer.ColorKind, colors);
+        return mesh;
+    };
+    var stemAndLeaf = function (name, top) {
+        var stem = colored(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder("".concat(name, "-stem"), { diameterTop: 0.1, diameterBottom: 0.16, height: 0.45, tessellation: 6 }, scene), COLORS.stem);
+        stem.position.set(0, top + 0.15, 0);
+        stem.rotation.z = 0.25;
+        var leaf = colored(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateSphere("".concat(name, "-leaf"), { diameter: 1, segments: 6 }, scene), COLORS.leaf);
+        leaf.scaling.set(0.42, 0.08, 0.2);
+        leaf.rotation.z = 0.5;
+        leaf.position.set(0.22, top + 0.22, 0);
+        return [stem, leaf];
+    };
+    var build = function (name, parts, templateMaterial) {
+        var _a;
+        var merged = (_a = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Mesh.MergeMeshes(parts, true, true)) !== null && _a !== void 0 ? _a : parts[0];
+        merged.name = name;
+        merged.material = templateMaterial;
+        merged.isVisible = false;
+        merged.isPickable = false;
+        return merged;
+    };
+    var apple = function (name, hex) {
+        var body = colored(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateSphere("".concat(name, "-body"), { diameter: 1, segments: 12 }, scene), hex);
+        body.scaling.y = 0.9;
+        return __spreadArray([body], stemAndLeaf(name, 0.42), true);
+    };
+    var orangeBody = colored(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateSphere("fruit-rush-orange-body", { diameter: 1, segments: 12 }, scene), COLORS.orange);
+    var pearBody = colored(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateSphere("fruit-rush-pear-body", { diameter: 1, segments: 12 }, scene), COLORS.pear);
+    var pearNeck = colored(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateSphere("fruit-rush-pear-neck", { diameter: 0.65, segments: 10 }, scene), COLORS.pear);
+    pearNeck.position.y = 0.5;
+    return {
+        apple: build("fruit-rush-apple", apple("fruit-rush-apple", COLORS.apple), material),
+        orange: build("fruit-rush-orange", __spreadArray([orangeBody], stemAndLeaf("fruit-rush-orange", 0.45).slice(1), true), material),
+        pear: build("fruit-rush-pear", __spreadArray([pearBody, pearNeck], stemAndLeaf("fruit-rush-pear", 0.78), true), material),
+        golden: build("fruit-rush-golden", apple("fruit-rush-golden", COLORS.golden), golden),
+    };
+}
+function formatTime(seconds) {
+    var whole = Math.max(0, Math.ceil(seconds));
+    return "0:".concat(whole.toString().padStart(2, "0"));
+}
+function loadBest() {
+    try {
+        var stored = window.localStorage.getItem(BEST_KEY);
+        var value = stored === null ? NaN : Number(stored);
+        return Number.isFinite(value) ? value : null;
+    }
+    catch (_a) {
+        return null;
+    }
+}
+function saveBest(value) {
+    try {
+        window.localStorage.setItem(BEST_KEY, String(Math.round(value)));
+    }
+    catch (_a) {
+        // Private mode or blocked storage: the best score just isn't remembered.
+    }
+}
+
+
+/***/ },
+
 /***/ "./src/scenes/world/ground.ts"
 /*!************************************!*\
   !*** ./src/scenes/world/ground.ts ***!
@@ -7353,7 +8022,8 @@ function drawCherries(context, x, y) {
 (__unused_webpack_module, __webpack_exports__, __webpack_require__) {
 
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   decorateGround: () => (/* binding */ decorateGround)
+/* harmony export */   decorateGround: () => (/* binding */ decorateGround),
+/* harmony export */   keepGroundClear: () => (/* binding */ keepGroundClear)
 /* harmony export */ });
 /* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core */ "./node_modules/@babylonjs/core/index.js");
 /* harmony import */ var _playground__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./playground */ "./src/scenes/world/playground.ts");
@@ -7413,6 +8083,11 @@ var PALETTE = {
     bushes: ["#6E9F7E", "#5B8C70", "#82B08F"],
     boulders: ["#B8B1A3", "#9C968A", "#CFC7B8"],
 };
+var extraClearAreas = [];
+/** Keeps an area free of decorations (bushes, boulders, flowers), e.g. a minigame's playing field. Call before decorateGround. */
+function keepGroundClear(area) {
+    extraClearAreas.push(area);
+}
 function decorateGround(scene, treePositions) {
     try {
         restyleGroundMaterial(scene);
@@ -7625,7 +8300,7 @@ function collectBlockedAreas(scene) {
     // too much).
     var ignored = /^(ground|tank_holder|splatter\d*|ball|deco-|ground-petal|road-)/;
     // The ramps' run-up lanes and the roads stay clear too.
-    var areas = __spreadArray(__spreadArray([], _playground__WEBPACK_IMPORTED_MODULE_1__.PLAYGROUND_LANES, true), (0,_roads__WEBPACK_IMPORTED_MODULE_2__.getRoadClearAreas)(), true).map(function (lane) { return (__assign({}, lane)); });
+    var areas = __spreadArray(__spreadArray(__spreadArray([], _playground__WEBPACK_IMPORTED_MODULE_1__.PLAYGROUND_LANES, true), (0,_roads__WEBPACK_IMPORTED_MODULE_2__.getRoadClearAreas)(), true), extraClearAreas, true).map(function (lane) { return (__assign({}, lane)); });
     for (var _i = 0, _a = scene.meshes; _i < _a.length; _i++) {
         var mesh = _a[_i];
         if (!mesh.isEnabled() || ignored.test(mesh.name) || (tank && mesh.isDescendantOf(tank))) {
@@ -8902,7 +9577,7 @@ function buildDisc(name, cx, cz, radiusX, radiusZ, rotation, y, scene) {
 /* harmony export */   createTradingGame: () => (/* binding */ createTradingGame)
 /* harmony export */ });
 /* harmony import */ var _ui_style__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../ui/style */ "./src/scenes/ui/style.ts");
-/* harmony import */ var _ui_tradingHud__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../ui/tradingHud */ "./src/scenes/ui/tradingHud.ts");
+/* harmony import */ var _ui_minigameHud__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../ui/minigameHud */ "./src/scenes/ui/minigameHud.ts");
 /* harmony import */ var _infoStand__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./infoStand */ "./src/scenes/world/infoStand.ts");
 /* harmony import */ var _workCorner__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./workCorner */ "./src/scenes/world/workCorner.ts");
 var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -8973,7 +9648,7 @@ var SIGNAL_ACCURACY = 0.8;
 /** The forecast stays on this long into the new trend. */
 var SIGNAL_LINGER = 0.6;
 /** The card shows up this close to the corner. */
-var HUD_DISTANCE = 75;
+var HUD_DISTANCE = 50;
 /**
  * The trading floor: during a round, driving further than this from the corner's centre starts a
  * short countdown (LEAVE_GRACE seconds), and the round is called off unless you come back.
@@ -8999,7 +9674,7 @@ var COLORS = {
 };
 function createTradingGame(context, corner) {
     return __awaiter(this, void 0, void 0, function () {
-        var scene, tank, sounds, gui, ui, hud, board, buttons, setSignal, soundAt, state, best, timeLeft, resultsLeft, price, trend, trendLeft, nextTrend, signal, signalLeft, position, entry, realized, finalResult, newBest, message, messageLeft, sampleTimer, sampleCount, screenTimer, history, trades, pressedAt, clock, awayFor, idleTicker, flash, openProfit, startRound, closePosition, endRound, trade, press, pickTrend, forecast, stepMarket, screen, screenSize, updateScreen, W, H, font, drawChart, drawResults;
+        var scene, tank, sounds, gui, hud, board, buttons, setSignal, soundAt, state, best, timeLeft, resultsLeft, price, trend, trendLeft, nextTrend, signal, signalLeft, position, entry, realized, finalResult, newBest, message, messageLeft, sampleTimer, sampleCount, screenTimer, history, trades, pressedAt, clock, awayFor, idleTicker, flash, openProfit, startRound, closePosition, endRound, trade, press, pickTrend, forecast, stepMarket, screen, screenSize, updateScreen, W, H, font, drawChart, drawResults;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -9010,8 +9685,7 @@ function createTradingGame(context, corner) {
                     if (scene.isDisposed) {
                         return [2 /*return*/];
                     }
-                    ui = gui.AdvancedDynamicTexture.CreateFullscreenUI("trading-ui", true, scene);
-                    hud = (0,_ui_tradingHud__WEBPACK_IMPORTED_MODULE_1__.createTradingHud)(gui, ui);
+                    hud = (0,_ui_minigameHud__WEBPACK_IMPORTED_MODULE_1__.createMinigameHud)(gui, scene, "trading");
                     board = corner.board, buttons = corner.buttons, setSignal = corner.setSignal;
                     soundAt = corner.center;
                     state = "idle";
@@ -9371,7 +10045,6 @@ function createTradingGame(context, corner) {
                             hud.set(newBest ? "NEW BEST!" : "MARKET CLOSED", _ui_style__WEBPACK_IMPORTED_MODULE_0__.UI.mint, formatMoney(finalResult), "".concat(best !== null ? "Best ".concat(formatMoney(best), ". ") : "", "Shoot BUY or SELL to play again."), finalResult >= 0 ? "#3E9C6E" : _ui_style__WEBPACK_IMPORTED_MODULE_0__.UI.pinkDeep);
                         }
                     });
-                    scene.onDisposeObservable.addOnce(function () { return ui.dispose(); });
                     return [2 /*return*/];
             }
         });
@@ -9465,7 +10138,8 @@ var TREE_POSITIONS = [
     new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(57.1332, 5.1848, 77.0256),
     // A few more towards the edges of the play area, away from the paths.
     new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(-72, 5.1848, 98),
-    new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(-136, 5.1848, 40),
+    // Clear of the Fruit Rush field in front of the desk.
+    new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(-150, 5.1848, 70),
     new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(100, 5.1848, 72),
     new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(162, 5.1848, -58),
 ];
@@ -9980,11 +10654,11 @@ function addBullseye(scene, id, parent, y, materials) {
 /* harmony export */ });
 /* unused harmony export WORK_CORNER_POSITION */
 /* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core */ "./node_modules/@babylonjs/core/index.js");
-/* harmony import */ var _audio_soundMaterials__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../audio/soundMaterials */ "./src/scenes/audio/soundMaterials.ts");
-/* harmony import */ var _core_staticBodies__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../core/staticBodies */ "./src/scenes/core/staticBodies.ts");
-/* harmony import */ var _core_toyStyle__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../core/toyStyle */ "./src/scenes/core/toyStyle.ts");
-/* harmony import */ var _core_constants__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../core/constants */ "./src/scenes/core/constants.ts");
-/* harmony import */ var _ui_style__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../ui/style */ "./src/scenes/ui/style.ts");
+/* harmony import */ var _core_staticBodies__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../core/staticBodies */ "./src/scenes/core/staticBodies.ts");
+/* harmony import */ var _core_toyStyle__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../core/toyStyle */ "./src/scenes/core/toyStyle.ts");
+/* harmony import */ var _core_constants__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../core/constants */ "./src/scenes/core/constants.ts");
+/* harmony import */ var _ui_style__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../ui/style */ "./src/scenes/ui/style.ts");
+/* harmony import */ var _arcadeButton__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./arcadeButton */ "./src/scenes/world/arcadeButton.ts");
 /* harmony import */ var _infoStand__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./infoStand */ "./src/scenes/world/infoStand.ts");
 var __assign = (undefined && undefined.__assign) || function () {
     __assign = Object.assign || function(t) {
@@ -10024,7 +10698,7 @@ var __assign = (undefined && undefined.__assign) || function () {
 var WORK_CORNER_POSITION = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector2(-20, -72);
 /** Nothing animates when the tank is further away than this. */
 var ANIMATION_DISTANCE = 170;
-var FONT = _ui_style__WEBPACK_IMPORTED_MODULE_5__.UI.font;
+var FONT = _ui_style__WEBPACK_IMPORTED_MODULE_4__.UI.font;
 var PALETTE = {
     navy: "#344B63",
     navyLight: "#4A6280",
@@ -10043,12 +10717,12 @@ var PALETTE = {
     stamp: "#C94F4F",
 };
 function createWorkCorner(scene) {
-    var yaw = _core_constants__WEBPACK_IMPORTED_MODULE_4__.FACE_CAMERA_YAW;
+    var yaw = _core_constants__WEBPACK_IMPORTED_MODULE_3__.FACE_CAMERA_YAW;
     var right = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
     var away = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(Math.sin(yaw), 0, Math.cos(yaw));
     var frame = {
         yaw: yaw,
-        toWorld: function (x, y, z) { return new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(WORK_CORNER_POSITION.x + (right.x * x) + (away.x * z), _core_constants__WEBPACK_IMPORTED_MODULE_4__.GROUND_Y + y, WORK_CORNER_POSITION.y + (right.z * x) + (away.z * z)); },
+        toWorld: function (x, y, z) { return new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(WORK_CORNER_POSITION.x + (right.x * x) + (away.x * z), _core_constants__WEBPACK_IMPORTED_MODULE_3__.GROUND_Y + y, WORK_CORNER_POSITION.y + (right.z * x) + (away.z * z)); },
     };
     var materials = createMaterials(scene);
     var animations = [];
@@ -10067,14 +10741,19 @@ function createWorkCorner(scene) {
                 animations.push(board.animate);
             }],
         ["trade buttons", function () {
-                buttons = {
-                    buy: createTradeButton(scene, frame, materials, "buy", 16, -8),
-                    sell: createTradeButton(scene, frame, materials, "sell", 30, -8),
+                var button = function (kind, x) {
+                    var position = frame.toWorld(x, 0, -8);
+                    return (0,_arcadeButton__WEBPACK_IMPORTED_MODULE_5__.createArcadeButton)(scene, {
+                        id: "work-button-".concat(kind),
+                        x: position.x,
+                        z: position.z,
+                        yaw: frame.yaw,
+                        color: kind === "buy" ? PALETTE.mint : PALETTE.pink,
+                        symbol: kind === "buy" ? "\u25B2" : "\u25BC",
+                        label: kind === "buy" ? "BUY" : "SELL",
+                    });
                 };
-                animations.push(function (dt) {
-                    buttons === null || buttons === void 0 ? void 0 : buttons.buy.animate(dt);
-                    buttons === null || buttons === void 0 ? void 0 : buttons.sell.animate(dt);
-                });
+                buttons = { buy: button("buy", 16), sell: button("sell", 30) };
             }],
         ["briefcase", function () { return createBriefcase(scene, frame, materials); }],
     ];
@@ -10109,7 +10788,7 @@ function createMaterials(scene) {
         if (roughness === void 0) { roughness = 0.45; }
         if (clearCoat === void 0) { clearCoat = 0.4; }
         if (metallic === void 0) { metallic = 0; }
-        return (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createToyMaterial)(scene, "work-".concat(name), hex, { roughness: roughness, clearCoat: clearCoat, metallic: metallic });
+        return (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "work-".concat(name), hex, { roughness: roughness, clearCoat: clearCoat, metallic: metallic });
     };
     var core = toy("core", PALETTE.core, 0.2, 0.9);
     core.emissiveColor = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.FromHexString(PALETTE.core).toLinearSpace().scale(0.35);
@@ -10152,7 +10831,7 @@ function addCollider(scene, node, local, width, height, depth, sound) {
     if (sound === void 0) { sound = "solid"; }
     node.computeWorldMatrix(true);
     var scale = node.scaling.x;
-    (0,_core_staticBodies__WEBPACK_IMPORTED_MODULE_2__.addStaticBox)(scene, _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.TransformCoordinates(local, node.getWorldMatrix()), width * scale, height * scale, depth * scale, {
+    (0,_core_staticBodies__WEBPACK_IMPORTED_MODULE_1__.addStaticBox)(scene, _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.TransformCoordinates(local, node.getWorldMatrix()), width * scale, height * scale, depth * scale, {
         rotation: _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Quaternion.RotationYawPitchRoll(node.rotation.y, 0, 0),
         sound: sound,
     });
@@ -10280,8 +10959,8 @@ var SIGNAL_COLORS = { none: PALETTE.core, up: PALETTE.mint, down: PALETTE.pink }
 var SIGNAL_TILT = { none: -0.6, up: -0.15, down: Math.PI - 0.15 };
 function createQuantumCore(scene, frame, materials) {
     var root = createAnchor(scene, "work-quantum-core", frame, 2, 5, 1.5);
-    attach((0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createRoundedBox)("work-core-plinth", 6, 1.6, 6, 0.4, scene), root, materials.navy).position.y = 0.8;
-    attach((0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createRoundedBox)("work-core-plinth-top", 5.2, 0.3, 5.2, 0.12, scene), root, materials.sand).position.y = 1.75;
+    attach((0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("work-core-plinth", 6, 1.6, 6, 0.4, scene), root, materials.navy).position.y = 0.8;
+    attach((0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("work-core-plinth-top", 5.2, 0.3, 5.2, 0.12, scene), root, materials.sand).position.y = 1.75;
     var pillar = attach(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder("work-core-pillar", { diameterTop: 0.6, diameterBottom: 1.4, height: 3.6, tessellation: 20 }, scene), root, materials.gold);
     pillar.position.y = 3.6;
     var coreY = 8.4;
@@ -10364,12 +11043,12 @@ function createTradingBoard(scene, frame, materials) {
     var height = 10.5;
     var centerY = 9;
     var depth = 0.8;
-    attach((0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createRoundedBox)("work-board", width, height, depth, 0.6, scene), root, materials.navy).position.y = centerY;
-    var rim = attach((0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createRoundedBox)("work-board-rim", width + 1.2, height + 1.2, depth * 0.7, 0.8, scene), root, materials.sand);
+    attach((0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("work-board", width, height, depth, 0.6, scene), root, materials.navy).position.y = centerY;
+    var rim = attach((0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("work-board-rim", width + 1.2, height + 1.2, depth * 0.7, 0.8, scene), root, materials.sand);
     rim.position.set(0, centerY, 0.2);
     for (var _i = 0, _a = [-1, 1]; _i < _a.length; _i++) {
         var side = _a[_i];
-        var post = attach((0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createRoundedBox)("work-board-post-".concat(side), 1.1, centerY, 1.1, 0.35, scene), root, materials.wood);
+        var post = attach((0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("work-board-post-".concat(side), 1.1, centerY, 1.1, 0.35, scene), root, materials.wood);
         post.position.set(side * (width / 2 - 2.2), centerY / 2, 0.9);
     }
     // Chart area: faint grid lines, the candles and a gold trend line in front.
@@ -10378,7 +11057,7 @@ function createTradingBoard(scene, frame, materials) {
     var chartLeft = -6.3;
     var pitch = 1.8;
     var grid = [0, 1, 2, 3].map(function (i) {
-        var line = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createRoundedBox)("work-board-grid-".concat(i), width - 2, 0.12, 0.1, 0.04, scene, 1);
+        var line = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("work-board-grid-".concat(i), width - 2, 0.12, 0.1, 0.04, scene, 1);
         line.position.set(0, chartBottom + (i * 2.2), front - 0.05);
         return line;
     });
@@ -10391,10 +11070,10 @@ function createTradingBoard(scene, frame, materials) {
         var open = _a[0], close = _a[1], low = _a[2], high = _a[3];
         var x = chartLeft + (i * pitch);
         var bodyHeight = Math.max(0.3, Math.abs(close - open));
-        var body = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createRoundedBox)("work-candle-".concat(i), 1.05, bodyHeight, 0.7, 0.14, scene, 2);
+        var body = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("work-candle-".concat(i), 1.05, bodyHeight, 0.7, 0.14, scene, 2);
         body.position.set(x, chartBottom + ((open + close) / 2), front - 0.4);
         (close > open ? ups : downs).push(body);
-        var wick = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createRoundedBox)("work-wick-".concat(i), 0.2, high - low, 0.25, 0.08, scene, 1);
+        var wick = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("work-wick-".concat(i), 0.2, high - low, 0.25, 0.08, scene, 1);
         wick.position.set(x, chartBottom + ((low + high) / 2), front - 0.3);
         wicks.push(wick);
     });
@@ -10514,103 +11193,6 @@ function createTicker(scene, width, height) {
     };
     return { mesh: mesh, texture: texture, setText: setText };
 }
-// ==================================================================== Trade buttons
-var BUTTON_STYLE = {
-    buy: { label: "BUY", arrow: "\u25B2", color: PALETTE.mint },
-    sell: { label: "SELL", arrow: "\u25BC", color: PALETTE.pink },
-};
-/**
- * A big round arcade button on a post, facing the camera, for the minigame: shoot it to press it.
- * Built at (x, z) in the corner's frame.
- */
-function createTradeButton(scene, frame, materials, kind, x, z) {
-    var style = BUTTON_STYLE[kind];
-    var id = "work-button-".concat(kind);
-    var root = createAnchor(scene, id, frame, x, z, 1.2);
-    var discY = 6.2;
-    attach((0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createRoundedBox)("".concat(id, "-base"), 2.8, 0.6, 2.8, 0.25, scene), root, materials.sand).position.y = 0.3;
-    var post = attach((0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createRoundedBox)("".concat(id, "-post"), 0.8, discY, 0.8, 0.3, scene), root, materials.wood);
-    post.position.set(0, (discY / 2) + 0.3, 0.6);
-    // Cylinders stand along Y; tip them so their faces point at the camera (-Z).
-    var holder = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.TransformNode("".concat(id, "-holder"), scene);
-    holder.parent = root;
-    holder.position.set(0, discY, 0);
-    holder.rotation.x = -Math.PI / 2;
-    var rim = attach(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder("".concat(id, "-rim"), { diameter: 5, height: 0.8, tessellation: 40 }, scene), holder, materials.navy);
-    rim.position.y = 0.1;
-    // The cap is what moves in when the button is pressed.
-    var cap = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.TransformNode("".concat(id, "-cap"), scene);
-    cap.parent = holder;
-    var face = attach(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder("".concat(id, "-face"), { diameter: 4.1, height: 0.7, tessellation: 40 }, scene), cap, kind === "buy" ? materials.mint : materials.pink, true);
-    face.position.y = 0.6;
-    var label = createButtonLabel(scene, "".concat(id, "-label"), style.arrow, style.label);
-    label.parent = cap;
-    label.position.y = 0.97;
-    label.rotation.x = Math.PI / 2;
-    label.metadata = { keepUnfrozen: true };
-    var onHit = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Observable();
-    root.computeWorldMatrix(true);
-    var scale = root.scaling.x;
-    var position = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.TransformCoordinates(new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, discY, -0.5), root.getWorldMatrix());
-    var rotation = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Quaternion.RotationYawPitchRoll(root.rotation.y, 0, 0);
-    // Only shots press it; the tank driving into it just bumps.
-    (0,_core_staticBodies__WEBPACK_IMPORTED_MODULE_2__.addStaticBox)(scene, position, 5 * scale, 5 * scale, 1.6 * scale, {
-        rotation: rotation,
-        sound: "post",
-        onHit: function (body) {
-            if ((0,_audio_soundMaterials__WEBPACK_IMPORTED_MODULE_1__.getSoundMaterial)(body) === "ball") {
-                onHit.notifyObservers();
-            }
-        },
-    });
-    (0,_core_staticBodies__WEBPACK_IMPORTED_MODULE_2__.addStaticBox)(scene, _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.TransformCoordinates(new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, discY / 2, 0.6), root.getWorldMatrix()), 1.2 * scale, discY * scale, 1.2 * scale, { rotation: rotation, sound: "post" });
-    var pressed = 0;
-    return {
-        position: position,
-        onHit: onHit,
-        press: function () {
-            pressed = 1;
-        },
-        animate: function (dt) {
-            if (pressed <= 0 && cap.position.y === 0) {
-                return;
-            }
-            pressed = Math.max(0, pressed - (dt * 3));
-            // In fast, back out slowly.
-            cap.position.y = -0.45 * Math.sin(Math.min(1, pressed) * Math.PI * 0.5);
-        },
-    };
-}
-function createButtonLabel(scene, name, arrow, text) {
-    var size = 256;
-    var texture = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.DynamicTexture("".concat(name, "-texture"), { width: size, height: size }, scene, true);
-    texture.hasAlpha = true;
-    var context = texture.getContext();
-    var draw = function () {
-        context.clearRect(0, 0, size, size);
-        context.fillStyle = PALETTE.navyDeep;
-        context.textAlign = "center";
-        context.textBaseline = "middle";
-        context.font = "900 54px ".concat(FONT);
-        context.fillText(arrow, size / 2, size * 0.32);
-        context.font = "900 ".concat(text.length > 3 ? 70 : 80, "px ").concat(FONT);
-        context.fillText(text, size / 2, size * 0.64);
-        texture.update();
-    };
-    draw();
-    if ("fonts" in document) {
-        void document.fonts.load("900 40px Nunito").then(draw).catch(function () { return undefined; });
-    }
-    var material = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.StandardMaterial("".concat(name, "-material"), scene);
-    material.diffuseTexture = texture;
-    material.useAlphaFromDiffuseTexture = true;
-    material.specularColor = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3(0.1, 0.1, 0.1);
-    material.emissiveColor = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3(0.3, 0.3, 0.3);
-    var plane = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreatePlane(name, { size: 3.4 }, scene);
-    plane.material = material;
-    plane.isPickable = false;
-    return plane;
-}
 // ==================================================================== Briefcase
 /** A pushable briefcase with a padlock and a CONFIDENTIAL stamp. */
 function createBriefcase(scene, frame, materials) {
@@ -10628,9 +11210,9 @@ function createBriefcase(scene, frame, materials) {
         body.angularDamping = 0.3;
     }
     var add = function (mesh, material) { return attach(mesh, collider, material, true); };
-    add((0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createRoundedBox)("work-briefcase-body", size.width, size.height, size.depth, 0.35, scene), materials.leather);
+    add((0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("work-briefcase-body", size.width, size.height, size.depth, 0.35, scene), materials.leather);
     // A band round the middle where the lid closes.
-    add((0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createRoundedBox)("work-briefcase-band", size.width + 0.08, 0.35, size.depth + 0.08, 0.12, scene, 2), materials.leatherDark).position.y = 0.55;
+    add((0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("work-briefcase-band", size.width + 0.08, 0.35, size.depth + 0.08, 0.12, scene, 2), materials.leatherDark).position.y = 0.55;
     var handlePath = [];
     for (var i = 0; i <= 12; i++) {
         var angle = (i / 12) * Math.PI;
@@ -10641,12 +11223,12 @@ function createBriefcase(scene, frame, materials) {
     var front = -(size.depth / 2);
     for (var _i = 0, _a = [-1, 1]; _i < _a.length; _i++) {
         var side = _a[_i];
-        add((0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createRoundedBox)("work-briefcase-latch-".concat(side), 0.6, 0.5, 0.2, 0.08, scene, 1), materials.gold).position.set(side * 1.6, 0.55, front - 0.08);
+        add((0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("work-briefcase-latch-".concat(side), 0.6, 0.5, 0.2, 0.08, scene, 1), materials.gold).position.set(side * 1.6, 0.55, front - 0.08);
     }
     var shackle = add(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateTorus("work-briefcase-shackle", { diameter: 0.6, thickness: 0.12, tessellation: 20 }, scene), materials.gold);
     shackle.rotation.x = Math.PI / 2;
     shackle.position.set(0, 0.45, front - 0.15);
-    add((0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_3__.createRoundedBox)("work-briefcase-lock", 0.8, 0.7, 0.3, 0.12, scene, 2), materials.gold).position.set(0, -0.05, front - 0.18);
+    add((0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("work-briefcase-lock", 0.8, 0.7, 0.3, 0.12, scene, 2), materials.gold).position.set(0, -0.05, front - 0.18);
     var stamp = createStamp(scene);
     stamp.parent = collider;
     stamp.position.set(0, -1, front - 0.02);
@@ -10691,4 +11273,4 @@ function createStamp(scene) {
 /***/ }
 
 }]);
-//# sourceMappingURL=src_scenes_tools_ts.624b0a8d2e0c44b4b72f.js.map
+//# sourceMappingURL=src_scenes_tools_ts.01e15d601fc310912cf0.js.map
