@@ -1,4 +1,4 @@
-import type * as BABYLON from "@babylonjs/core";
+import type * as BABYLON from "../babylon";
 
 /** Meshes that move without a physics body of their own. */
 const MOVING_MESHES = new Set(["tank", "tank_holder"]);

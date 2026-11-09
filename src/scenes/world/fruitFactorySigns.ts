@@ -1,4 +1,4 @@
-import * as BABYLON from "@babylonjs/core";
+import * as BABYLON from "../babylon";
 
 import { addStaticBox } from "../core/staticBodies";
 import { createRoundedBox, createToyMaterial } from "../core/toyStyle";

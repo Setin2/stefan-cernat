@@ -1,7 +1,7 @@
-import type * as BABYLON from "@babylonjs/core";
-import type { AdvancedDynamicTexture, Ellipse, Rectangle, TextBlock } from "@babylonjs/gui";
+import type * as BABYLON from "../babylon";
+import type { AdvancedDynamicTexture, Ellipse, Rectangle, TextBlock } from "@babylonjs/gui/2D";
 
-import { UI, createCard, createRow, createText, refreshWhenFontLoaded, type GuiModule } from "./style";
+import { NARROW_LAYOUT, UI, createCard, createRow, createText, isNarrowScreen, refreshWhenFontLoaded, type GuiModule } from "./style";
 
 /**
  * The in-game target HUD: the objective card (top left), the sight in the middle of the screen,
@@ -30,13 +30,14 @@ const OBJECTIVE_MOODS: Record<ObjectiveMood, { label: string; color: string }> =
  */
 export function createObjectiveHint(gui: GuiModule, ui: AdvancedDynamicTexture): ObjectiveHint {
     const card = createCard(gui, "objective-hint");
-    card.width = "360px";
+    const narrow = isNarrowScreen();
+    card.width = narrow ? `${window.innerWidth - (NARROW_LAYOUT.margin * 2)}px` : "360px";
     card.height = "1px";
     card.adaptHeightToChildren = true;
     card.horizontalAlignment = gui.Control.HORIZONTAL_ALIGNMENT_LEFT;
     card.verticalAlignment = gui.Control.VERTICAL_ALIGNMENT_TOP;
-    card.left = "18px";
-    card.top = "18px";
+    card.left = narrow ? `${NARROW_LAYOUT.margin}px` : "18px";
+    card.top = narrow ? `${NARROW_LAYOUT.margin}px` : "18px";
     card.zIndex = 2;
     card.isPointerBlocker = false;
 

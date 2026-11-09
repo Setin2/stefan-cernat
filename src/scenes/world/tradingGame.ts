@@ -52,7 +52,7 @@ const COLORS = {
 
 export async function createTradingGame(context: TankContext, corner: WorkCorner): Promise<void> {
     const { scene, tank, sounds } = context;
-    const gui = await import("@babylonjs/gui");
+    const gui = await import("@babylonjs/gui/2D");
     if (scene.isDisposed) {
         return;
     }

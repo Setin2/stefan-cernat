@@ -1,4 +1,4 @@
-import * as BABYLON from "@babylonjs/core";
+import * as BABYLON from "../babylon";
 
 import { SUN_DIRECTION } from "../core/shadows";
 import { createLumpyBall, createRandom, createToyMaterial } from "../core/toyStyle";

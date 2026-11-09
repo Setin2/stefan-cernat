@@ -1,4 +1,4 @@
-import * as BABYLON from "@babylonjs/core";
+import * as BABYLON from "../babylon";
 
 import { FACE_CAMERA_YAW, GROUND_Y } from "../core/constants";
 import { createRoundedBox, createToyMaterial, extrudeOutline } from "../core/toyStyle";
@@ -7,8 +7,7 @@ import { createRoundedBox, createToyMaterial, extrudeOutline } from "../core/toy
  * Programming-language trophies: a gold cup with two loop handles on a plinth, with the language's
  * badge on the front of the cup.
  *
- * - C#, beside the projects desk. It replaces the imported C# logo model (whose physics box ended
- *   up out of step with what was drawn, so the tank drove straight through it).
+ * - C#, beside the projects desk, where an imported C# logo model used to stand.
  * - Python, beside the work corner: a blue badge with a yellow "Py", and a toy snake coiled round
  *   the cup's stem.
  *
@@ -80,7 +79,6 @@ const CUP_PROFILE: [number, number][] = [
 const BOX = { width: 5.6, height: 7.4, depth: 4.4 };
 
 export function createCSharpTrophy(scene: BABYLON.Scene): void {
-    removeLogoModel(scene);
     createTrophy(scene, {
         id: "csharp-trophy",
         position: CSHARP_POSITION,
@@ -128,17 +126,6 @@ function createTrophy(scene: BABYLON.Scene, spec: TrophySpec): void {
         // Moves with its physics body, so its world matrix mustn't be frozen.
         mesh.metadata = { ...(mesh.metadata ?? {}), keepUnfrozen: true };
     }
-}
-
-/** The imported logo: a box with a physics body and the logo mesh as its child. */
-function removeLogoModel(scene: BABYLON.Scene): void {
-    const logo = scene.getMeshByName("c#");
-    if (!logo) {
-        return;
-    }
-    // The scene loader doesn't set mesh.physicsImpostor, so find the body through the engine.
-    (logo.physicsImpostor ?? scene.getPhysicsEngine()?.getImpostorForPhysicsObject(logo))?.dispose();
-    logo.dispose();
 }
 
 function buildModel(scene: BABYLON.Scene, spec: TrophySpec): BABYLON.Mesh[] {

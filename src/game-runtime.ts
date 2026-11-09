@@ -1,7 +1,19 @@
-import { BabylonFileLoaderConfiguration, Engine, Scene } from "@babylonjs/core";
+import { Engine } from "@babylonjs/core/Engines/engine";
+import { BabylonFileLoaderConfiguration } from "@babylonjs/core/Loading/Plugins/babylonFileLoader";
+import { Scene } from "@babylonjs/core/scene";
+// The scene loader shows Babylon's loading screen hooks, so it needs them loaded first.
+import "@babylonjs/core/Loading/loadingScreen";
 
 import { configureEngine, hideDeprecatedRendererInfo } from "./engine-config";
 import { warmUpShaders } from "./scenes/core/warmUp";
+
+/**
+ * How far the loading bar is after each stage of loading (0 to 1): the engine code, the scene
+ * file's download, building the world. Shader compilation fills the rest.
+ */
+const LOADING_STAGES = { engine: 0.3, sceneFile: 0.65, world: 0.8 };
+/** Roughly the scene file's size, for when the browser can't tell how big the download is. */
+const SCENE_FILE_BYTES = 2.6e6;
 
 export class GameRuntime {
     /**
@@ -16,6 +28,13 @@ export class GameRuntime {
     private readonly statusTitle: HTMLElement | null;
     private readonly statusMessage: HTMLElement | null;
     private readonly statusRetryButton: HTMLButtonElement | null;
+    private readonly progress = {
+        bar: document.getElementById("statusProgress"),
+        fill: document.getElementById("statusProgressFill"),
+        label: document.getElementById("statusProgressLabel"),
+        value: document.getElementById("statusProgressValue"),
+    };
+    private shownProgress = 0;
     private sceneReady = false;
     private readonly renderScene = () => this.scene.render();
 
@@ -36,6 +55,8 @@ export class GameRuntime {
         this.scene = new Scene(this.engine);
 
         this._setStatus("Loading scene", this._getInitialStatusMessage());
+        // The engine itself (the biggest download) is in by now.
+        this._setProgress(LOADING_STAGES.engine, "Loading the world");
         this._bindEvents();
         void this._loadScene();
     }
@@ -52,7 +73,13 @@ export class GameRuntime {
             ]);
 
             BabylonFileLoaderConfiguration.LoaderInjectedPhysicsEngine = CANNON;
-            await appendScene(this.scene, rootUrl, "../scene/scene.babylon");
+            // The scene file's download, then building the world on top of it.
+            await appendScene(this.scene, rootUrl, "../scene/scene.babylon", (event) => {
+                const total = event.lengthComputable && event.total > 0 ? event.total : SCENE_FILE_BYTES;
+                const fraction = Math.min(1, event.loaded / total);
+                this._setProgress(LOADING_STAGES.engine + ((LOADING_STAGES.sceneFile - LOADING_STAGES.engine) * fraction), "Loading the world");
+            });
+            this._setProgress(LOADING_STAGES.world, "Warming up");
 
             if (!this.scene.activeCamera) {
                 throw new Error("No camera defined in the scene. Please add at least one camera in the project or create one yourself in the code.");
@@ -60,7 +87,10 @@ export class GameRuntime {
 
             this.scene.activeCamera.attachControl(this.engine.getRenderingCanvas(), false);
             // Compile all shaders now, so nothing stutters the first time it comes into view.
-            await warmUpShaders(this.scene);
+            await warmUpShaders(this.scene, (fraction) => {
+                this._setProgress(LOADING_STAGES.world + ((1 - LOADING_STAGES.world) * fraction), "Warming up");
+            });
+            this._setProgress(1, "Ready");
             this.sceneReady = true;
             this._hideStatus();
             this._syncRenderLoop();
@@ -85,6 +115,18 @@ export class GameRuntime {
         }
     }
 
+    /** Moves the loading bar to `fraction` (0 to 1); it never goes backwards. */
+    private _setProgress(fraction: number, label: string): void {
+        this.shownProgress = Math.max(this.shownProgress, Math.min(1, fraction));
+        const percent = Math.round(this.shownProgress * 100);
+        if (this.progress.fill) {
+            this.progress.fill.style.width = `${percent}%`;
+        }
+        this.progress.bar?.setAttribute("aria-valuenow", String(percent));
+        this.progress.label?.replaceChildren(label);
+        this.progress.value?.replaceChildren(`${percent}%`);
+    }
+
     private _hideStatus(): void {
         if (this.statusOverlay) {
             this.statusOverlay.hidden = true;
@@ -96,7 +138,7 @@ export class GameRuntime {
 
     private _getInitialStatusMessage(): string {
         if (window.matchMedia("(pointer: coarse)").matches) {
-            return "Loading assets. This scene is built around keyboard controls, so desktop works best.";
+            return "Loading assets. Drive with the joystick at the bottom left and shoot with the FIRE button.";
         }
 
         return "Loading assets and interactive scene data.";

@@ -1,4 +1,4 @@
-import * as BABYLON from "@babylonjs/core";
+import * as BABYLON from "../babylon";
 
 import type { SoundBoard } from "./soundBoard";
 import { getSoundMaterial, isSurface, setSoundMaterial, type SoundMaterial } from "./soundMaterials";

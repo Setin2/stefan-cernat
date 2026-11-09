@@ -1,7 +1,8 @@
-import * as BABYLON from "@babylonjs/core";
-import type { Rectangle } from "@babylonjs/gui";
+import * as BABYLON from "../babylon";
+import type { Rectangle } from "@babylonjs/gui/2D";
 
 import { segmentDistanceSquared } from "../core/math";
+import { prefersTouch } from "../ui/device";
 import { UI } from "../ui/style";
 import { createHitFeedback, createImpactBurst, createObjectiveHint, createReticle, createTargetLabel, type ObjectiveMood } from "../ui/targetHud";
 import { collideWithRamps } from "../world/playground";
@@ -70,13 +71,8 @@ export async function initializeShooting(_this: TankContext, forward: BABYLON.Ve
         return;
     }
 
-    const githubMaterial = github.material;
-    if (githubMaterial && "albedoTexture" in githubMaterial) {
-        githubMaterial.albedoTexture = new BABYLON.Texture("assets/models/target/target (Base Color).png", _this.scene);
-    }
-
     const highlightColor = BABYLON.Color3.FromHexString("#f7b955");
-    const gui = await import("@babylonjs/gui");
+    const gui = await import("@babylonjs/gui/2D");
     if (_this.scene.isDisposed) {
         return;
     }
@@ -278,7 +274,7 @@ export async function initializeShooting(_this: TankContext, forward: BABYLON.Ve
 
         const isNearby = nearestTargetDistanceSquared <= targetHintRangeSquared;
         const nextObjectiveText = hasAimLock
-            ? `${aimedTargetLabel} is locked on, ${formatDistance(Math.sqrt(aimedTargetDistanceSquared))}. Press E to fire!`
+            ? `${aimedTargetLabel} is locked on, ${formatDistance(Math.sqrt(aimedTargetDistanceSquared))}. ${prefersTouch() ? "Tap FIRE!" : "Press E to fire!"}`
             : isNearby
                 ? `${nearbyTargetLabel} is ${formatDistance(Math.sqrt(nearestTargetDistanceSquared))}. Turn toward it to lock on.`
                 : "Drive around the island to find the glowing targets, my projects, my work and links.";
@@ -395,8 +391,10 @@ export async function initializeShooting(_this: TankContext, forward: BABYLON.Ve
             handleShoot,
         ),
     );
+    const fireObserver = _this.input.onFire.add(handleShoot);
 
     _this.scene.onDisposeObservable.addOnce(() => {
+        _this.input.onFire.remove(fireObserver);
         _this.scene.onBeforeRenderObservable.remove(shotObserver);
         _this.scene.onAfterRenderObservable.remove(recoilRestoreObserver);
         activeShots.forEach((activeShot) => {

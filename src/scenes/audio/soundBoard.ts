@@ -1,4 +1,4 @@
-import * as BABYLON from "@babylonjs/core";
+import * as BABYLON from "../babylon";
 
 import { clamp } from "../core/math";
 import { isSurface, type SoundMaterial, type SurfaceMaterial } from "./soundMaterials";

@@ -1,4 +1,4 @@
-import * as BABYLON from "@babylonjs/core";
+import * as BABYLON from "../babylon";
 
 import { FACE_CAMERA_YAW, GROUND_Y } from "../core/constants";
 import { createToyMaterial } from "../core/toyStyle";
@@ -87,7 +87,7 @@ export function createFruitRushButton(scene: BABYLON.Scene): ArcadeButton {
 
 export async function createFruitRush(context: TankContext, button: ArcadeButton): Promise<void> {
     const { scene, tank, sounds } = context;
-    const gui = await import("@babylonjs/gui");
+    const gui = await import("@babylonjs/gui/2D");
     if (scene.isDisposed) {
         return;
     }

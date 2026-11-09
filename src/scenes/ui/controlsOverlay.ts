@@ -1,7 +1,8 @@
-import * as BABYLON from "@babylonjs/core";
-import type { AdvancedDynamicTexture, Rectangle } from "@babylonjs/gui";
+import * as BABYLON from "../babylon";
+import type { AdvancedDynamicTexture, Rectangle } from "@babylonjs/gui/2D";
 
-import { UI, createCard, createKeycap, createRow, createSpacer, createText, refreshWhenFontLoaded, type GuiModule } from "./style";
+import { prefersTouch } from "./device";
+import { NARROW_LAYOUT, UI, createCard, createKeycap, createRow, createSpacer, createText, refreshWhenFontLoaded, type GuiModule, isNarrowScreen } from "./style";
 
 /** The help card hides itself after this long on first load. */
 const AUTO_DISMISS_MS = 10000;
@@ -36,7 +37,7 @@ export class ControlOverlay {
 
     /** Builds the overlay and shows the help card (it hides itself after a while). */
     public async show(): Promise<void> {
-        const gui = await import("@babylonjs/gui");
+        const gui = await import("@babylonjs/gui/2D");
         if (this.scene.isDisposed) {
             return;
         }
@@ -48,7 +49,7 @@ export class ControlOverlay {
             onToggle: () => this.toggle(),
             onClose: () => this.hide(),
             onToggleMute: () => this.toggleMute(),
-            isTouchDevice: window.matchMedia("(pointer: coarse)").matches,
+            isTouchDevice: prefersTouch(),
         });
         this.panel = panel;
         this.hint = hint;
@@ -128,9 +129,10 @@ function createControlOverlay(
     panel.height = "1px";
     panel.adaptHeightToChildren = true;
     panel.horizontalAlignment = gui.Control.HORIZONTAL_ALIGNMENT_RIGHT;
-    panel.verticalAlignment = gui.Control.VERTICAL_ALIGNMENT_BOTTOM;
+    // On touch screens the joystick and FIRE button take the bottom corners: centre the card.
+    panel.verticalAlignment = options.isTouchDevice ? gui.Control.VERTICAL_ALIGNMENT_CENTER : gui.Control.VERTICAL_ALIGNMENT_BOTTOM;
     panel.left = options.isTouchDevice ? "-4%" : "-22px";
-    panel.top = "-24px";
+    panel.top = options.isTouchDevice ? "40px" : "-24px";
     panel.isPointerBlocker = true;
 
     const stack = new gui.StackPanel("controls-panel-stack");
@@ -144,14 +146,12 @@ function createControlOverlay(
     eyebrow.paddingLeft = "20px";
     stack.addControl(eyebrow);
 
-    const title = createText(gui, "controls-title", options.isTouchDevice ? "Best on a desktop" : "Drive, aim and explore", { size: 24, weight: "900", color: UI.navy });
+    const title = createText(gui, "controls-title", "Drive, aim and explore", { size: 24, weight: "900", color: UI.navy });
     title.height = "36px";
     title.paddingLeft = "20px";
     stack.addControl(title);
 
-    const description = createText(gui, "controls-description", options.isTouchDevice
-        ? "The portfolio is built around keyboard driving. You can look around here, but driving and shooting need a keyboard."
-        : "Drive the tank between the projects and shoot the glowing targets to open links.", { size: 14, weight: "700", color: UI.muted });
+    const description = createText(gui, "controls-description", "Drive the tank between the projects and shoot the glowing targets to open links.", { size: 14, weight: "700", color: UI.muted });
     description.textWrapping = true;
     description.resizeToFit = true;
     description.paddingLeft = "20px";
@@ -160,13 +160,18 @@ function createControlOverlay(
     stack.addControl(description);
 
     // One row per control: keycaps, then what they do.
-    const rows: { keys: string[]; text: string }[] = [
-        { keys: ["W", "A", "S", "D"], text: "Drive the tank" },
-        { keys: ["E"], text: "Shoot glowing targets" },
-        { keys: ["H"], text: "Show or hide this help" },
-        { keys: ["M"], text: "Sound on or off" },
-        { keys: ["Esc"], text: "Close the help" },
-    ];
+    const rows: { keys: string[]; text: string }[] = options.isTouchDevice
+        ? [
+            { keys: ["Stick"], text: "Drive the tank" },
+            { keys: ["FIRE"], text: "Shoot glowing targets" },
+        ]
+        : [
+            { keys: ["W", "A", "S", "D"], text: "Drive the tank" },
+            { keys: ["E"], text: "Shoot glowing targets" },
+            { keys: ["H"], text: "Show or hide this help" },
+            { keys: ["M"], text: "Sound on or off" },
+            { keys: ["Esc"], text: "Close the help" },
+        ];
     rows.forEach((row, index) => {
         const line = createRow(gui, `controls-line-${index}`, 36);
         line.paddingLeft = "20px";
@@ -207,8 +212,9 @@ function createControlOverlay(
     badge.height = "42px";
     badge.horizontalAlignment = gui.Control.HORIZONTAL_ALIGNMENT_RIGHT;
     badge.verticalAlignment = gui.Control.VERTICAL_ALIGNMENT_TOP;
-    badge.top = "54px";
-    badge.left = "-14px";
+    // Below the FPS counter, or below the objective card on narrow screens.
+    badge.top = isNarrowScreen() ? `${NARROW_LAYOUT.belowObjective}px` : "54px";
+    badge.left = isNarrowScreen() ? `-${NARROW_LAYOUT.margin}px` : "-14px";
     badge.shadowOffsetY = 3;
     badge.isPointerBlocker = true;
     badge.hoverCursor = "pointer";

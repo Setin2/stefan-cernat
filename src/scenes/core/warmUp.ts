@@ -1,4 +1,4 @@
-import * as BABYLON from "@babylonjs/core";
+import * as BABYLON from "../babylon";
 
 /**
  * Compiles every shader the game will need while the loading screen is still up.
@@ -20,7 +20,8 @@ export function registerLoadingTask(task: Promise<unknown>): void {
     pending.push(task.catch(() => undefined));
 }
 
-export async function warmUpShaders(scene: BABYLON.Scene): Promise<void> {
+/** `onProgress` gets the fraction (0 to 1) of shaders compiled so far. */
+export async function warmUpShaders(scene: BABYLON.Scene, onProgress?: (fraction: number) => void): Promise<void> {
     await withTimeout(Promise.all(pending.splice(0)));
     if (scene.isDisposed) {
         return;
@@ -61,7 +62,13 @@ export async function warmUpShaders(scene: BABYLON.Scene): Promise<void> {
         }));
     }
 
-    await withTimeout(Promise.all(tasks));
+    let done = 0;
+    const counted = tasks.map((task) => task.then(() => {
+        done++;
+        onProgress?.(done / tasks.length);
+    }));
+    onProgress?.(tasks.length ? 0 : 1);
+    await withTimeout(Promise.all(counted));
 }
 
 function hasPerInstanceAttributes(mesh: BABYLON.Mesh): boolean {

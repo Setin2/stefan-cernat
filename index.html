@@ -1,11 +1,43 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html lang="en">
 
 <head>
-    <link rel="shortcut icon" href="#">
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>&#129430;</title>
+    <title>Stefan Cernat · Interactive Portfolio</title>
+    <meta name="description" content="Stefan Cernat's interactive portfolio: drive a toy tank around a little island to find my projects, my work on quantum-inspired trading software, and my links." />
+    <meta name="author" content="Stefan Cernat" />
+    <meta name="theme-color" content="#2e7fa8" />
+    <link rel="canonical" href="https://setin2.github.io/stefan-cernat/" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+
+    <!-- Link previews (LinkedIn, Slack, X, ...). -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Stefan Cernat" />
+    <meta property="og:title" content="Stefan Cernat · Interactive Portfolio" />
+    <meta property="og:description" content="Stefan Cernat's interactive portfolio: drive a toy tank around a little island to find my projects, my work on quantum-inspired trading software, and my links." />
+    <meta property="og:url" content="https://setin2.github.io/stefan-cernat/" />
+    <meta property="og:image" content="https://setin2.github.io/stefan-cernat/preview.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="A toy tank on a little island with cherry trees, brick walls, signposts and trophies." />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Stefan Cernat · Interactive Portfolio" />
+    <meta name="twitter:description" content="Stefan Cernat's interactive portfolio: drive a toy tank around a little island to find my projects, my work on quantum-inspired trading software, and my links." />
+    <meta name="twitter:image" content="https://setin2.github.io/stefan-cernat/preview.png" />
+
+    <!-- Who this site is about, for search engines. -->
+    <script type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Person",
+            "name": "Stefan Cernat",
+            "url": "https://setin2.github.io/stefan-cernat/",
+            "jobTitle": "Software Engineer",
+            "knowsAbout": ["Quantum-inspired algorithms", "Financial trading software", "Game development", "Babylon.js"],
+            "sameAs": ["https://github.com/Setin2", "https://www.linkedin.com/in/stefan-cernat/"]
+        }
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
@@ -89,37 +121,46 @@
             color: #6b7b8c;
         }
 
-        /* Little bouncing blocks while loading. */
-        .status-blocks {
+        /* Loading bar: a navy-rimmed toy track filling with striped pink. */
+        .status-progress {
+            height: 18px;
+            margin-top: 18px;
+            border: 3px solid #344b63;
+            border-radius: 12px;
+            background: #e8dcc6;
+            overflow: hidden;
+        }
+
+        .status-progress-fill {
+            width: 2%;
+            height: 100%;
+            border-radius: 8px;
+            background: repeating-linear-gradient(-45deg, #e8869f 0 10px, #f0a3b6 10px 20px);
+            background-size: 28px 28px;
+            transition: width 0.35s ease-out;
+            animation: status-stripes 0.8s linear infinite;
+        }
+
+        .status-progress-text {
             display: flex;
-            gap: 8px;
-            margin-top: 16px;
+            justify-content: space-between;
+            margin: 8px 2px 0;
+            font-size: 13px;
+            font-weight: 800;
+            color: #6b7b8c;
         }
 
-        .status-blocks span {
-            width: 16px;
-            height: 16px;
-            border-radius: 5px;
-            box-shadow: 0 3px 0 rgba(26, 40, 56, 0.35);
-            animation: status-bounce 0.9s ease-in-out infinite;
-        }
-
-        .status-blocks span:nth-child(1) { background: #e8869f; }
-        .status-blocks span:nth-child(2) { background: #d9a13b; animation-delay: 0.15s; }
-        .status-blocks span:nth-child(3) { background: #3f8c84; animation-delay: 0.3s; }
-        .status-blocks span:nth-child(4) { background: #456f99; animation-delay: 0.45s; }
-
-        #statusOverlay[data-state="error"] .status-blocks {
+        #statusOverlay[data-state="error"] .status-progress,
+        #statusOverlay[data-state="error"] .status-progress-text {
             display: none;
         }
 
-        @keyframes status-bounce {
-            0%, 100% { transform: translateY(0); }
-            40% { transform: translateY(-8px); }
+        @keyframes status-stripes {
+            to { background-position: 28px 0; }
         }
 
         @media (prefers-reduced-motion: reduce) {
-            .status-blocks span { animation: none; }
+            .status-progress-fill { animation: none; transition: none; }
         }
 
         .status-actions {
@@ -158,6 +199,58 @@
             display: none;
         }
 
+        /* The plain version: the site's content as a normal page. Always in the page (for search
+           engines and screen readers), shown when the 3D game can't run or someone asks for it. */
+        .plain:not(.is-open) {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+            clip-path: inset(50%);
+            white-space: nowrap;
+        }
+
+        .plain.is-open {
+            position: fixed;
+            inset: 0;
+            z-index: 30;
+            overflow-y: auto;
+            padding: 32px 16px;
+            background: repeating-conic-gradient(#2e7fa8 0% 25%, #2a76a0 0% 50%) 50% / 120px 120px;
+        }
+
+        .plain-card {
+            max-width: 640px;
+            margin: 0 auto;
+            padding: 24px 28px 28px;
+            border: 3px solid #344b63;
+            border-radius: 20px;
+            background: #f4ebdd;
+            box-shadow: 0 6px 0 rgba(26, 40, 56, 0.45);
+            line-height: 1.55;
+        }
+
+        .plain h1 { margin: 0 0 4px; font-size: clamp(26px, 6vw, 34px); font-weight: 900; color: #344b63; }
+        .plain h2 { margin: 24px 0 6px; font-size: 18px; font-weight: 900; color: #344b63; }
+        .plain p, .plain li { margin: 0 0 8px; font-weight: 700; color: #4b5a6a; }
+        .plain ul { padding-left: 20px; }
+        .plain a { color: #c9667f; font-weight: 900; }
+        .plain .status-actions { margin-top: 20px; }
+
+        .status-link {
+            margin-left: auto;
+            align-self: center;
+            border: 0;
+            background: none;
+            padding: 0;
+            font: inherit;
+            font-size: 13px;
+            font-weight: 800;
+            color: #6b7b8c;
+            text-decoration: underline;
+            cursor: pointer;
+        }
+
         #fps {
             position: absolute;
             background: #f4ebdd;
@@ -188,12 +281,47 @@
             <p class="status-label">Interactive Portfolio</p>
             <h1 id="statusTitle">Loading scene</h1>
             <p id="statusMessage">Loading assets and interactive scene data.</p>
-            <div class="status-blocks" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+            <div class="status-progress" id="statusProgress" role="progressbar" aria-label="Loading" aria-valuemin="0" aria-valuemax="100" aria-valuenow="2">
+                <div class="status-progress-fill" id="statusProgressFill"></div>
+            </div>
+            <p class="status-progress-text"><span id="statusProgressLabel">Loading the engine</span><span id="statusProgressValue">2%</span></p>
             <div class="status-actions">
                 <button id="statusRetryButton" class="status-button" type="button" hidden>Retry loading</button>
+                <button class="status-link" type="button" data-plain="open">Skip the game: plain version</button>
             </div>
         </section>
     </div>
+
+    <main id="plainVersion" class="plain" aria-labelledby="plainTitle">
+        <article class="plain-card">
+            <p class="status-label">Interactive Portfolio</p>
+            <h1 id="plainTitle">Stefan Cernat</h1>
+            <p>Software engineer. This site is a small 3D world: you drive a toy tank around an island to find my work, my projects and my links. Here is the same content as a plain page.</p>
+
+            <h2>My work: quantum-inspired trading</h2>
+            <p>I build software for financial trading, using quantum-inspired algorithms to solve hard optimisation problems. The rest is confidential.</p>
+
+            <h2>My projects</h2>
+            <ul>
+                <li><strong>Idle Fruit Factory</strong>: my first Android mobile game, free on the Google Play Store.</li>
+                <li><strong>This website</strong>: built with Babylon.js and cannon.js. Everything on the island is made in code, including two minigames, Quantum Trader and Fruit Rush. Source on <a href="https://github.com/Setin2/stefan-cernat">GitHub</a>.</li>
+            </ul>
+
+            <h2>Find me</h2>
+            <ul>
+                <li><a href="https://github.com/Setin2" rel="me">GitHub</a></li>
+                <li><a href="https://www.linkedin.com/in/stefan-cernat/" rel="me">LinkedIn</a></li>
+            </ul>
+
+            <div class="status-actions">
+                <button class="status-button" type="button" data-plain="close" id="plainBackButton">Back to the 3D version</button>
+            </div>
+        </article>
+    </main>
+
+    <noscript>
+        <style>.plain { position: static !important; width: auto !important; height: auto !important; clip-path: none !important; white-space: normal !important; } #statusOverlay, #renderCanvas, #fps { display: none !important; } html, body { overflow: auto !important; }</style>
+    </noscript>
     <div id="fps">0</div>
 
     <script type="text/javascript">

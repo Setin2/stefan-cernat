@@ -1,7 +1,7 @@
-import type { Scene } from "@babylonjs/core";
-import type { AdvancedDynamicTexture, Rectangle, TextBlock } from "@babylonjs/gui";
+import type { Scene } from "@babylonjs/core/scene";
+import type { AdvancedDynamicTexture, Rectangle, TextBlock } from "@babylonjs/gui/2D";
 
-import { UI, createCard, createText, refreshWhenFontLoaded, type GuiModule } from "./style";
+import { NARROW_LAYOUT, UI, createCard, createText, isNarrowScreen, refreshWhenFontLoaded, type GuiModule } from "./style";
 
 /**
  * A minigame's card (top centre): an eyebrow badge, a big line (time, score) and a smaller line
@@ -37,12 +37,12 @@ export function createMinigameHud(gui: GuiModule, scene: Scene, name: string): M
     const layer = getLayer(gui, scene);
     const ui = layer.ui;
     const card: Rectangle = createCard(gui, `${name}-hud`);
-    card.width = "340px";
+    card.width = `${Math.min(340, window.innerWidth - (NARROW_LAYOUT.margin * 2))}px`;
     card.height = "1px";
     card.adaptHeightToChildren = true;
     card.horizontalAlignment = gui.Control.HORIZONTAL_ALIGNMENT_CENTER;
     card.verticalAlignment = gui.Control.VERTICAL_ALIGNMENT_TOP;
-    card.top = "18px";
+    card.top = isNarrowScreen() ? `${NARROW_LAYOUT.belowBadge}px` : "18px";
     card.zIndex = 2;
     card.isPointerBlocker = false;
     card.isVisible = false;

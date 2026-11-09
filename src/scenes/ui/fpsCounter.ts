@@ -1,4 +1,4 @@
-import type * as BABYLON from "@babylonjs/core";
+import type * as BABYLON from "../babylon";
 
 const UPDATE_INTERVAL_MS = 250;
 

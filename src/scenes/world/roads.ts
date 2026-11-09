@@ -1,4 +1,4 @@
-import * as BABYLON from "@babylonjs/core";
+import * as BABYLON from "../babylon";
 
 import { getPlaygroundHeight } from "./playground";
 import { addThinInstances, buildMesh, createRandom, pushOrientedTriangle } from "../core/toyStyle";

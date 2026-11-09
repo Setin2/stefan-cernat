@@ -1,4 +1,4 @@
-import type * as BABYLON from "@babylonjs/core";
+import type * as BABYLON from "../babylon";
 
 import { clamp } from "../core/math";
 import { getPlaygroundHeight } from "../world/playground";

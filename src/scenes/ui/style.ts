@@ -1,4 +1,4 @@
-import type { AdvancedDynamicTexture, Control, Rectangle, StackPanel, TextBlock } from "@babylonjs/gui";
+import type { AdvancedDynamicTexture, Control, Rectangle, StackPanel, TextBlock } from "@babylonjs/gui/2D";
 
 /**
  * Shared look for the on-screen UI, matching the toy world: cream cards with a chunky navy outline
@@ -6,7 +6,7 @@ import type { AdvancedDynamicTexture, Control, Rectangle, StackPanel, TextBlock 
  * world's sakura pink and gold as accents.
  */
 
-export type GuiModule = typeof import("@babylonjs/gui");
+export type GuiModule = typeof import("@babylonjs/gui/2D");
 
 export const UI = {
     cream: "#F4EBDD",
@@ -22,6 +22,17 @@ export const UI = {
     shadow: "rgba(26, 40, 56, 0.45)",
     font: "Nunito, \"Arial Rounded MT Bold\", \"Trebuchet MS\", sans-serif",
 };
+
+/**
+ * Phones (in portrait) and other narrow screens: the corner cards would run into each other, so
+ * the objective card spans the top and the other cards stack below it (see NARROW_LAYOUT).
+ */
+export function isNarrowScreen(): boolean {
+    return window.innerWidth < 760;
+}
+
+/** Where things go on a narrow screen, from the top (the objective card is about 110 px tall). */
+export const NARROW_LAYOUT = { margin: 12, belowObjective: 132, belowBadge: 184 };
 
 /** Redraws the UI once the web font has loaded (text drawn before that uses the fallback font). */
 export function refreshWhenFontLoaded(ui: AdvancedDynamicTexture): void {

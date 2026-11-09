@@ -1,4 +1,4 @@
-import type * as BABYLON from "@babylonjs/core";
+import type * as BABYLON from "../babylon";
 
 /**
  * A safety net for big screens: renders at a slightly lower resolution when the frame rate stays

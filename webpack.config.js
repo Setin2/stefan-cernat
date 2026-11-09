@@ -61,5 +61,16 @@ module.exports = (_, argv) => {
             usedExports: true,
         },
         devtool: argv.mode === "production" ? false : "source-map",
+        // `npm run dev`: serves the site on http://localhost:1338/ and rebuilds on every change.
+        // The bundle is built in memory and served as /dist/, so the dist/ folder on disk (the
+        // committed production build) is never touched.
+        devServer: {
+            port: 1338,
+            static: { directory: __dirname, watch: false },
+            devMiddleware: { publicPath: "/dist/" },
+            hot: false,
+            liveReload: true,
+            client: { overlay: { errors: true, warnings: false } },
+        },
     };
 };

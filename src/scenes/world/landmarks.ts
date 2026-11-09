@@ -1,4 +1,4 @@
-import * as BABYLON from "@babylonjs/core";
+import * as BABYLON from "../babylon";
 
 import { createRoadNetwork } from "./roads";
 import { addStaticBox } from "../core/staticBodies";
@@ -34,15 +34,9 @@ export function restyleLandmarks(scene: BABYLON.Scene): void {
     }
 
     try {
-        restyleRoads(scene);
+        createRoads(scene);
     } catch (error) {
-        console.error("Road restyle failed, keeping the original", error);
-    }
-
-    try {
-        restyleSigns(scene);
-    } catch (error) {
-        console.error("Sign restyle failed, keeping the originals", error);
+        console.error("Roads failed", error);
     }
 }
 
@@ -131,9 +125,7 @@ function restylePodium(scene: BABYLON.Scene): void {
 
     for (const child of podium.getChildMeshes()) {
         const name = child.name.toLowerCase();
-        if (name.includes("twitter")) {
-            child.setEnabled(false);
-        } else if (name.includes("linkedin")) {
+        if (name.includes("linkedin")) {
             child.material = createToyMaterial(scene, `toy-logo-${name}`, PALETTE.logoBlue, { roughness: 0.4, clearCoat: 0.6 });
         } else if (name.includes("stlmesh")) {
             child.material = createToyMaterial(scene, "toy-logo-sakura", PALETTE.logoSakura, { roughness: 0.45, clearCoat: 0.5 });
@@ -165,15 +157,8 @@ function createNumberMaterial(scene: BABYLON.Scene, place: number): BABYLON.Stan
 
 // ==================================================================== Roads
 
-/**
- * Replaces the imported road patches with the road network (see roads.ts), using the same
- * cobblestone material and edge pebbles.
- */
-function restyleRoads(scene: BABYLON.Scene): void {
-    for (const road of scene.meshes.filter((mesh) => /^road\d*$/i.test(mesh.name))) {
-        road.setEnabled(false);
-    }
-
+/** The road network (see roads.ts), with its cobblestone material and edge pebbles. */
+function createRoads(scene: BABYLON.Scene): void {
     const random = createRandom(42);
     const pebbles = PALETTE.edgePebbles.map((hex, i) => {
         const pebble = createLumpyBall(`road-edge-pebble-${i}`, scene, random, 1.6, 2);
@@ -280,16 +265,4 @@ function createCobbleMaterial(scene: BABYLON.Scene): BABYLON.PBRMaterial {
 
 function clampByte(value: number): number {
     return Math.max(0, Math.min(255, Math.round(value)));
-}
-
-// ==================================================================== Signs
-
-/**
- * Signs lying on the ground: extruded 3D text, and the Fruit Factory description (white text on a
- * transparent image). Each gets a raised navy plate with a sand rim underneath, like a toy name
- * plate, and the 3D letters get a glossy cream plastic finish.
- */
-function restyleSigns(scene: BABYLON.Scene): void {
-    // The description lying on the ground is replaced by the info stand in fruitFactorySigns.ts.
-    scene.getMeshByName("ffdescription")?.setEnabled(false);
 }

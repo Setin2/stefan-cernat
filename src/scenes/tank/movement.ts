@@ -1,12 +1,12 @@
-import * as BABYLON from "@babylonjs/core";
+import * as BABYLON from "../babylon";
 
-import { getYaw } from "../core/math";
+import { clamp, getYaw } from "../core/math";
 import type { TankContext } from "./context";
 import { createEngineSound } from "../audio/engineSound";
 import { createGroundContact } from "./groundContact";
 
 /**
- * Keyboard driving (W/A/S/D), riding the ramps, and the camera following the tank.
+ * Driving with W/A/S/D or the touch controls, riding the ramps, and the camera following the tank.
  */
 export function initializeTankMovement(_this: TankContext, rotationSpeed: number): void {
     const inputMap: Record<string, boolean> = {};
@@ -85,7 +85,8 @@ export function initializeTankMovement(_this: TankContext, rotationSpeed: number
             return 0;
         }
 
-        const desiredSpeed = moveInput > 0 ? maxForwardSpeed : moveInput < 0 ? -maxReverseSpeed : 0;
+        // Keys give full speed; the touch joystick anything in between.
+        const desiredSpeed = moveInput > 0 ? moveInput * maxForwardSpeed : moveInput * maxReverseSpeed;
         const speedDelta = (moveInput === 0 ? deceleration : acceleration) * deltaSeconds;
         currentMoveSpeed = moveToward(currentMoveSpeed, desiredSpeed, speedDelta);
 
@@ -124,8 +125,8 @@ export function initializeTankMovement(_this: TankContext, rotationSpeed: number
         // Clamp so a long pause (hidden tab, stalled frame) can't teleport the tank through obstacles.
         // Babylon clamps the physics step to the same 0.1s.
         const deltaSeconds = Math.min(engine.getDeltaTime() / 1000, maxDeltaSeconds);
-        const moveInput = (inputMap["w"] ? 1 : 0) - (inputMap["s"] ? 1 : 0);
-        const turnInput = (inputMap["d"] ? 1 : 0) - (inputMap["a"] ? 1 : 0);
+        const moveInput = clamp((inputMap["w"] ? 1 : 0) - (inputMap["s"] ? 1 : 0) + _this.input.move, -1, 1);
+        const turnInput = clamp((inputMap["d"] ? 1 : 0) - (inputMap["a"] ? 1 : 0) + _this.input.turn, -1, 1);
         applyMovement(_this.tank, moveInput, deltaSeconds);
 
         const desiredTurnSpeed = turnInput * maxTurnSpeed;

@@ -1,4 +1,4 @@
-import * as BABYLON from "@babylonjs/core";
+import * as BABYLON from "../babylon";
 
 import { PLAYGROUND_LANES } from "./playground";
 import { getRoadClearAreas } from "./roads";

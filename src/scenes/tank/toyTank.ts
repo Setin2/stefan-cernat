@@ -1,4 +1,4 @@
-import * as BABYLON from "@babylonjs/core";
+import * as BABYLON from "../babylon";
 
 import { buildMesh, createRoundedBox, createTemplate, createToyMaterial, pushOrientedTriangle } from "../core/toyStyle";
 import { clamp, getYaw } from "../core/math";

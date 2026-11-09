@@ -1,4 +1,4 @@
-import * as BABYLON from "@babylonjs/core";
+import * as BABYLON from "../babylon";
 
 import { addThinInstances, buildMesh, createLumpyBall, createRandom, createRoundedBox, createToyMaterial, pushOrientedTriangle } from "../core/toyStyle";
 import { GROUND_Y } from "../core/constants";

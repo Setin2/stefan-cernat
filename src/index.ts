@@ -5,6 +5,12 @@ export class Game {
      * Constructor.
      */
     public constructor() {
+        setUpPlainVersion();
+        if (!supportsWebGL()) {
+            // No 3D here: show the plain version instead, and don't download the game at all.
+            showPlainVersion(false);
+            return;
+        }
         void this._bootstrap();
     }
 
@@ -33,5 +39,46 @@ export class Game {
                 retryButton.addEventListener("click", () => window.location.reload(), { once: true });
             }
         }
+    }
+}
+
+/** Whether the browser can run the 3D version (WebGL). */
+function supportsWebGL(): boolean {
+    try {
+        const canvas = document.createElement("canvas");
+        return !!(canvas.getContext("webgl2") ?? canvas.getContext("webgl"));
+    } catch {
+        return false;
+    }
+}
+
+/**
+ * The plain version (in index.html): the site's content as a normal page. Buttons marked
+ * data-plain="open" / "close" show and hide it.
+ */
+function setUpPlainVersion(): void {
+    document.addEventListener("click", (event) => {
+        const button = (event.target as HTMLElement | null)?.closest<HTMLElement>("[data-plain]");
+        if (button?.dataset.plain === "open") {
+            showPlainVersion(true);
+        } else if (button?.dataset.plain === "close") {
+            document.getElementById("plainVersion")?.classList.remove("is-open");
+        }
+    });
+}
+
+function showPlainVersion(canGoBack: boolean): void {
+    const plain = document.getElementById("plainVersion");
+    if (!plain) {
+        return;
+    }
+    plain.classList.add("is-open");
+    plain.scrollTop = 0;
+    const back = document.getElementById("plainBackButton");
+    if (back) {
+        back.hidden = !canGoBack;
+    }
+    if (!canGoBack) {
+        document.getElementById("statusOverlay")?.setAttribute("hidden", "");
     }
 }

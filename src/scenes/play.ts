@@ -1,4 +1,4 @@
-import * as BABYLON from "@babylonjs/core";
+import * as BABYLON from "./babylon";
 import { Node } from "@babylonjs/core/node";
 
 import { createImpactSounds } from "./audio/impactSounds";
@@ -10,10 +10,12 @@ import { initializeShadows } from "./core/shadows";
 import { registerLoadingTask } from "./core/warmUp";
 import { initializeTankMovement } from "./tank/movement";
 import { initializeShooting } from "./tank/shooting";
+import { createTankInput } from "./tank/input";
 import { createTankTrail } from "./tank/tankTrail";
 import { createToyTank, type ToyTank } from "./tank/toyTank";
 import { ControlOverlay } from "./ui/controlsOverlay";
 import { attachFpsCounter } from "./ui/fpsCounter";
+import { createTouchControls } from "./ui/touchControls";
 import { createAiTrophies } from "./world/aiTrophies";
 import { createBrickBuilds } from "./world/bricks";
 import type { ArcadeButton } from "./world/arcadeButton";
@@ -57,7 +59,6 @@ export default class Play extends Node {
      */
     public onInitialize(): void {
         this.findSceneObjects();
-        this.loadScreenTexture();
         // An easter egg for whoever opens the console.
         // eslint-disable-next-line no-console
         console.log("%c Very sly of you, but there is nothing to see here ;)", "color: #CE718F");
@@ -96,14 +97,6 @@ export default class Play extends Node {
         this.tank = tank;
     }
 
-    /** Loaded by hand so the desk monitor's texture loads reliably in production builds. */
-    private loadScreenTexture(): void {
-        const screenMaterial = this.scene.getMeshByName("monitor")?.material;
-        if (screenMaterial && "albedoTexture" in screenMaterial) {
-            screenMaterial.albedoTexture = new BABYLON.Texture("assets/models/projects/monitor (Base Color).png", this.scene);
-        }
-    }
-
     /** Restyles the imported scene and adds everything built in code. Order matters where noted. */
     private buildWorld(): void {
         const scene = this.scene;
@@ -135,19 +128,13 @@ export default class Play extends Node {
     }
 
     /**
-     * Swaps the imported tank model for the toy tank built in code. Add `?tank=classic` to the URL
-     * to get the original model back for comparison.
+     * Builds the toy tank model (in code) on the tank holder, which carries its physics body.
      */
     private createToyTankModel(): void {
-        if (new URLSearchParams(window.location.search).get("tank") === "classic") {
-            return;
-        }
-
         try {
             this.toyTank = createToyTank(this.scene, this.tank);
-            this.scene.getMeshByName("tank")?.setEnabled(false);
         } catch (error) {
-            console.error("Toy tank creation failed, keeping the original model", error);
+            console.error("Toy tank creation failed", error);
             this.toyTank?.root.dispose();
             this.toyTank = null;
         }
@@ -156,12 +143,16 @@ export default class Play extends Node {
     /** Driving, shooting, the minigames and all the sounds (synthesised, see audio/). After the world is built. */
     private initializeTank(): void {
         const sounds = new SoundBoard(this.scene, this.tank, this.camera);
+        const input = createTankInput();
+        const touchControls = createTouchControls(input);
+        this.onDisposeObservable.addOnce(() => touchControls.dispose());
         const context = {
             scene: this.scene,
             tank: this.tank,
             camera: this.camera,
             sounds,
             impacts: createImpactSounds(this.scene, sounds, this.tank),
+            input,
             onShoot: this.toyTank ? () => this.toyTank?.fire() : undefined,
             shotOrigin: this.toyTank?.muzzle,
         };

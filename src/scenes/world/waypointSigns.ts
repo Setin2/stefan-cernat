@@ -1,4 +1,4 @@
-import * as BABYLON from "@babylonjs/core";
+import * as BABYLON from "../babylon";
 
 import { addStaticBox } from "../core/staticBodies";
 import { createRoundedBox, createToyMaterial, extrudeOutline } from "../core/toyStyle";
@@ -44,46 +44,38 @@ const PALETTE = {
     gold: "#C9A35B",
 };
 
+/** The crossroads near the start (where the old "PROJECTS -->" text lay on the ground). */
+const CROSSROADS_POSITION = new BABYLON.Vector2(-40.49, 3.75);
 /** Where the bullseye-topped "TARGET PRACTICE" sign stands: beside the podium, not in front of it. */
 const TARGET_SIGN_POSITION = new BABYLON.Vector2(55, 2);
 
+const SIGNPOSTS: Signpost[] = [
+    {
+        // Projects (the Fruit Factory) to the right on screen, the targets on the podium to the
+        // left, and work straight ahead (on top of the post).
+        id: "sign-crossroads",
+        x: CROSSROADS_POSITION.x,
+        z: CROSSROADS_POSITION.y,
+        postHeight: 9.5,
+        boards: [
+            { label: "WORK", direction: 0, y: 11.9, length: 7.4, height: 4.2 },
+            { label: "PROJECTS", direction: 1, y: 7.8, length: 11, height: 2.6 },
+            { label: "TARGETS", direction: -1, y: 4.9, length: 10, height: 2.6 },
+        ],
+    },
+    {
+        id: "sign-targets",
+        x: TARGET_SIGN_POSITION.x,
+        z: TARGET_SIGN_POSITION.y,
+        postHeight: 8,
+        bullseye: true,
+        boards: [
+            { label: "TARGET\nPRACTICE", direction: -1, y: 5.6, length: 11, height: 4 },
+        ],
+    },
+];
+
 export function createWaypointSigns(scene: BABYLON.Scene): void {
-    const projectsText = scene.getMeshByName("projects_sign");
-    const targetText = scene.getMeshByName("target_text");
-
-    const signposts: Signpost[] = [];
-
-    if (projectsText) {
-        projectsText.computeWorldMatrix(true);
-        const center = projectsText.getBoundingInfo().boundingBox.centerWorld;
-        // The crossroads near the start: projects (the Fruit Factory) to the right on screen,
-        // the targets on the podium to the left, and work straight ahead (on top of the post).
-        signposts.push({
-            id: "sign-crossroads",
-            x: center.x,
-            z: center.z,
-            postHeight: 9.5,
-            boards: [
-                { label: "WORK", direction: 0, y: 11.9, length: 7.4, height: 4.2 },
-                { label: "PROJECTS", direction: 1, y: 7.8, length: 11, height: 2.6 },
-                { label: "TARGETS", direction: -1, y: 4.9, length: 10, height: 2.6 },
-            ],
-        });
-    }
-
-    if (targetText) {
-        signposts.push({
-            id: "sign-targets",
-            x: TARGET_SIGN_POSITION.x,
-            z: TARGET_SIGN_POSITION.y,
-            postHeight: 8,
-            bullseye: true,
-            boards: [
-                { label: "TARGET\nPRACTICE", direction: -1, y: 5.6, length: 11, height: 4 },
-            ],
-        });
-    }
-
     const materials = {
         board: createToyMaterial(scene, "toy-signpost-board", PALETTE.board, { roughness: 0.45, clearCoat: 0.5 }),
         rim: createToyMaterial(scene, "toy-signpost-rim", PALETTE.rim, { roughness: 0.45, clearCoat: 0.4 }),
@@ -93,14 +85,11 @@ export function createWaypointSigns(scene: BABYLON.Scene): void {
         gold: createToyMaterial(scene, "toy-signpost-gold", PALETTE.gold, { roughness: 0.25, metallic: 0.6, clearCoat: 0.6 }),
     };
 
-    // Each new signpost replaces its text on the ground (which stays if the signpost fails).
-    const replaces: Record<string, BABYLON.AbstractMesh | null> = { "sign-crossroads": projectsText, "sign-targets": targetText };
-    for (const signpost of signposts) {
+    for (const signpost of SIGNPOSTS) {
         try {
             createSignpost(scene, signpost, materials);
-            replaces[signpost.id]?.setEnabled(false);
         } catch (error) {
-            console.error(`Signpost "${signpost.id}" failed, keeping the original text`, error);
+            console.error(`Signpost "${signpost.id}" failed`, error);
         }
     }
 }

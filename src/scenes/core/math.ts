@@ -1,4 +1,4 @@
-import type * as BABYLON from "@babylonjs/core";
+import type * as BABYLON from "../babylon";
 
 /** Small math helpers shared across the scene code. */
 

@@ -9,9 +9,9 @@ The website is still under development and is available at https://setin2.github
 
 The application is still being developed and has only a few features so far, so the setup is simple.
 
-1. First clone the repository and install all dependencies using `npm install`.
-2. (Optional) If you want webpack to rebuild while you edit, run `npm run watch`.
-3. You can start the application using `npm run webserver`, which will use `http-server` to host it on `http://localhost:1338/app/`.
+1. Clone the repository and install the dependencies with `npm install`.
+2. Run `npm run dev` and open http://localhost:1338/. It rebuilds and reloads the page on every change. The development build is kept in memory, so it never touches the committed `dist/`.
+3. To try the production build instead, run `npm run build`, then `npm run webserver` (http://localhost:1338/).
 
 # Linting and formatting
 
@@ -28,8 +28,7 @@ Run `npm test` to run the test suite (Jest). The tests live in `tests/`, in fold
 
 GitHub Pages serves the site straight from `main`, including the built `dist/` folder, so `dist/` has to be rebuilt and committed with every change:
 
-1. Stop `npm run watch` if it's running (it writes a development build into `dist/`).
-2. Run `npm run build` and commit `dist/` together with the source changes.
+Run `npm run build` and commit `dist/` together with the source changes. This is safe while `npm run dev` is running.
 
 `npm run verify` runs everything CI checks: lint and formatting, typecheck, tests, the production build, and that `dist/` matches the committed one.
 

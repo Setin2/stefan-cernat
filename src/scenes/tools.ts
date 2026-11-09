@@ -10,7 +10,7 @@ import { Tools } from "@babylonjs/core/Misc/tools";
 import { Engine } from "@babylonjs/core/Engines/engine";
 import { Color3, Color4 } from "@babylonjs/core/Maths/math.color";
 import { EngineStore } from "@babylonjs/core/Engines/engineStore";
-import { SceneLoader } from "@babylonjs/core/Loading/sceneLoader";
+import { SceneLoader, type ISceneLoaderProgressEvent } from "@babylonjs/core/Loading/sceneLoader";
 import { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { Texture } from "@babylonjs/core/Materials/Textures/texture";
@@ -85,8 +85,8 @@ export interface IScript {
  * @param rootUrl defines the root url for the scene and resources or the concatenation of rootURL and filename (e.g. http://example.com/test.glb)
  * @param sceneFilename defines the name of the scene file.
  */
-export async function appendScene(toScene: Scene, rootUrl: string, sceneFilename: string): Promise<void> {
-    await SceneLoader.AppendAsync(rootUrl, sceneFilename, toScene, null, ".babylon");
+export async function appendScene(toScene: Scene, rootUrl: string, sceneFilename: string, onProgress?: (event: ISceneLoaderProgressEvent) => void): Promise<void> {
+    await SceneLoader.AppendAsync(rootUrl, sceneFilename, toScene, onProgress ?? null, ".babylon");
 
     return new Promise<void>((resolve, reject) => {
         toScene.executeWhenReady(() => {

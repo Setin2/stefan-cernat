@@ -1,4 +1,4 @@
-import * as BABYLON from "@babylonjs/core";
+import * as BABYLON from "../babylon";
 
 import { createLumpyBall, createRandom, createRoundedBox, createToyMaterial, extrudeOutline } from "../core/toyStyle";
 import { GROUND_Y, FACE_CAMERA_YAW } from "../core/constants";
@@ -62,8 +62,6 @@ const SPOTS: Spot[] = [
 ];
 
 export function createAiTrophies(scene: BABYLON.Scene): void {
-    removeFigures(scene);
-
     const shared = {
         plinth: createToyMaterial(scene, "ai-trophy-plinth", PALETTE.plinth, { roughness: 0.45, clearCoat: 0.4 }),
         plinthTop: createToyMaterial(scene, "ai-trophy-plinth-top", PALETTE.plinthTop, { roughness: 0.45, clearCoat: 0.35 }),
@@ -76,17 +74,6 @@ export function createAiTrophies(scene: BABYLON.Scene): void {
         } catch (error) {
             console.error(`AI trophy "${spot.label}" failed`, error);
         }
-    }
-}
-
-function removeFigures(scene: BABYLON.Scene): void {
-    const physics = scene.getPhysicsEngine();
-    const figures = scene.meshes.filter((mesh) => mesh.name === "amongus" && !mesh.parent);
-    for (const figure of figures) {
-        // The scene loader creates the physics bodies without setting mesh.physicsImpostor, so
-        // disposing the mesh alone would leave an invisible body behind for the trophies to hit.
-        (figure.physicsImpostor ?? physics?.getImpostorForPhysicsObject(figure))?.dispose();
-        figure.dispose();
     }
 }
 
