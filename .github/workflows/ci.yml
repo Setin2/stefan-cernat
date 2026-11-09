@@ -30,10 +30,10 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Check out
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -49,7 +49,7 @@ jobs:
 
       # Jest transforms Babylon.js on its first run (slow); keep its cache between runs.
       - name: Restore Jest cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: .jest-cache
           key: jest-${{ runner.os }}-${{ hashFiles('package-lock.json', 'babel.config.js', 'jest.config.js') }}
