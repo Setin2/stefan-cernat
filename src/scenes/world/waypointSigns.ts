@@ -14,8 +14,8 @@ import { GROUND_Y, FACE_CAMERA_YAW } from "../core/constants";
 type Board = {
     /** Text on the board; "\n" splits it into lines. */
     label: string;
-    /** 1 points right on screen, -1 points left. */
-    direction: 1 | -1;
+    /** 1 points right on screen, -1 points left, 0 points up (straight ahead, away from the camera). */
+    direction: 1 | -1 | 0;
     /** Height of the board's centre above the ground (before scaling). */
     y: number;
     length: number;
@@ -57,13 +57,14 @@ export function createWaypointSigns(scene: BABYLON.Scene): void {
         projectsText.computeWorldMatrix(true);
         const center = projectsText.getBoundingInfo().boundingBox.centerWorld;
         // The crossroads near the start: projects (the Fruit Factory) to the right on screen,
-        // the targets on the podium to the left.
+        // the targets on the podium to the left, and work straight ahead (on top of the post).
         signposts.push({
             id: "sign-crossroads",
             x: center.x,
             z: center.z,
             postHeight: 9.5,
             boards: [
+                { label: "WORK", direction: 0, y: 11.9, length: 7.4, height: 4.2 },
                 { label: "PROJECTS", direction: 1, y: 7.8, length: 11, height: 2.6 },
                 { label: "TARGETS", direction: -1, y: 4.9, length: 10, height: 2.6 },
             ],
@@ -128,7 +129,7 @@ function createSignpost(scene: BABYLON.Scene, signpost: Signpost, materials: Mat
     const top = 0.6 + signpost.postHeight;
     if (signpost.bullseye) {
         addBullseye(scene, `${id}-bullseye`, root, top + 1.15, materials);
-    } else {
+    } else if (!signpost.boards.some((board) => board.direction === 0)) {
         const cap = add(BABYLON.MeshBuilder.CreateSphere(`${id}-cap`, { diameter: 1.3, segments: 16 }, scene), materials.cap);
         cap.position.y = top + 0.2;
     }
@@ -136,7 +137,7 @@ function createSignpost(scene: BABYLON.Scene, signpost: Signpost, materials: Mat
     signpost.boards.forEach((board, index) => {
         createBoard(scene, `${id}-board-${index}`, board, root, materials);
         // Solid box around the board and its rim.
-        const center = new BABYLON.Vector3(board.direction * ((board.length / 2) - 1.1), board.y, -0.65);
+        const center = new BABYLON.Vector3(boardOffset(board), board.y, -0.65);
         addSignCollider(scene, root, center, board.length + 0.6, board.height + 0.6, 0.8);
     });
     if (signpost.bullseye) {
@@ -156,6 +157,11 @@ function addSignCollider(scene: BABYLON.Scene, root: BABYLON.TransformNode, loca
     });
 }
 
+/** Sideways boards have their tail end over the post; an upward one is centred on it. */
+function boardOffset(board: Board): number {
+    return board.direction * ((board.length / 2) - 1.1);
+}
+
 /**
  * An arrow-shaped board (a pentagon pointing along `direction`) mounted in front of the post, its
  * tail end over the post, with a navy rim, the label and two gold bolts.
@@ -166,32 +172,48 @@ function createBoard(scene: BABYLON.Scene, id: string, board: Board, parent: BAB
     const node = new BABYLON.TransformNode(id, scene);
     node.parent = parent;
     // The tail end sits on the post; the board reaches out towards the arrow's tip.
-    node.position.set(direction * ((length / 2) - 1.1), board.y, -0.75);
+    node.position.set(boardOffset(board), board.y, -0.75);
 
-    const arrow = (l: number, h: number, t: number): [number, number][] => [
-        [-l / 2, -h / 2],
-        [(l / 2) - t, -h / 2],
-        [l / 2, 0],
-        [(l / 2) - t, h / 2],
-        [-l / 2, h / 2],
-    ].map(([x, y]) => [x * direction, y] as [number, number]);
+    const up = direction === 0;
+    // An upward arrow's tip is shorter, relative to its width.
+    const upTip = height * 0.32;
+    const arrow = (l: number, h: number, t: number): [number, number][] => (up
+        ? [
+            [-l / 2, -h / 2],
+            [l / 2, -h / 2],
+            [l / 2, (h / 2) - t],
+            [0, h / 2],
+            [-l / 2, (h / 2) - t],
+        ]
+        : [
+            [-l / 2, -h / 2],
+            [(l / 2) - t, -h / 2],
+            [l / 2, 0],
+            [(l / 2) - t, h / 2],
+            [-l / 2, h / 2],
+        ].map(([x, y]) => [x * direction, y] as [number, number]));
+    const tipSize = up ? upTip : tip;
 
-    const front = extrudeOutline(`${id}-face`, arrow(length, height, tip), 0.5, 0.12, scene);
+    const front = extrudeOutline(`${id}-face`, arrow(length, height, tipSize), 0.5, 0.12, scene);
     front.material = materials.board;
     front.parent = node;
 
-    const rim = extrudeOutline(`${id}-rim`, arrow(length + 0.6, height + 0.6, tip + 0.3), 0.4, 0.1, scene);
+    const rim = extrudeOutline(`${id}-rim`, arrow(length + 0.6, height + 0.6, tipSize + 0.3), 0.4, 0.1, scene);
     rim.material = materials.rim;
     rim.parent = node;
     rim.position.z = 0.2;
 
     // Label over the rectangular part of the board.
-    const bodyLength = length - tip;
-    const bodyCenter = -direction * (tip / 2);
-    const label = createLabel(scene, `${id}-label`, board.label, bodyLength - 1.6, height * 0.8);
+    const label = up
+        ? createLabel(scene, `${id}-label`, board.label, length - 1.6, (height - upTip) * 0.8)
+        : createLabel(scene, `${id}-label`, board.label, length - tip - 1.6, height * 0.8);
     if (label) {
         label.parent = node;
-        label.position.set(bodyCenter + (direction * 0.15), 0, -0.27);
+        if (up) {
+            label.position.set(0, -upTip / 2, -0.27);
+        } else {
+            label.position.set((-direction * (tip / 2)) + (direction * 0.15), 0, -0.27);
+        }
     }
 
     // Two bolts near the tail, where the board is "screwed" to the post.
@@ -200,7 +222,12 @@ function createBoard(scene: BABYLON.Scene, id: string, board: Board, parent: BAB
         bolt.scaling.z = 0.45;
         bolt.material = materials.gold;
         bolt.parent = node;
-        bolt.position.set(-direction * ((length / 2) - 0.45), side * height * 0.3, -0.27);
+        if (up) {
+            // In the bottom corners.
+            bolt.position.set(side * ((length / 2) - 0.45), -(height / 2) + 0.45, -0.27);
+        } else {
+            bolt.position.set(-direction * ((length / 2) - 0.45), side * height * 0.3, -0.27);
+        }
     }
 
     for (const mesh of node.getChildMeshes()) {

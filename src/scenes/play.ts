@@ -26,6 +26,7 @@ import { restyleMascots } from "./world/mascots";
 import { createPlayground } from "./world/playground";
 import { instantiateTrees, TREE_POSITIONS } from "./world/trees";
 import { createWaypointSigns } from "./world/waypointSigns";
+import { createWorkCorner } from "./world/workCorner";
 
 /**
  * The game's entry point: the Babylon.js Editor attaches this script to the scene (see
@@ -109,6 +110,7 @@ export default class Play extends Node {
         restyleMascots(scene);
         tryTo("AI trophies", () => createAiTrophies(scene));
         tryTo("C# trophy", () => createCodeTrophy(scene));
+        tryTo("Work corner", () => createWorkCorner(scene));
         createWaypointSigns(scene);
         tryTo("Playground", () => createPlayground(scene));
         createBrickBuilds({ scene, tank: this.tank });

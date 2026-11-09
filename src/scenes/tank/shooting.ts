@@ -281,7 +281,7 @@ export async function initializeShooting(_this: TankContext, forward: BABYLON.Ve
             ? `${aimedTargetLabel} is locked on, ${formatDistance(Math.sqrt(aimedTargetDistanceSquared))}. Press E to fire!`
             : isNearby
                 ? `${nearbyTargetLabel} is ${formatDistance(Math.sqrt(nearestTargetDistanceSquared))}. Turn toward it to lock on.`
-                : "Drive around the island to find the glowing targets, your projects and links.";
+                : "Drive around the island to find the glowing targets, my projects, my work and links.";
         const nextMood: ObjectiveMood = hasAimLock ? "locked" : isNearby ? "nearby" : "explore";
 
         if (now >= currentStatusUntil) {

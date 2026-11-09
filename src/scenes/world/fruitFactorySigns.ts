@@ -2,7 +2,8 @@ import * as BABYLON from "@babylonjs/core";
 
 import { addStaticBox } from "../core/staticBodies";
 import { createRoundedBox, createToyMaterial } from "../core/toyStyle";
-import { GROUND_Y, FACE_CAMERA_YAW } from "../core/constants";
+import { createInfoStand, drawInfoText, roundRect } from "./infoStand";
+import { GROUND_Y } from "../core/constants";
 import { UI } from "../ui/style";
 
 /**
@@ -42,7 +43,7 @@ export function createFruitFactorySigns(scene: BABYLON.Scene): void {
         console.error("Fruit Factory title sign failed", error);
     }
     try {
-        createInfoStand(scene);
+        createProjectInfoStand(scene);
     } catch (error) {
         console.error("Fruit Factory info stand failed", error);
     }
@@ -215,148 +216,49 @@ function createPear(scene: BABYLON.Scene, name: string, center: BABYLON.Vector3,
 
 // ==================================================================== Info stand
 
-function createInfoStand(scene: BABYLON.Scene): void {
-    const panelWidth = 22;
-    const panelHeight = 13;
-    const tilt = (40 * Math.PI) / 180;
-    const bottomY = 1.6;
+/** Title, description, a "Free on Google Play" pill and a few drawn fruits. */
+function createProjectInfoStand(scene: BABYLON.Scene): void {
+    createInfoStand(scene, {
+        id: "ff-info-stand",
+        x: INFO_STAND_POSITION.x,
+        z: INFO_STAND_POSITION.y,
+        draw: (context) => {
+            const pad = 64;
+            const bottom = drawInfoText(context, FONT, {
+                eyebrow: "MY PROJECTS",
+                eyebrowColor: PALETTE.pink,
+                title: "Idle Fruit Factory",
+                titleColor: PALETTE.navy,
+                body: "My first Android mobile game. Download it for free on the Google Play Store.",
+                bodyColor: PALETTE.muted,
+                maxWidth: 580,
+            });
 
-    const root = new BABYLON.TransformNode("ff-info-stand", scene);
-    root.position.set(INFO_STAND_POSITION.x, GROUND_Y, INFO_STAND_POSITION.y);
-    root.rotation.y = FACE_CAMERA_YAW;
+            // Pill badge.
+            const pillY = bottom + 18;
+            const pillHeight = 76;
+            context.font = `900 36px ${FONT}`;
+            const pillText = "Free on Google Play";
+            const pillWidth = context.measureText(pillText).width + 120;
+            roundRect(context, pad, pillY, pillWidth, pillHeight, pillHeight / 2);
+            context.fillStyle = PALETTE.navy;
+            context.fill();
+            context.fillStyle = PALETTE.cream;
+            // Little "play" triangle.
+            context.beginPath();
+            context.moveTo(pad + 34, pillY + 22);
+            context.lineTo(pad + 60, pillY + (pillHeight / 2));
+            context.lineTo(pad + 34, pillY + pillHeight - 22);
+            context.closePath();
+            context.fill();
+            context.fillText(pillText, pad + 80, pillY + 50);
 
-    // The panel leans back, so it faces up towards the camera (which looks down at ~30°).
-    const panel = new BABYLON.TransformNode("ff-info-panel", scene);
-    panel.parent = root;
-    panel.position.set(0, bottomY + ((panelHeight / 2) * Math.cos(tilt)), (panelHeight / 2) * Math.sin(tilt));
-    panel.rotation.x = tilt;
-
-    const frame = createRoundedBox("ff-info-frame", panelWidth + 1.4, panelHeight + 1.4, 0.7, 0.6, scene);
-    frame.material = createToyMaterial(scene, "ff-info-frame", PALETTE.navy, { roughness: 0.45, clearCoat: 0.4 });
-    frame.parent = panel;
-    frame.position.z = 0.35;
-
-    const face = BABYLON.MeshBuilder.CreatePlane("ff-info-face", { width: panelWidth, height: panelHeight }, scene);
-    face.material = createInfoMaterial(scene, panelWidth, panelHeight);
-    face.parent = panel;
-    face.position.z = -0.03;
-
-    // Two legs behind the panel and a little foot at the front edge of each.
-    const legMaterial = createToyMaterial(scene, "ff-info-leg", PALETTE.post, { roughness: 0.55, clearCoat: 0.3 });
-    const legZ = (panelHeight / 2) * Math.sin(tilt) + 0.8;
-    const legHeight = panel.position.y;
-    for (const side of [-1, 1]) {
-        const leg = createRoundedBox(`ff-info-leg-${side}`, 0.9, legHeight, 0.9, 0.3, scene);
-        leg.material = legMaterial;
-        leg.parent = root;
-        leg.position.set(side * (panelWidth / 2 - 2.5), legHeight / 2, legZ);
-        const foot = createRoundedBox(`ff-info-foot-${side}`, 1.4, 0.6, legZ + 1.5, 0.25, scene);
-        foot.material = legMaterial;
-        foot.parent = root;
-        foot.position.set(side * (panelWidth / 2 - 2.5), 0.3, legZ / 2);
-    }
-
-    for (const mesh of root.getChildMeshes()) {
-        mesh.isPickable = false;
-    }
-
-    // Solid, so the tank bumps into it.
-    root.computeWorldMatrix(true);
-    const center = BABYLON.Vector3.TransformCoordinates(new BABYLON.Vector3(0, 4, legZ / 2), root.getWorldMatrix());
-    addStaticBox(scene, center, panelWidth + 1.4, 8, legZ + 3, { rotation: BABYLON.Quaternion.RotationYawPitchRoll(FACE_CAMERA_YAW, 0, 0), sound: "solid" });
-}
-
-/** The panel's face: title, description, a "Free on Google Play" pill and a few drawn fruits. */
-function createInfoMaterial(scene: BABYLON.Scene, panelWidth: number, panelHeight: number): BABYLON.StandardMaterial {
-    const width = 1024;
-    const height = Math.round((width * panelHeight) / panelWidth);
-    const texture = new BABYLON.DynamicTexture("ff-info-texture", { width, height }, scene, true);
-    const context = texture.getContext() as CanvasRenderingContext2D;
-
-    const draw = () => {
-        context.fillStyle = PALETTE.cream;
-        context.fillRect(0, 0, width, height);
-        const pad = 64;
-        context.textAlign = "left";
-        context.textBaseline = "alphabetic";
-
-        context.fillStyle = PALETTE.pink;
-        context.font = `900 34px ${FONT}`;
-        context.fillText("MY PROJECTS", pad, 96);
-
-        context.fillStyle = PALETTE.navy;
-        context.font = `900 74px ${FONT}`;
-        context.fillText("Idle Fruit Factory", pad, 190);
-
-        context.fillStyle = PALETTE.muted;
-        context.font = `800 40px ${FONT}`;
-        const lines = wrapText(context, "My first Android mobile game. Download it for free on the Google Play Store.", 580);
-        lines.forEach((line, i) => context.fillText(line, pad, 262 + (i * 52)));
-
-        // Pill badge.
-        const pillY = 262 + (lines.length * 52) + 18;
-        const pillHeight = 76;
-        context.font = `900 36px ${FONT}`;
-        const pillText = "Free on Google Play";
-        const pillWidth = context.measureText(pillText).width + 120;
-        roundRect(context, pad, pillY, pillWidth, pillHeight, pillHeight / 2);
-        context.fillStyle = PALETTE.navy;
-        context.fill();
-        context.fillStyle = PALETTE.cream;
-        // Little "play" triangle.
-        context.beginPath();
-        context.moveTo(pad + 34, pillY + 22);
-        context.lineTo(pad + 60, pillY + (pillHeight / 2));
-        context.lineTo(pad + 34, pillY + pillHeight - 22);
-        context.closePath();
-        context.fill();
-        context.fillText(pillText, pad + 80, pillY + 50);
-
-        // Fruit doodles on the right.
-        drawApple(context, 890, 200, 72);
-        drawOrange(context, 820, 410, 60);
-        drawCherries(context, 935, 420);
-        texture.update();
-    };
-    draw();
-    // Redraw with the rounded web font once it has loaded.
-    if ("fonts" in document) {
-        void document.fonts.load(`900 40px Nunito`).then(draw).catch(() => undefined);
-    }
-
-    const material = new BABYLON.StandardMaterial("ff-info-material", scene);
-    material.diffuseTexture = texture;
-    material.specularColor = new BABYLON.Color3(0.08, 0.08, 0.08);
-    material.emissiveColor = new BABYLON.Color3(0.22, 0.22, 0.22);
-    return material;
-}
-
-function wrapText(context: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
-    const lines: string[] = [];
-    let line = "";
-    for (const word of text.split(" ")) {
-        const candidate = line ? `${line} ${word}` : word;
-        if (context.measureText(candidate).width > maxWidth && line) {
-            lines.push(line);
-            line = word;
-        } else {
-            line = candidate;
-        }
-    }
-    if (line) {
-        lines.push(line);
-    }
-    return lines;
-}
-
-function roundRect(context: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number): void {
-    context.beginPath();
-    context.moveTo(x + r, y);
-    context.arcTo(x + w, y, x + w, y + h, r);
-    context.arcTo(x + w, y + h, x, y + h, r);
-    context.arcTo(x, y + h, x, y, r);
-    context.arcTo(x, y, x + w, y, r);
-    context.closePath();
+            // Fruit doodles on the right.
+            drawApple(context, 890, 200, 72);
+            drawOrange(context, 820, 410, 60);
+            drawCherries(context, 935, 420);
+        },
+    });
 }
 
 function drawLeaf(context: CanvasRenderingContext2D, x: number, y: number, size: number, angle: number): void {

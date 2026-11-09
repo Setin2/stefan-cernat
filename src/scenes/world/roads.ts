@@ -14,7 +14,8 @@ import { GROUND_Y } from "../core/constants";
  *   sweeps north and back into the loop;
  * - a hump road that leaves the stunt road, goes over the hump bridge and rejoins it before the
  *   jump;
- * - a path out towards the brick tower that thins out into stepping stones on the grass.
+ * - a path out towards the brick tower that thins out into stepping stones on the grass;
+ * - a path to the work corner, which ends in stepping stones in front of it.
  *
  * To keep them from dominating the view, roads are not solid ribbons: they are laid as separate
  * paving slabs with thin strips of grass between them (two staggered rows on the main road,
@@ -70,6 +71,12 @@ const ROADS: Road[] = [
         width: 9,
         fadeOut: true,
         points: [[-48, 52], [-64, 64], [-82, 70], [-98, 80]],
+    },
+    {
+        name: "work-path",
+        width: 9,
+        fadeOut: true,
+        points: [[-35, -7], [-38, -32], [-34, -58]],
     },
 ];
 

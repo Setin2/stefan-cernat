@@ -1793,6 +1793,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _world_playground__WEBPACK_IMPORTED_MODULE_24__ = __webpack_require__(/*! ./world/playground */ "./src/scenes/world/playground.ts");
 /* harmony import */ var _world_trees__WEBPACK_IMPORTED_MODULE_25__ = __webpack_require__(/*! ./world/trees */ "./src/scenes/world/trees.ts");
 /* harmony import */ var _world_waypointSigns__WEBPACK_IMPORTED_MODULE_26__ = __webpack_require__(/*! ./world/waypointSigns */ "./src/scenes/world/waypointSigns.ts");
+/* harmony import */ var _world_workCorner__WEBPACK_IMPORTED_MODULE_27__ = __webpack_require__(/*! ./world/workCorner */ "./src/scenes/world/workCorner.ts");
 var __extends = (undefined && undefined.__extends) || (function () {
     var extendStatics = function (d, b) {
         extendStatics = Object.setPrototypeOf ||
@@ -1808,6 +1809,7 @@ var __extends = (undefined && undefined.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
+
 
 
 
@@ -1907,6 +1909,7 @@ var Play = /** @class */ (function (_super) {
         (0,_world_mascots__WEBPACK_IMPORTED_MODULE_23__.restyleMascots)(scene);
         tryTo("AI trophies", function () { return (0,_world_aiTrophies__WEBPACK_IMPORTED_MODULE_15__.createAiTrophies)(scene); });
         tryTo("C# trophy", function () { return (0,_world_codeTrophy__WEBPACK_IMPORTED_MODULE_18__.createCodeTrophy)(scene); });
+        tryTo("Work corner", function () { return (0,_world_workCorner__WEBPACK_IMPORTED_MODULE_27__.createWorkCorner)(scene); });
         (0,_world_waypointSigns__WEBPACK_IMPORTED_MODULE_26__.createWaypointSigns)(scene);
         tryTo("Playground", function () { return (0,_world_playground__WEBPACK_IMPORTED_MODULE_24__.createPlayground)(scene); });
         (0,_world_bricks__WEBPACK_IMPORTED_MODULE_16__.createBrickBuilds)({ scene: scene, tank: this.tank });
@@ -2615,7 +2618,7 @@ function initializeShooting(_this, forward) {
                             ? "".concat(aimedTargetLabel, " is locked on, ").concat(formatDistance(Math.sqrt(aimedTargetDistanceSquared)), ". Press E to fire!")
                             : isNearby
                                 ? "".concat(nearbyTargetLabel, " is ").concat(formatDistance(Math.sqrt(nearestTargetDistanceSquared)), ". Turn toward it to lock on.")
-                                : "Drive around the island to find the glowing targets, your projects and links.";
+                                : "Drive around the island to find the glowing targets, my projects, my work and links.";
                         var nextMood = hasAimLock ? "locked" : isNearby ? "nearby" : "explore";
                         if (now >= currentStatusUntil) {
                             currentMood = nextMood;
@@ -6910,8 +6913,10 @@ function place(mesh, frame, x, y, z) {
 /* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core */ "./node_modules/@babylonjs/core/index.js");
 /* harmony import */ var _core_staticBodies__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../core/staticBodies */ "./src/scenes/core/staticBodies.ts");
 /* harmony import */ var _core_toyStyle__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../core/toyStyle */ "./src/scenes/core/toyStyle.ts");
-/* harmony import */ var _core_constants__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../core/constants */ "./src/scenes/core/constants.ts");
-/* harmony import */ var _ui_style__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../ui/style */ "./src/scenes/ui/style.ts");
+/* harmony import */ var _infoStand__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./infoStand */ "./src/scenes/world/infoStand.ts");
+/* harmony import */ var _core_constants__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../core/constants */ "./src/scenes/core/constants.ts");
+/* harmony import */ var _ui_style__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../ui/style */ "./src/scenes/ui/style.ts");
+
 
 
 
@@ -6925,7 +6930,7 @@ function place(mesh, frame, x, y, z) {
  * - the description that used to lie on the ground is now a tilted info stand facing the camera,
  *   with the game's name, the description and a "Free on Google Play" pill.
  */
-var FONT = _ui_style__WEBPACK_IMPORTED_MODULE_4__.UI.font;
+var FONT = _ui_style__WEBPACK_IMPORTED_MODULE_5__.UI.font;
 var PALETTE = {
     board: "#344B63",
     rim: "#E8DCC6",
@@ -6951,7 +6956,7 @@ function createFruitFactorySigns(scene) {
         console.error("Fruit Factory title sign failed", error);
     }
     try {
-        createInfoStand(scene);
+        createProjectInfoStand(scene);
     }
     catch (error) {
         console.error("Fruit Factory info stand failed", error);
@@ -6998,10 +7003,10 @@ function createTitleSign(scene) {
     for (var _b = 0, _c = [-1, 1]; _b < _c.length; _b++) {
         var side = _c[_b];
         var x = centerX + (side * ((width / 2) - 2.2));
-        var post = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("ff-title-post-".concat(side), 1.1, postTop - _core_constants__WEBPACK_IMPORTED_MODULE_3__.GROUND_Y, 1.1, 0.35, scene);
+        var post = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("ff-title-post-".concat(side), 1.1, postTop - _core_constants__WEBPACK_IMPORTED_MODULE_4__.GROUND_Y, 1.1, 0.35, scene);
         post.material = materials.post;
-        post.position.set(x, _core_constants__WEBPACK_IMPORTED_MODULE_3__.GROUND_Y + ((postTop - _core_constants__WEBPACK_IMPORTED_MODULE_3__.GROUND_Y) / 2), boardZ - 0.9);
-        (0,_core_staticBodies__WEBPACK_IMPORTED_MODULE_1__.addStaticBox)(scene, post.position, 1.3, postTop - _core_constants__WEBPACK_IMPORTED_MODULE_3__.GROUND_Y, 1.3, { sound: "post" });
+        post.position.set(x, _core_constants__WEBPACK_IMPORTED_MODULE_4__.GROUND_Y + ((postTop - _core_constants__WEBPACK_IMPORTED_MODULE_4__.GROUND_Y) / 2), boardZ - 0.9);
+        (0,_core_staticBodies__WEBPACK_IMPORTED_MODULE_1__.addStaticBox)(scene, post.position, 1.3, postTop - _core_constants__WEBPACK_IMPORTED_MODULE_4__.GROUND_Y, 1.3, { sound: "post" });
     }
     // Marquee bulbs round the edge of the board's front.
     var bulbMaterial = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.StandardMaterial("ff-title-bulb", scene);
@@ -7113,135 +7118,47 @@ function createPear(scene, name, center, size) {
     addStemAndLeaf(scene, name, center.add(new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, 1.55 * size, 0)), size * 0.9, -0.5);
 }
 // ==================================================================== Info stand
-function createInfoStand(scene) {
-    var panelWidth = 22;
-    var panelHeight = 13;
-    var tilt = (40 * Math.PI) / 180;
-    var bottomY = 1.6;
-    var root = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.TransformNode("ff-info-stand", scene);
-    root.position.set(INFO_STAND_POSITION.x, _core_constants__WEBPACK_IMPORTED_MODULE_3__.GROUND_Y, INFO_STAND_POSITION.y);
-    root.rotation.y = _core_constants__WEBPACK_IMPORTED_MODULE_3__.FACE_CAMERA_YAW;
-    // The panel leans back, so it faces up towards the camera (which looks down at ~30°).
-    var panel = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.TransformNode("ff-info-panel", scene);
-    panel.parent = root;
-    panel.position.set(0, bottomY + ((panelHeight / 2) * Math.cos(tilt)), (panelHeight / 2) * Math.sin(tilt));
-    panel.rotation.x = tilt;
-    var frame = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("ff-info-frame", panelWidth + 1.4, panelHeight + 1.4, 0.7, 0.6, scene);
-    frame.material = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "ff-info-frame", PALETTE.navy, { roughness: 0.45, clearCoat: 0.4 });
-    frame.parent = panel;
-    frame.position.z = 0.35;
-    var face = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreatePlane("ff-info-face", { width: panelWidth, height: panelHeight }, scene);
-    face.material = createInfoMaterial(scene, panelWidth, panelHeight);
-    face.parent = panel;
-    face.position.z = -0.03;
-    // Two legs behind the panel and a little foot at the front edge of each.
-    var legMaterial = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "ff-info-leg", PALETTE.post, { roughness: 0.55, clearCoat: 0.3 });
-    var legZ = (panelHeight / 2) * Math.sin(tilt) + 0.8;
-    var legHeight = panel.position.y;
-    for (var _i = 0, _a = [-1, 1]; _i < _a.length; _i++) {
-        var side = _a[_i];
-        var leg = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("ff-info-leg-".concat(side), 0.9, legHeight, 0.9, 0.3, scene);
-        leg.material = legMaterial;
-        leg.parent = root;
-        leg.position.set(side * (panelWidth / 2 - 2.5), legHeight / 2, legZ);
-        var foot = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("ff-info-foot-".concat(side), 1.4, 0.6, legZ + 1.5, 0.25, scene);
-        foot.material = legMaterial;
-        foot.parent = root;
-        foot.position.set(side * (panelWidth / 2 - 2.5), 0.3, legZ / 2);
-    }
-    for (var _b = 0, _c = root.getChildMeshes(); _b < _c.length; _b++) {
-        var mesh = _c[_b];
-        mesh.isPickable = false;
-    }
-    // Solid, so the tank bumps into it.
-    root.computeWorldMatrix(true);
-    var center = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.TransformCoordinates(new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, 4, legZ / 2), root.getWorldMatrix());
-    (0,_core_staticBodies__WEBPACK_IMPORTED_MODULE_1__.addStaticBox)(scene, center, panelWidth + 1.4, 8, legZ + 3, { rotation: _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Quaternion.RotationYawPitchRoll(_core_constants__WEBPACK_IMPORTED_MODULE_3__.FACE_CAMERA_YAW, 0, 0), sound: "solid" });
-}
-/** The panel's face: title, description, a "Free on Google Play" pill and a few drawn fruits. */
-function createInfoMaterial(scene, panelWidth, panelHeight) {
-    var width = 1024;
-    var height = Math.round((width * panelHeight) / panelWidth);
-    var texture = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.DynamicTexture("ff-info-texture", { width: width, height: height }, scene, true);
-    var context = texture.getContext();
-    var draw = function () {
-        context.fillStyle = PALETTE.cream;
-        context.fillRect(0, 0, width, height);
-        var pad = 64;
-        context.textAlign = "left";
-        context.textBaseline = "alphabetic";
-        context.fillStyle = PALETTE.pink;
-        context.font = "900 34px ".concat(FONT);
-        context.fillText("MY PROJECTS", pad, 96);
-        context.fillStyle = PALETTE.navy;
-        context.font = "900 74px ".concat(FONT);
-        context.fillText("Idle Fruit Factory", pad, 190);
-        context.fillStyle = PALETTE.muted;
-        context.font = "800 40px ".concat(FONT);
-        var lines = wrapText(context, "My first Android mobile game. Download it for free on the Google Play Store.", 580);
-        lines.forEach(function (line, i) { return context.fillText(line, pad, 262 + (i * 52)); });
-        // Pill badge.
-        var pillY = 262 + (lines.length * 52) + 18;
-        var pillHeight = 76;
-        context.font = "900 36px ".concat(FONT);
-        var pillText = "Free on Google Play";
-        var pillWidth = context.measureText(pillText).width + 120;
-        roundRect(context, pad, pillY, pillWidth, pillHeight, pillHeight / 2);
-        context.fillStyle = PALETTE.navy;
-        context.fill();
-        context.fillStyle = PALETTE.cream;
-        // Little "play" triangle.
-        context.beginPath();
-        context.moveTo(pad + 34, pillY + 22);
-        context.lineTo(pad + 60, pillY + (pillHeight / 2));
-        context.lineTo(pad + 34, pillY + pillHeight - 22);
-        context.closePath();
-        context.fill();
-        context.fillText(pillText, pad + 80, pillY + 50);
-        // Fruit doodles on the right.
-        drawApple(context, 890, 200, 72);
-        drawOrange(context, 820, 410, 60);
-        drawCherries(context, 935, 420);
-        texture.update();
-    };
-    draw();
-    // Redraw with the rounded web font once it has loaded.
-    if ("fonts" in document) {
-        void document.fonts.load("900 40px Nunito").then(draw).catch(function () { return undefined; });
-    }
-    var material = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.StandardMaterial("ff-info-material", scene);
-    material.diffuseTexture = texture;
-    material.specularColor = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3(0.08, 0.08, 0.08);
-    material.emissiveColor = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3(0.22, 0.22, 0.22);
-    return material;
-}
-function wrapText(context, text, maxWidth) {
-    var lines = [];
-    var line = "";
-    for (var _i = 0, _a = text.split(" "); _i < _a.length; _i++) {
-        var word = _a[_i];
-        var candidate = line ? "".concat(line, " ").concat(word) : word;
-        if (context.measureText(candidate).width > maxWidth && line) {
-            lines.push(line);
-            line = word;
-        }
-        else {
-            line = candidate;
-        }
-    }
-    if (line) {
-        lines.push(line);
-    }
-    return lines;
-}
-function roundRect(context, x, y, w, h, r) {
-    context.beginPath();
-    context.moveTo(x + r, y);
-    context.arcTo(x + w, y, x + w, y + h, r);
-    context.arcTo(x + w, y + h, x, y + h, r);
-    context.arcTo(x, y + h, x, y, r);
-    context.arcTo(x, y, x + w, y, r);
-    context.closePath();
+/** Title, description, a "Free on Google Play" pill and a few drawn fruits. */
+function createProjectInfoStand(scene) {
+    (0,_infoStand__WEBPACK_IMPORTED_MODULE_3__.createInfoStand)(scene, {
+        id: "ff-info-stand",
+        x: INFO_STAND_POSITION.x,
+        z: INFO_STAND_POSITION.y,
+        draw: function (context) {
+            var pad = 64;
+            var bottom = (0,_infoStand__WEBPACK_IMPORTED_MODULE_3__.drawInfoText)(context, FONT, {
+                eyebrow: "MY PROJECTS",
+                eyebrowColor: PALETTE.pink,
+                title: "Idle Fruit Factory",
+                titleColor: PALETTE.navy,
+                body: "My first Android mobile game. Download it for free on the Google Play Store.",
+                bodyColor: PALETTE.muted,
+                maxWidth: 580,
+            });
+            // Pill badge.
+            var pillY = bottom + 18;
+            var pillHeight = 76;
+            context.font = "900 36px ".concat(FONT);
+            var pillText = "Free on Google Play";
+            var pillWidth = context.measureText(pillText).width + 120;
+            (0,_infoStand__WEBPACK_IMPORTED_MODULE_3__.roundRect)(context, pad, pillY, pillWidth, pillHeight, pillHeight / 2);
+            context.fillStyle = PALETTE.navy;
+            context.fill();
+            context.fillStyle = PALETTE.cream;
+            // Little "play" triangle.
+            context.beginPath();
+            context.moveTo(pad + 34, pillY + 22);
+            context.lineTo(pad + 60, pillY + (pillHeight / 2));
+            context.lineTo(pad + 34, pillY + pillHeight - 22);
+            context.closePath();
+            context.fill();
+            context.fillText(pillText, pad + 80, pillY + 50);
+            // Fruit doodles on the right.
+            drawApple(context, 890, 200, 72);
+            drawOrange(context, 820, 410, 60);
+            drawCherries(context, 935, 420);
+        },
+    });
 }
 function drawLeaf(context, x, y, size, angle) {
     context.save();
@@ -7627,6 +7544,166 @@ function createFlowerMesh(scene, name, petalHex) {
     }
     flower.name = name;
     return flower;
+}
+
+
+/***/ },
+
+/***/ "./src/scenes/world/infoStand.ts"
+/*!***************************************!*\
+  !*** ./src/scenes/world/infoStand.ts ***!
+  \***************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   createInfoStand: () => (/* binding */ createInfoStand),
+/* harmony export */   drawInfoText: () => (/* binding */ drawInfoText),
+/* harmony export */   roundRect: () => (/* binding */ roundRect)
+/* harmony export */ });
+/* unused harmony exports INFO_FACE_WIDTH, wrapText */
+/* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core */ "./node_modules/@babylonjs/core/index.js");
+/* harmony import */ var _core_staticBodies__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../core/staticBodies */ "./src/scenes/core/staticBodies.ts");
+/* harmony import */ var _core_toyStyle__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../core/toyStyle */ "./src/scenes/core/toyStyle.ts");
+/* harmony import */ var _core_constants__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../core/constants */ "./src/scenes/core/constants.ts");
+
+
+
+
+/**
+ * A tilted info stand facing the camera: a navy-framed panel leaning back on two wooden legs, with
+ * a face drawn on a canvas (cream background, text, doodles). Used for the project and work
+ * descriptions.
+ */
+var PALETTE = {
+    frame: "#344B63",
+    leg: "#8B6A50",
+    face: "#F4EBDD",
+};
+/** The face is drawn on a canvas this many pixels wide. */
+var INFO_FACE_WIDTH = 1024;
+function createInfoStand(scene, options) {
+    var _a, _b, _c, _d;
+    var id = options.id;
+    var panelWidth = (_a = options.width) !== null && _a !== void 0 ? _a : 22;
+    var panelHeight = (_b = options.height) !== null && _b !== void 0 ? _b : 13;
+    var tilt = (40 * Math.PI) / 180;
+    var bottomY = 1.6;
+    var root = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.TransformNode(id, scene);
+    root.position.set(options.x, _core_constants__WEBPACK_IMPORTED_MODULE_3__.GROUND_Y, options.z);
+    root.rotation.y = _core_constants__WEBPACK_IMPORTED_MODULE_3__.FACE_CAMERA_YAW;
+    // The panel leans back, so it faces up towards the camera (which looks down at ~30°).
+    var panel = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.TransformNode("".concat(id, "-panel"), scene);
+    panel.parent = root;
+    panel.position.set(0, bottomY + ((panelHeight / 2) * Math.cos(tilt)), (panelHeight / 2) * Math.sin(tilt));
+    panel.rotation.x = tilt;
+    var frame = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("".concat(id, "-frame"), panelWidth + 1.4, panelHeight + 1.4, 0.7, 0.6, scene);
+    frame.material = (_c = scene.getMaterialByName("info-stand-frame")) !== null && _c !== void 0 ? _c : (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "info-stand-frame", PALETTE.frame, { roughness: 0.45, clearCoat: 0.4 });
+    frame.parent = panel;
+    frame.position.z = 0.35;
+    var face = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreatePlane("".concat(id, "-face"), { width: panelWidth, height: panelHeight }, scene);
+    face.material = createFaceMaterial(scene, id, panelWidth, panelHeight, options.draw);
+    face.parent = panel;
+    face.position.z = -0.03;
+    // Two legs behind the panel and a little foot at the front edge of each.
+    var legMaterial = (_d = scene.getMaterialByName("info-stand-leg")) !== null && _d !== void 0 ? _d : (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "info-stand-leg", PALETTE.leg, { roughness: 0.55, clearCoat: 0.3 });
+    var legZ = (panelHeight / 2) * Math.sin(tilt) + 0.8;
+    var legHeight = panel.position.y;
+    for (var _i = 0, _e = [-1, 1]; _i < _e.length; _i++) {
+        var side = _e[_i];
+        var leg = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("".concat(id, "-leg-").concat(side), 0.9, legHeight, 0.9, 0.3, scene);
+        leg.material = legMaterial;
+        leg.parent = root;
+        leg.position.set(side * (panelWidth / 2 - 2.5), legHeight / 2, legZ);
+        var foot = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("".concat(id, "-foot-").concat(side), 1.4, 0.6, legZ + 1.5, 0.25, scene);
+        foot.material = legMaterial;
+        foot.parent = root;
+        foot.position.set(side * (panelWidth / 2 - 2.5), 0.3, legZ / 2);
+    }
+    for (var _f = 0, _g = root.getChildMeshes(); _f < _g.length; _f++) {
+        var mesh = _g[_f];
+        mesh.isPickable = false;
+    }
+    // Solid, so the tank bumps into it.
+    root.computeWorldMatrix(true);
+    var center = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.TransformCoordinates(new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, 4, legZ / 2), root.getWorldMatrix());
+    (0,_core_staticBodies__WEBPACK_IMPORTED_MODULE_1__.addStaticBox)(scene, center, panelWidth + 1.4, 8, legZ + 3, { rotation: _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Quaternion.RotationYawPitchRoll(_core_constants__WEBPACK_IMPORTED_MODULE_3__.FACE_CAMERA_YAW, 0, 0), sound: "solid" });
+    return root;
+}
+function createFaceMaterial(scene, id, panelWidth, panelHeight, draw) {
+    var width = INFO_FACE_WIDTH;
+    var height = Math.round((width * panelHeight) / panelWidth);
+    var texture = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.DynamicTexture("".concat(id, "-texture"), { width: width, height: height }, scene, true);
+    var context = texture.getContext();
+    var redraw = function () {
+        context.fillStyle = PALETTE.face;
+        context.fillRect(0, 0, width, height);
+        context.textAlign = "left";
+        context.textBaseline = "alphabetic";
+        draw(context, width, height);
+        texture.update();
+    };
+    redraw();
+    // Redraw with the rounded web font once it has loaded.
+    if ("fonts" in document) {
+        void document.fonts.load("900 40px Nunito").then(redraw).catch(function () { return undefined; });
+    }
+    var material = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.StandardMaterial("".concat(id, "-material"), scene);
+    material.diffuseTexture = texture;
+    material.specularColor = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3(0.08, 0.08, 0.08);
+    material.emissiveColor = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3(0.22, 0.22, 0.22);
+    return material;
+}
+/** Splits `text` into lines no wider than `maxWidth` in the context's current font. */
+function wrapText(context, text, maxWidth) {
+    var lines = [];
+    var line = "";
+    for (var _i = 0, _a = text.split(" "); _i < _a.length; _i++) {
+        var word = _a[_i];
+        var candidate = line ? "".concat(line, " ").concat(word) : word;
+        if (context.measureText(candidate).width > maxWidth && line) {
+            lines.push(line);
+            line = word;
+        }
+        else {
+            line = candidate;
+        }
+    }
+    if (line) {
+        lines.push(line);
+    }
+    return lines;
+}
+function roundRect(context, x, y, w, h, r) {
+    context.beginPath();
+    context.moveTo(x + r, y);
+    context.arcTo(x + w, y, x + w, y + h, r);
+    context.arcTo(x + w, y + h, x, y + h, r);
+    context.arcTo(x, y + h, x, y, r);
+    context.arcTo(x, y, x + w, y, r);
+    context.closePath();
+}
+/**
+ * The standard layout: a small coloured eyebrow, a big title (shrunk to fit `maxWidth`), and a
+ * wrapped description. Returns the y just below the description, for whatever comes next.
+ */
+function drawInfoText(context, font, text) {
+    var pad = 64;
+    context.fillStyle = text.eyebrowColor;
+    context.font = "900 34px ".concat(font);
+    context.fillText(text.eyebrow, pad, 96);
+    var titleSize = 74;
+    context.font = "900 ".concat(titleSize, "px ").concat(font);
+    while (titleSize > 40 && context.measureText(text.title).width > text.maxWidth + 120) {
+        titleSize -= 2;
+        context.font = "900 ".concat(titleSize, "px ").concat(font);
+    }
+    context.fillStyle = text.titleColor;
+    context.fillText(text.title, pad, 190);
+    context.fillStyle = text.bodyColor;
+    context.font = "800 40px ".concat(font);
+    var lines = wrapText(context, text.body, text.maxWidth);
+    lines.forEach(function (line, i) { return context.fillText(line, pad, 262 + (i * 52)); });
+    return 262 + (lines.length * 52);
 }
 
 
@@ -8360,7 +8437,8 @@ function buildTriangle(name, corners, side, scene) {
  *   sweeps north and back into the loop;
  * - a hump road that leaves the stunt road, goes over the hump bridge and rejoins it before the
  *   jump;
- * - a path out towards the brick tower that thins out into stepping stones on the grass.
+ * - a path out towards the brick tower that thins out into stepping stones on the grass;
+ * - a path to the work corner, which ends in stepping stones in front of it.
  *
  * To keep them from dominating the view, roads are not solid ribbons: they are laid as separate
  * paving slabs with thin strips of grass between them (two staggered rows on the main road,
@@ -8402,6 +8480,12 @@ var ROADS = [
         width: 9,
         fadeOut: true,
         points: [[-48, 52], [-64, 64], [-82, 70], [-98, 80]],
+    },
+    {
+        name: "work-path",
+        width: 9,
+        fadeOut: true,
+        points: [[-35, -7], [-38, -32], [-34, -58]],
     },
 ];
 var ROAD_SAMPLES = ROADS.map(function (road, index) {
@@ -8719,8 +8803,10 @@ var CANOPY_PIVOT_Y = 6;
 var TREE_POSITIONS = [
     new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(78.3985, 5.1848, -11.2018),
     new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(47.5043, 5.1848, -36.9549),
-    new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(-39.5430, 5.1848, -44.9435),
-    new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(-54.0394, 5.1848, -22.0382),
+    // Moved west, out of the way of the path to the work corner.
+    new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(-74, 5.1848, -46),
+    // Behind the work corner, as a backdrop (it used to hide the corner from the start).
+    new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(-6, 5.1848, -97),
     new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(57.1332, 5.1848, 77.0256),
     // A few more towards the edges of the play area, away from the paths.
     new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(-72, 5.1848, 98),
@@ -8993,13 +9079,14 @@ function createWaypointSigns(scene) {
         projectsText.computeWorldMatrix(true);
         var center = projectsText.getBoundingInfo().boundingBox.centerWorld;
         // The crossroads near the start: projects (the Fruit Factory) to the right on screen,
-        // the targets on the podium to the left.
+        // the targets on the podium to the left, and work straight ahead (on top of the post).
         signposts.push({
             id: "sign-crossroads",
             x: center.x,
             z: center.z,
             postHeight: 9.5,
             boards: [
+                { label: "WORK", direction: 0, y: 11.9, length: 7.4, height: 4.2 },
                 { label: "PROJECTS", direction: 1, y: 7.8, length: 11, height: 2.6 },
                 { label: "TARGETS", direction: -1, y: 4.9, length: 10, height: 2.6 },
             ],
@@ -9058,14 +9145,14 @@ function createSignpost(scene, signpost, materials) {
     if (signpost.bullseye) {
         addBullseye(scene, "".concat(id, "-bullseye"), root, top + 1.15, materials);
     }
-    else {
+    else if (!signpost.boards.some(function (board) { return board.direction === 0; })) {
         var cap = add(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateSphere("".concat(id, "-cap"), { diameter: 1.3, segments: 16 }, scene), materials.cap);
         cap.position.y = top + 0.2;
     }
     signpost.boards.forEach(function (board, index) {
         createBoard(scene, "".concat(id, "-board-").concat(index), board, root, materials);
         // Solid box around the board and its rim.
-        var center = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(board.direction * ((board.length / 2) - 1.1), board.y, -0.65);
+        var center = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(boardOffset(board), board.y, -0.65);
         addSignCollider(scene, root, center, board.length + 0.6, board.height + 0.6, 0.8);
     });
     if (signpost.bullseye) {
@@ -9082,6 +9169,10 @@ function addSignCollider(scene, root, localCenter, width, height, depth) {
         sound: "post",
     });
 }
+/** Sideways boards have their tail end over the post; an upward one is centred on it. */
+function boardOffset(board) {
+    return board.direction * ((board.length / 2) - 1.1);
+}
 /**
  * An arrow-shaped board (a pentagon pointing along `direction`) mounted in front of the post, its
  * tail end over the post, with a navy rim, the label and two gold bolts.
@@ -9092,31 +9183,48 @@ function createBoard(scene, id, board, parent, materials) {
     var node = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.TransformNode(id, scene);
     node.parent = parent;
     // The tail end sits on the post; the board reaches out towards the arrow's tip.
-    node.position.set(direction * ((length / 2) - 1.1), board.y, -0.75);
-    var arrow = function (l, h, t) { return [
-        [-l / 2, -h / 2],
-        [(l / 2) - t, -h / 2],
-        [l / 2, 0],
-        [(l / 2) - t, h / 2],
-        [-l / 2, h / 2],
-    ].map(function (_a) {
-        var x = _a[0], y = _a[1];
-        return [x * direction, y];
-    }); };
-    var front = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.extrudeOutline)("".concat(id, "-face"), arrow(length, height, tip), 0.5, 0.12, scene);
+    node.position.set(boardOffset(board), board.y, -0.75);
+    var up = direction === 0;
+    // An upward arrow's tip is shorter, relative to its width.
+    var upTip = height * 0.32;
+    var arrow = function (l, h, t) { return (up
+        ? [
+            [-l / 2, -h / 2],
+            [l / 2, -h / 2],
+            [l / 2, (h / 2) - t],
+            [0, h / 2],
+            [-l / 2, (h / 2) - t],
+        ]
+        : [
+            [-l / 2, -h / 2],
+            [(l / 2) - t, -h / 2],
+            [l / 2, 0],
+            [(l / 2) - t, h / 2],
+            [-l / 2, h / 2],
+        ].map(function (_a) {
+            var x = _a[0], y = _a[1];
+            return [x * direction, y];
+        })); };
+    var tipSize = up ? upTip : tip;
+    var front = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.extrudeOutline)("".concat(id, "-face"), arrow(length, height, tipSize), 0.5, 0.12, scene);
     front.material = materials.board;
     front.parent = node;
-    var rim = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.extrudeOutline)("".concat(id, "-rim"), arrow(length + 0.6, height + 0.6, tip + 0.3), 0.4, 0.1, scene);
+    var rim = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.extrudeOutline)("".concat(id, "-rim"), arrow(length + 0.6, height + 0.6, tipSize + 0.3), 0.4, 0.1, scene);
     rim.material = materials.rim;
     rim.parent = node;
     rim.position.z = 0.2;
     // Label over the rectangular part of the board.
-    var bodyLength = length - tip;
-    var bodyCenter = -direction * (tip / 2);
-    var label = createLabel(scene, "".concat(id, "-label"), board.label, bodyLength - 1.6, height * 0.8);
+    var label = up
+        ? createLabel(scene, "".concat(id, "-label"), board.label, length - 1.6, (height - upTip) * 0.8)
+        : createLabel(scene, "".concat(id, "-label"), board.label, length - tip - 1.6, height * 0.8);
     if (label) {
         label.parent = node;
-        label.position.set(bodyCenter + (direction * 0.15), 0, -0.27);
+        if (up) {
+            label.position.set(0, -upTip / 2, -0.27);
+        }
+        else {
+            label.position.set((-direction * (tip / 2)) + (direction * 0.15), 0, -0.27);
+        }
     }
     // Two bolts near the tail, where the board is "screwed" to the post.
     for (var _i = 0, _a = [-1, 1]; _i < _a.length; _i++) {
@@ -9125,7 +9233,13 @@ function createBoard(scene, id, board, parent, materials) {
         bolt.scaling.z = 0.45;
         bolt.material = materials.gold;
         bolt.parent = node;
-        bolt.position.set(-direction * ((length / 2) - 0.45), side * height * 0.3, -0.27);
+        if (up) {
+            // In the bottom corners.
+            bolt.position.set(side * ((length / 2) - 0.45), -(height / 2) + 0.45, -0.27);
+        }
+        else {
+            bolt.position.set(-direction * ((length / 2) - 0.45), side * height * 0.3, -0.27);
+        }
     }
     for (var _b = 0, _c = node.getChildMeshes(); _b < _c.length; _b++) {
         var mesh = _c[_b];
@@ -9197,7 +9311,545 @@ function addBullseye(scene, id, parent, y, materials) {
 }
 
 
+/***/ },
+
+/***/ "./src/scenes/world/workCorner.ts"
+/*!****************************************!*\
+  !*** ./src/scenes/world/workCorner.ts ***!
+  \****************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   createWorkCorner: () => (/* binding */ createWorkCorner)
+/* harmony export */ });
+/* unused harmony export WORK_CORNER_POSITION */
+/* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babylonjs/core */ "./node_modules/@babylonjs/core/index.js");
+/* harmony import */ var _core_staticBodies__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../core/staticBodies */ "./src/scenes/core/staticBodies.ts");
+/* harmony import */ var _core_toyStyle__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../core/toyStyle */ "./src/scenes/core/toyStyle.ts");
+/* harmony import */ var _core_constants__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../core/constants */ "./src/scenes/core/constants.ts");
+/* harmony import */ var _ui_style__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../ui/style */ "./src/scenes/ui/style.ts");
+/* harmony import */ var _infoStand__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./infoStand */ "./src/scenes/world/infoStand.ts");
+var __assign = (undefined && undefined.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
+
+
+
+
+
+
+/**
+ * The work corner, in the open field south of the start, past the brick wall: straight ahead from
+ * the crossroads sign, with a side path leading there from the main loop. The work itself is confidential, so the corner
+ * hints at it rather than showing anything:
+ *
+ * - an info stand: quantum-inspired algorithms for financial trading software;
+ * - a "quantum core" sculpture: a glowing sphere with a precessing state arrow and two orbiting
+ *   rings, on a plinth;
+ * - a toy trading board: candlesticks trending up, a gold trend line and a scrolling ticker strip;
+ * - a briefcase stamped CONFIDENTIAL with a padlock, which can be pushed around.
+ *
+ * Laid out in a frame facing the camera: local x runs to the right on screen and local -z towards
+ * the camera.
+ */
+/** Centre of the corner on the ground (x, z). */
+var WORK_CORNER_POSITION = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector2(-20, -72);
+/** Nothing animates when the tank is further away than this. */
+var ANIMATION_DISTANCE = 170;
+var FONT = _ui_style__WEBPACK_IMPORTED_MODULE_4__.UI.font;
+var PALETTE = {
+    navy: "#344B63",
+    navyLight: "#4A6280",
+    navyDeep: "#22313F",
+    sand: "#E8DCC6",
+    cream: "#F4EBDD",
+    gold: "#C9A35B",
+    wood: "#8B6A50",
+    mint: "#7CC9A0",
+    pink: "#E8869F",
+    pinkDeep: "#C9667F",
+    muted: "#6B7B8C",
+    core: "#8FD3E8",
+    leather: "#7A4E36",
+    leatherDark: "#5B3828",
+    stamp: "#C94F4F",
+};
+function createWorkCorner(scene) {
+    var yaw = _core_constants__WEBPACK_IMPORTED_MODULE_3__.FACE_CAMERA_YAW;
+    var right = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
+    var away = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(Math.sin(yaw), 0, Math.cos(yaw));
+    var frame = {
+        yaw: yaw,
+        toWorld: function (x, y, z) { return new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(WORK_CORNER_POSITION.x + (right.x * x) + (away.x * z), _core_constants__WEBPACK_IMPORTED_MODULE_3__.GROUND_Y + y, WORK_CORNER_POSITION.y + (right.z * x) + (away.z * z)); },
+    };
+    var materials = createMaterials(scene);
+    var animations = [];
+    var parts = [
+        ["info stand", function () { return createWorkInfoStand(scene, frame); }],
+        ["quantum core", function () { return animations.push(createQuantumCore(scene, frame, materials)); }],
+        ["trading board", function () { return animations.push(createTradingBoard(scene, frame, materials)); }],
+        ["briefcase", function () { return createBriefcase(scene, frame, materials); }],
+    ];
+    for (var _i = 0, parts_1 = parts; _i < parts_1.length; _i++) {
+        var _a = parts_1[_i], name_1 = _a[0], build = _a[1];
+        try {
+            build();
+        }
+        catch (error) {
+            console.error("Work corner ".concat(name_1, " failed"), error);
+        }
+    }
+    var tank = scene.getMeshByName("tank_holder");
+    var center = frame.toWorld(0, 0, 0);
+    scene.onBeforeRenderObservable.add(function () {
+        if (tank && Math.hypot(tank.position.x - center.x, tank.position.z - center.z) > ANIMATION_DISTANCE) {
+            return;
+        }
+        var dt = Math.min(scene.getEngine().getDeltaTime() / 1000, 0.1);
+        for (var _i = 0, animations_1 = animations; _i < animations_1.length; _i++) {
+            var animate = animations_1[_i];
+            animate(dt);
+        }
+    });
+}
+function createMaterials(scene) {
+    var toy = function (name, hex, roughness, clearCoat, metallic) {
+        if (roughness === void 0) { roughness = 0.45; }
+        if (clearCoat === void 0) { clearCoat = 0.4; }
+        if (metallic === void 0) { metallic = 0; }
+        return (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createToyMaterial)(scene, "work-".concat(name), hex, { roughness: roughness, clearCoat: clearCoat, metallic: metallic });
+    };
+    var core = toy("core", PALETTE.core, 0.2, 0.9);
+    core.emissiveColor = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.FromHexString(PALETTE.core).toLinearSpace().scale(0.35);
+    return {
+        navy: toy("navy", PALETTE.navy),
+        navyLight: toy("navy-light", PALETTE.navyLight, 0.5, 0.2),
+        sand: toy("sand", PALETTE.sand, 0.45, 0.35),
+        cream: toy("cream", PALETTE.cream, 0.45, 0.4),
+        gold: toy("gold", PALETTE.gold, 0.25, 0.6, 0.6),
+        wood: toy("wood", PALETTE.wood, 0.55, 0.3),
+        mint: toy("mint", PALETTE.mint, 0.4, 0.5),
+        pink: toy("pink", PALETTE.pink, 0.4, 0.5),
+        core: core,
+        leather: toy("leather", PALETTE.leather, 0.5, 0.35),
+        leatherDark: toy("leather-dark", PALETTE.leatherDark, 0.5, 0.3),
+    };
+}
+/** A node in the corner's frame at local (x, z), facing the camera; its children are built at size 1. */
+function createAnchor(scene, name, frame, x, z, scale) {
+    if (scale === void 0) { scale = 1; }
+    var node = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.TransformNode(name, scene);
+    node.position.copyFrom(frame.toWorld(x, 0, z));
+    node.rotation.y = frame.yaw;
+    node.scaling.setAll(scale);
+    return node;
+}
+function attach(mesh, parent, material, animated) {
+    var _a;
+    if (animated === void 0) { animated = false; }
+    mesh.parent = parent;
+    mesh.material = material;
+    mesh.isPickable = false;
+    if (animated) {
+        mesh.metadata = __assign(__assign({}, ((_a = mesh.metadata) !== null && _a !== void 0 ? _a : {})), { keepUnfrozen: true });
+    }
+    return mesh;
+}
+/** Static collision box given in a node's (uniformly scaled) frame. */
+function addCollider(scene, node, local, width, height, depth, sound) {
+    if (sound === void 0) { sound = "solid"; }
+    node.computeWorldMatrix(true);
+    var scale = node.scaling.x;
+    (0,_core_staticBodies__WEBPACK_IMPORTED_MODULE_1__.addStaticBox)(scene, _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3.TransformCoordinates(local, node.getWorldMatrix()), width * scale, height * scale, depth * scale, {
+        rotation: _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Quaternion.RotationYawPitchRoll(node.rotation.y, 0, 0),
+        sound: sound,
+    });
+}
+// ==================================================================== Info stand
+function createWorkInfoStand(scene, frame) {
+    var position = frame.toWorld(-19, 0, -4);
+    (0,_infoStand__WEBPACK_IMPORTED_MODULE_5__.createInfoStand)(scene, {
+        id: "work-info-stand",
+        x: position.x,
+        z: position.z,
+        draw: function (context) {
+            var pad = 64;
+            var bottom = (0,_infoStand__WEBPACK_IMPORTED_MODULE_5__.drawInfoText)(context, FONT, {
+                eyebrow: "MY WORK",
+                eyebrowColor: PALETTE.pinkDeep,
+                title: "Quantum-Inspired Trading",
+                titleColor: PALETTE.navy,
+                body: "I build software for financial trading, using quantum-inspired algorithms to solve hard optimisation problems. The rest is confidential.",
+                bodyColor: PALETTE.muted,
+                maxWidth: 600,
+            });
+            // "Confidential" pill with a padlock.
+            var pillY = bottom + 14;
+            var pillHeight = 72;
+            context.font = "900 34px ".concat(FONT);
+            var pillText = "Top secret, sorry!";
+            var pillWidth = context.measureText(pillText).width + 116;
+            (0,_infoStand__WEBPACK_IMPORTED_MODULE_5__.roundRect)(context, pad, pillY, pillWidth, pillHeight, pillHeight / 2);
+            context.fillStyle = PALETTE.navy;
+            context.fill();
+            drawPadlock(context, pad + 46, pillY + (pillHeight / 2) + 4, 0.9, PALETTE.cream, PALETTE.navy);
+            context.fillStyle = PALETTE.cream;
+            context.fillText(pillText, pad + 82, pillY + 47);
+            drawQubit(context, 880, 300, 82);
+            drawCandles(context, 740, 560);
+        },
+    });
+}
+function drawPadlock(context, x, y, size, color, hole) {
+    context.save();
+    context.translate(x, y);
+    context.scale(size, size);
+    context.strokeStyle = color;
+    context.lineWidth = 7;
+    context.beginPath();
+    context.arc(0, -12, 12, Math.PI, 0);
+    context.lineTo(12, -4);
+    context.moveTo(-12, -12);
+    context.lineTo(-12, -4);
+    context.stroke();
+    context.fillStyle = color;
+    (0,_infoStand__WEBPACK_IMPORTED_MODULE_5__.roundRect)(context, -19, -6, 38, 30, 6);
+    context.fill();
+    context.fillStyle = hole;
+    context.beginPath();
+    context.arc(0, 6, 4.5, 0, Math.PI * 2);
+    context.fill();
+    context.restore();
+}
+/** A Bloch sphere: a circle, its equator, axes and a state arrow. */
+function drawQubit(context, x, y, r) {
+    context.save();
+    context.fillStyle = "#DDF1F6";
+    context.beginPath();
+    context.arc(x, y, r, 0, Math.PI * 2);
+    context.fill();
+    context.lineWidth = 6;
+    context.strokeStyle = PALETTE.navy;
+    context.stroke();
+    context.lineWidth = 4;
+    context.setLineDash([12, 10]);
+    context.beginPath();
+    context.ellipse(x, y, r, r * 0.3, 0, 0, Math.PI * 2);
+    context.stroke();
+    context.beginPath();
+    context.moveTo(x, y - r);
+    context.lineTo(x, y + r);
+    context.stroke();
+    context.setLineDash([]);
+    // State arrow.
+    var tipX = x + (r * 0.55);
+    var tipY = y - (r * 0.62);
+    context.strokeStyle = PALETTE.pinkDeep;
+    context.lineWidth = 8;
+    context.lineCap = "round";
+    context.beginPath();
+    context.moveTo(x, y);
+    context.lineTo(tipX, tipY);
+    context.stroke();
+    context.fillStyle = PALETTE.pinkDeep;
+    context.beginPath();
+    context.arc(tipX, tipY, 11, 0, Math.PI * 2);
+    context.fill();
+    context.fillStyle = PALETTE.navy;
+    context.beginPath();
+    context.arc(x, y, 8, 0, Math.PI * 2);
+    context.fill();
+    context.restore();
+}
+/** A few candlesticks trending up, with their base at (x, y). */
+function drawCandles(context, x, y) {
+    var candles = [[0, 40, -10, 52], [40, 22, 14, 52], [22, 74, 12, 86], [74, 58, 46, 92], [58, 120, 50, 134]];
+    context.lineCap = "round";
+    candles.forEach(function (_a, i) {
+        var open = _a[0], close = _a[1], low = _a[2], high = _a[3];
+        var cx = x + (i * 46);
+        var up = close > open;
+        context.strokeStyle = PALETTE.navy;
+        context.lineWidth = 5;
+        context.beginPath();
+        context.moveTo(cx, y - low);
+        context.lineTo(cx, y - high);
+        context.stroke();
+        context.fillStyle = up ? PALETTE.mint : PALETTE.pink;
+        (0,_infoStand__WEBPACK_IMPORTED_MODULE_5__.roundRect)(context, cx - 15, y - Math.max(open, close), 30, Math.max(8, Math.abs(close - open)), 6);
+        context.fill();
+    });
+}
+// ==================================================================== Quantum core
+/** Returns its animation step. */
+function createQuantumCore(scene, frame, materials) {
+    var root = createAnchor(scene, "work-quantum-core", frame, 2, 5, 1.5);
+    attach((0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("work-core-plinth", 6, 1.6, 6, 0.4, scene), root, materials.navy).position.y = 0.8;
+    attach((0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("work-core-plinth-top", 5.2, 0.3, 5.2, 0.12, scene), root, materials.sand).position.y = 1.75;
+    var pillar = attach(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder("work-core-pillar", { diameterTop: 0.6, diameterBottom: 1.4, height: 3.6, tessellation: 20 }, scene), root, materials.gold);
+    pillar.position.y = 3.6;
+    var coreY = 8.4;
+    var core = attach(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateSphere("work-core-sphere", { diameter: 3.6, segments: 24 }, scene), root, materials.core);
+    core.position.y = coreY;
+    // The state arrow (a gold shaft with a pink ball on the end), precessing around the vertical.
+    var precession = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.TransformNode("work-core-precession", scene);
+    precession.parent = root;
+    precession.position.y = coreY;
+    var arrow = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.TransformNode("work-core-arrow", scene);
+    arrow.parent = precession;
+    arrow.rotation.z = -0.6;
+    var shaft = attach(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder("work-core-shaft", { diameter: 0.22, height: 3, tessellation: 10 }, scene), arrow, materials.gold, true);
+    shaft.position.y = 1.5;
+    var tip = attach(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateSphere("work-core-tip", { diameter: 0.7, segments: 12 }, scene), arrow, materials.pink, true);
+    tip.position.y = 3;
+    // Two tilted rings, each with a little bead running round it.
+    var rings = [
+        { tilt: 1.05, speed: 0.7, bead: materials.pink },
+        { tilt: -1.05, speed: -0.5, bead: materials.mint },
+    ].map(function (_a, i) {
+        var tilt = _a.tilt, speed = _a.speed, bead = _a.bead;
+        var holder = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.TransformNode("work-core-ring-holder-".concat(i), scene);
+        holder.parent = root;
+        holder.position.y = coreY;
+        holder.rotation.z = tilt;
+        var spinner = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.TransformNode("work-core-ring-".concat(i), scene);
+        spinner.parent = holder;
+        attach(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateTorus("work-core-torus-".concat(i), { diameter: 6, thickness: 0.22, tessellation: 48 }, scene), spinner, materials.cream, true);
+        var beadMesh = attach(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateSphere("work-core-bead-".concat(i), { diameter: 0.6, segments: 10 }, scene), spinner, bead, true);
+        beadMesh.position.x = 3;
+        return { spinner: spinner, speed: speed };
+    });
+    addCollider(scene, root, new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, 5.5, 0), 6.6, 11, 6.6);
+    var time = 0;
+    return function (dt) {
+        time += dt;
+        precession.rotation.y += dt * 0.9;
+        // A gentle nod, so it doesn't look like a plain turntable.
+        arrow.rotation.z = -0.6 + (Math.sin(time * 0.8) * 0.2);
+        for (var _i = 0, rings_1 = rings; _i < rings_1.length; _i++) {
+            var ring = rings_1[_i];
+            ring.spinner.rotation.y += dt * ring.speed;
+        }
+    };
+}
+// ==================================================================== Trading board
+/** Open, close, low, high, in chart units (0 at the bottom of the chart area). */
+var CANDLES = [
+    [1.0, 2.0, 0.6, 2.4],
+    [2.0, 1.4, 1.0, 2.3],
+    [1.4, 3.0, 1.2, 3.4],
+    [3.0, 3.8, 2.6, 4.2],
+    [3.8, 3.1, 2.8, 4.1],
+    [3.1, 4.9, 2.9, 5.3],
+    [4.9, 4.4, 4.0, 5.4],
+    [4.4, 6.4, 4.2, 6.8],
+];
+var TICKER_TEXT = "QUANTUM-INSPIRED ALGORITHMS   ▲   FINANCIAL TRADING   ▲   OPTIMISATION   ▲   SOFTWARE ENGINEERING   ▲   ";
+/** Returns its animation step (the ticker scrolling). */
+function createTradingBoard(scene, frame, materials) {
+    var root = createAnchor(scene, "work-trading-board", frame, 23, 3, 1.25);
+    var width = 16;
+    var height = 10.5;
+    var centerY = 9;
+    var depth = 0.8;
+    attach((0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("work-board", width, height, depth, 0.6, scene), root, materials.navy).position.y = centerY;
+    var rim = attach((0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("work-board-rim", width + 1.2, height + 1.2, depth * 0.7, 0.8, scene), root, materials.sand);
+    rim.position.set(0, centerY, 0.2);
+    for (var _i = 0, _a = [-1, 1]; _i < _a.length; _i++) {
+        var side = _a[_i];
+        var post = attach((0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("work-board-post-".concat(side), 1.1, centerY, 1.1, 0.35, scene), root, materials.wood);
+        post.position.set(side * (width / 2 - 2.2), centerY / 2, 0.9);
+    }
+    // Chart area: faint grid lines, the candles and a gold trend line in front.
+    var front = -(depth / 2);
+    var chartBottom = 5.6;
+    var chartLeft = -6.3;
+    var pitch = 1.8;
+    var grid = [0, 1, 2, 3].map(function (i) {
+        var line = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("work-board-grid-".concat(i), width - 2, 0.12, 0.1, 0.04, scene, 1);
+        line.position.set(0, chartBottom + (i * 2.2), front - 0.05);
+        return line;
+    });
+    mergeInto("work-board-grid", grid, root, materials.navyLight);
+    var ups = [];
+    var downs = [];
+    var wicks = [];
+    CANDLES.forEach(function (_a, i) {
+        var open = _a[0], close = _a[1], low = _a[2], high = _a[3];
+        var x = chartLeft + (i * pitch);
+        var bodyHeight = Math.max(0.3, Math.abs(close - open));
+        var body = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("work-candle-".concat(i), 1.05, bodyHeight, 0.7, 0.14, scene, 2);
+        body.position.set(x, chartBottom + ((open + close) / 2), front - 0.4);
+        (close > open ? ups : downs).push(body);
+        var wick = (0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("work-wick-".concat(i), 0.2, high - low, 0.25, 0.08, scene, 1);
+        wick.position.set(x, chartBottom + ((low + high) / 2), front - 0.3);
+        wicks.push(wick);
+    });
+    mergeInto("work-candles-up", ups, root, materials.mint);
+    mergeInto("work-candles-down", downs, root, materials.pink);
+    mergeInto("work-wicks", wicks, root, materials.cream);
+    // Trend line through the candles' closes, ending in an arrowhead past the last one.
+    var path = CANDLES.map(function (_a, i) {
+        var close = _a[1];
+        return new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(chartLeft + (i * pitch), chartBottom + close + 0.9, front - 1);
+    });
+    var last = path[path.length - 1];
+    var before = path[path.length - 2];
+    var direction = last.subtract(before).normalize();
+    var headBase = last.add(direction.scale(0.6));
+    path.push(headBase);
+    var line = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateTube("work-trend", { path: path, radius: 0.16, tessellation: 10, cap: _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Mesh.CAP_ALL }, scene);
+    var head = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateCylinder("work-trend-head", { diameterTop: 0, diameterBottom: 0.9, height: 1, tessellation: 12 }, scene);
+    head.position.copyFrom(headBase.add(direction.scale(0.5)));
+    head.rotation.z = -Math.atan2(direction.x, direction.y);
+    mergeInto("work-trend-line", [line, head], root, materials.gold);
+    // Ticker strip along the bottom of the board, scrolling sideways.
+    var ticker = createTicker(scene, width - 1.6, 1.2);
+    ticker.mesh.parent = root;
+    ticker.mesh.position.set(0, 4.35, front - 0.03);
+    addCollider(scene, root, new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(0, (centerY + (height / 2) + 0.6) / 2, 0.3), width + 1.4, centerY + (height / 2) + 0.6, 2.4, "post");
+    return function (dt) {
+        ticker.texture.uOffset = (ticker.texture.uOffset + (dt * 0.045)) % 1;
+    };
+}
+/** Merges meshes (built in the parent's frame) into one under `parent`. */
+function mergeInto(name, meshes, parent, material) {
+    var merged = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Mesh.MergeMeshes(meshes, true, true);
+    if (merged) {
+        merged.name = name;
+        attach(merged, parent, material);
+    }
+}
+function createTicker(scene, width, height) {
+    var textureWidth = 4096;
+    var textureHeight = 128;
+    var texture = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.DynamicTexture("work-ticker-texture", { width: textureWidth, height: textureHeight }, scene, true);
+    texture.wrapU = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Texture.WRAP_ADDRESSMODE;
+    // Same aspect ratio as the strip, so the letters aren't stretched.
+    texture.uScale = (width / height) / (textureWidth / textureHeight);
+    var context = texture.getContext();
+    var draw = function () {
+        context.fillStyle = PALETTE.navyDeep;
+        context.fillRect(0, 0, textureWidth, textureHeight);
+        context.font = "900 64px ".concat(FONT);
+        context.textBaseline = "middle";
+        // Whole copies of the text across the width (squeezed or stretched a little to fit), so
+        // it tiles seamlessly as it scrolls.
+        var textWidth = context.measureText(TICKER_TEXT).width;
+        var copies = Math.max(1, Math.round(textureWidth / textWidth));
+        var step = textureWidth / copies;
+        for (var i = 0; i < copies; i++) {
+            context.setTransform(step / textWidth, 0, 0, 1, i * step, 0);
+            var x = 0;
+            for (var _i = 0, _a = TICKER_TEXT.split(/(\u25B2)/); _i < _a.length; _i++) {
+                var word = _a[_i];
+                context.fillStyle = word === "\u25B2" ? PALETTE.mint : PALETTE.cream;
+                context.fillText(word, x, (textureHeight / 2) + 4);
+                x += context.measureText(word).width;
+            }
+        }
+        context.setTransform(1, 0, 0, 1, 0, 0);
+        texture.update();
+    };
+    draw();
+    if ("fonts" in document) {
+        void document.fonts.load("900 40px Nunito").then(draw).catch(function () { return undefined; });
+    }
+    var material = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.StandardMaterial("work-ticker-material", scene);
+    material.disableLighting = true;
+    material.emissiveTexture = texture;
+    material.diffuseColor = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3.Black();
+    var mesh = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreatePlane("work-ticker", { width: width, height: height }, scene);
+    mesh.material = material;
+    mesh.isPickable = false;
+    return { mesh: mesh, texture: texture };
+}
+// ==================================================================== Briefcase
+/** A pushable briefcase with a padlock and a CONFIDENTIAL stamp. */
+function createBriefcase(scene, frame, materials) {
+    var size = { width: 5, height: 3.8, depth: 1.6 };
+    var collider = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateBox("work-briefcase-collider", size, scene);
+    collider.position.copyFrom(frame.toWorld(12, (size.height / 2) + 0.05, -5));
+    collider.rotation.y = frame.yaw - 0.35;
+    collider.isVisible = false;
+    collider.isPickable = false;
+    var impostor = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.PhysicsImpostor(collider, _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.PhysicsImpostor.BoxImpostor, { mass: 2, friction: 0.6, restitution: 0.05 }, scene);
+    collider.physicsImpostor = impostor;
+    var body = impostor.physicsBody;
+    if (body) {
+        body.linearDamping = 0.15;
+        body.angularDamping = 0.3;
+    }
+    var add = function (mesh, material) { return attach(mesh, collider, material, true); };
+    add((0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("work-briefcase-body", size.width, size.height, size.depth, 0.35, scene), materials.leather);
+    // A band round the middle where the lid closes.
+    add((0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("work-briefcase-band", size.width + 0.08, 0.35, size.depth + 0.08, 0.12, scene, 2), materials.leatherDark).position.y = 0.55;
+    var handlePath = [];
+    for (var i = 0; i <= 12; i++) {
+        var angle = (i / 12) * Math.PI;
+        handlePath.push(new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Vector3(Math.cos(angle) * 0.9, (size.height / 2) + (Math.sin(angle) * 0.7), 0));
+    }
+    add(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateTube("work-briefcase-handle", { path: handlePath, radius: 0.16, tessellation: 10, cap: _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Mesh.CAP_ALL }, scene), materials.leatherDark);
+    // Latches and a padlock hanging from the middle.
+    var front = -(size.depth / 2);
+    for (var _i = 0, _a = [-1, 1]; _i < _a.length; _i++) {
+        var side = _a[_i];
+        add((0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("work-briefcase-latch-".concat(side), 0.6, 0.5, 0.2, 0.08, scene, 1), materials.gold).position.set(side * 1.6, 0.55, front - 0.08);
+    }
+    var shackle = add(_babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateTorus("work-briefcase-shackle", { diameter: 0.6, thickness: 0.12, tessellation: 20 }, scene), materials.gold);
+    shackle.rotation.x = Math.PI / 2;
+    shackle.position.set(0, 0.45, front - 0.15);
+    add((0,_core_toyStyle__WEBPACK_IMPORTED_MODULE_2__.createRoundedBox)("work-briefcase-lock", 0.8, 0.7, 0.3, 0.12, scene, 2), materials.gold).position.set(0, -0.05, front - 0.18);
+    var stamp = createStamp(scene);
+    stamp.parent = collider;
+    stamp.position.set(0, -1, front - 0.02);
+    stamp.rotation.z = 0.12;
+    stamp.metadata = { keepUnfrozen: true };
+}
+function createStamp(scene) {
+    var width = 512;
+    var height = 128;
+    var texture = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.DynamicTexture("work-stamp-texture", { width: width, height: height }, scene, true);
+    texture.hasAlpha = true;
+    var context = texture.getContext();
+    var draw = function () {
+        context.clearRect(0, 0, width, height);
+        context.strokeStyle = PALETTE.stamp;
+        context.lineWidth = 10;
+        (0,_infoStand__WEBPACK_IMPORTED_MODULE_5__.roundRect)(context, 10, 10, width - 20, height - 20, 18);
+        context.stroke();
+        context.fillStyle = PALETTE.stamp;
+        context.font = "900 66px ".concat(FONT);
+        context.textAlign = "center";
+        context.textBaseline = "middle";
+        context.fillText("CONFIDENTIAL", width / 2, (height / 2) + 4);
+        texture.update();
+    };
+    draw();
+    if ("fonts" in document) {
+        void document.fonts.load("900 40px Nunito").then(draw).catch(function () { return undefined; });
+    }
+    var material = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.StandardMaterial("work-stamp-material", scene);
+    material.diffuseTexture = texture;
+    material.useAlphaFromDiffuseTexture = true;
+    material.specularColor = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3(0.1, 0.1, 0.1);
+    material.emissiveColor = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Color3(0.2, 0.2, 0.2);
+    var plane = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreatePlane("work-stamp", { width: 3.4, height: 0.85 }, scene);
+    plane.material = material;
+    plane.isPickable = false;
+    return plane;
+}
+
+
 /***/ }
 
 }]);
-//# sourceMappingURL=src_scenes_tools_ts.999d90c0ff50084a237c.js.map
+//# sourceMappingURL=src_scenes_tools_ts.1dc0b5983693463eb03a.js.map
