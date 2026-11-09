@@ -3,6 +3,7 @@ import type { Rectangle } from "@babylonjs/gui/2D";
 
 import { segmentDistanceSquared } from "../core/math";
 import { prefersTouch } from "../ui/device";
+import { openLink } from "../ui/linkPrompt";
 import { UI } from "../ui/style";
 import { createHitFeedback, createImpactBurst, createObjectiveHint, createReticle, createTargetLabel, type ObjectiveMood } from "../ui/targetHud";
 import { collideWithRamps } from "../world/playground";
@@ -305,7 +306,7 @@ export async function initializeShooting(_this: TankContext, forward: BABYLON.Ve
                     didHit = true;
                     toyTargets.get(target.mesh)?.hit();
                     _this.sounds.chime(target.mesh.absolutePosition);
-                    window.open(target.url, "_blank", "noopener,noreferrer");
+                    openLink(target.label, target.url);
                     currentObjectiveText = `Direct hit! Opening ${target.label} in a new tab.`;
                     currentMood = "hit";
                     objectiveHint.text = currentObjectiveText;

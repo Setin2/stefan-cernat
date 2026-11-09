@@ -15,6 +15,22 @@ export function optimizeScene(scene: BABYLON.Scene, tank: BABYLON.AbstractMesh):
     scene.getEngine().enableOfflineSupport = false;
     scene.blockMaterialDirtyMechanism = true;
     scene.collisionsEnabled = false;
+    // Babylon 9 re-checks every material's readiness for every mesh on every frame, about 3 ms a
+    // frame with this many meshes. Materials here never change in ways that need a different
+    // shader once they're on screen (the dirty mechanism above is blocked anyway; colours and
+    // visibility are uniforms), so one check per mesh is enough. Not for materials with a depth
+    // pre-pass (the clouds): that pass has a shader of its own, which then never gets made, and
+    // they render black. Materials created later (the minigames, shots) get it after their first
+    // frame, once all their settings are in.
+    const checkOnce = (material: BABYLON.Material) => {
+        if (!material.needDepthPrePass) {
+            material.checkReadyOnlyOnce = true;
+        }
+    };
+    scene.materials.forEach(checkOnce);
+    scene.onNewMaterialAddedObservable.add((material) => {
+        scene.onAfterRenderObservable.addOnce(() => checkOnce(material));
+    });
 
     // The game is driven with the keyboard; mouse picking is never needed.
     scene.skipPointerMovePicking = true;

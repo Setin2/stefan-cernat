@@ -5,6 +5,8 @@
 import { Node } from "@babylonjs/core/node";
 import { Scene } from "@babylonjs/core/scene";
 import { Nullable } from "@babylonjs/core/types";
+import type { Observable } from "@babylonjs/core/Misc/observable";
+import type { PhysicsEngine as PhysicsEngineV1 } from "@babylonjs/core/Physics/v1/physicsEngine";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { Tools } from "@babylonjs/core/Misc/tools";
 import { Engine } from "@babylonjs/core/Engines/engine";
@@ -15,7 +17,7 @@ import { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { Texture } from "@babylonjs/core/Materials/Textures/texture";
 import { InstancedMesh } from "@babylonjs/core/Meshes/instancedMesh";
-import { SerializationHelper } from "@babylonjs/core/Misc/decorators";
+import { SerializationHelper } from "@babylonjs/core/Misc/decorators.serialization";
 import { Vector2, Vector3, Vector4, Matrix, Quaternion } from "@babylonjs/core/Maths/math.vector";
 import type { AdvancedDynamicTexture } from "@babylonjs/gui/2D/advancedDynamicTexture";
 import type { MotionBlurPostProcess } from "@babylonjs/core/PostProcesses/motionBlurPostProcess";
@@ -23,7 +25,6 @@ import type { ScreenSpaceReflectionPostProcess } from "@babylonjs/core/PostProce
 import type { SSAO2RenderingPipeline } from "@babylonjs/core/PostProcesses/RenderPipeline/Pipelines/ssao2RenderingPipeline";
 import type { DefaultRenderingPipeline } from "@babylonjs/core/PostProcesses/RenderPipeline/Pipelines/defaultRenderingPipeline";
 
-import "@babylonjs/core/Audio/audioSceneComponent";
 import "@babylonjs/core/Physics/physicsEngineComponent";
 import "@babylonjs/core/Engines/Extensions/engine.textureSelector";
 import "@babylonjs/core/Materials/Textures/Loaders/ktxTextureLoader";
@@ -118,7 +119,7 @@ function isEs6Class(ctor: any, scene: Scene): boolean {
  */
 async function loadGuiComponent(path: string, node: (Scene | Node | AbstractMesh) & IScript, exports: any): Promise<void> {
     let isDisposed = false;
-    const disposeObserver = node.onDisposeObservable.addOnce(() => isDisposed = true);
+    const disposeObserver = (node.onDisposeObservable as Observable<any>).addOnce(() => isDisposed = true);
 
     const dataResult = await Tools.LoadFileAsync(path, false) as string;
 
@@ -126,7 +127,7 @@ async function loadGuiComponent(path: string, node: (Scene | Node | AbstractMesh
         return;
     }
 
-    node.onDisposeObservable.remove(disposeObserver as any);
+    (node.onDisposeObservable as Observable<any>).remove(disposeObserver as any);
 
     const data = JSON.parse(dataResult as string);
 
@@ -137,7 +138,7 @@ async function loadGuiComponent(path: string, node: (Scene | Node | AbstractMesh
 
     ui.parseContent(data, true);
 
-    node.onDisposeObservable.addOnce(() => ui.dispose());
+    (node.onDisposeObservable as Observable<any>).addOnce(() => ui.dispose());
 
     // Link controls
     const controlsLinks = (exports.default as any)._ControlsValues ?? [];
@@ -349,7 +350,7 @@ function requireScriptForNodes(scene: Scene, scriptsMap: ISceneScriptMap, nodes:
                 }
             });
 
-            n.onDisposeObservable.addOnce(() => scene.onPointerObservable.remove(observer));
+            (n.onDisposeObservable as Observable<any>).addOnce(() => scene.onPointerObservable.remove(observer));
         }
 
         const resultCallback = () => {
@@ -360,7 +361,7 @@ function requireScriptForNodes(scene: Scene, scriptsMap: ISceneScriptMap, nodes:
                     n.onStart!();
                 });
 
-                n.onDisposeObservable.addOnce(() => {
+                (n.onDisposeObservable as Observable<any>).addOnce(() => {
                     if (startObserver) {
                         scene.onBeforeRenderObservable.remove(startObserver);
                     }
@@ -370,12 +371,12 @@ function requireScriptForNodes(scene: Scene, scriptsMap: ISceneScriptMap, nodes:
             // Check update
             if (n.onUpdate) {
                 const updateObserver = scene.onBeforeRenderObservable.add(() => n.onUpdate!());
-                n.onDisposeObservable.addOnce(() => scene.onBeforeRenderObservable.remove(updateObserver));
+                (n.onDisposeObservable as Observable<any>).addOnce(() => scene.onBeforeRenderObservable.remove(updateObserver));
             }
 
             // Check stop
             if (n.onStop) {
-                n.onDisposeObservable.addOnce(() => n.onStop!());
+                (n.onDisposeObservable as Observable<any>).addOnce(() => n.onStop!());
             }
 
             // Check keyboard events
@@ -391,7 +392,7 @@ function requireScriptForNodes(scene: Scene, scriptsMap: ISceneScriptMap, nodes:
                     }
                 });
 
-                n.onDisposeObservable.addOnce(() => scene.onKeyboardObservable.remove(observer));
+                (n.onDisposeObservable as Observable<any>).addOnce(() => scene.onKeyboardObservable.remove(observer));
             }
 
             // Check resize events
@@ -401,12 +402,12 @@ function requireScriptForNodes(scene: Scene, scriptsMap: ISceneScriptMap, nodes:
                     n[event.propertyKey](e.getRenderWidth(), e.getRenderHeight());
                 });
 
-                n.onDisposeObservable.addOnce(() => engine.onResizeObservable.remove(observer));
+                (n.onDisposeObservable as Observable<any>).addOnce(() => engine.onResizeObservable.remove(observer));
             }
 
             // Retrieve impostors
             if (n instanceof AbstractMesh && !n.physicsImpostor) {
-                n.physicsImpostor = n._scene.getPhysicsEngine()?.getImpostorForPhysicsObject(n) ?? null;
+                n.physicsImpostor = (n._scene.getPhysicsEngine() as PhysicsEngineV1 | null)?.getImpostorForPhysicsObject(n) ?? null;
             }
 
             delete n.metadata.script;

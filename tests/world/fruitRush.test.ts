@@ -41,14 +41,21 @@ describe("Fruit Rush", () => {
 
     it("lets fruit nobody collects spoil away", async () => {
         const { scene, shoot, advance, tank, sounds, fruitInFlight } = await setup();
-        let thrown = 0;
-        scene.onNewMeshAddedObservable.add((mesh) => {
-            thrown += mesh.name.startsWith("fruit-rush-") ? 1 : 0;
+        // Every fruit has its own name, so the names seen add up to how many were thrown.
+        const seen = new Set<string>();
+        const look = () => scene.meshes.forEach((mesh) => {
+            if (/^fruit-rush-(apple|orange|pear|golden)-\d+$/.test(mesh.name)) {
+                seen.add(mesh.name);
+            }
         });
         // Just outside the field: close enough to keep playing, too far to catch anything.
         tank.position.x = FIELD.x + 30;
         shoot();
-        advance(20);
+        for (let i = 0; i < 40; i++) {
+            advance(0.5);
+            look();
+        }
+        const thrown = seen.size;
         expect(sounds.pickup).not.toHaveBeenCalled();
         expect(thrown).toBeGreaterThan(25);
         // Each lasts about 7 s once down, so most of what was thrown is gone again.

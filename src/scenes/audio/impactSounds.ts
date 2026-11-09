@@ -1,6 +1,7 @@
 import * as BABYLON from "../babylon";
 
 import type { SoundBoard } from "./soundBoard";
+import { getPhysics } from "../core/physics";
 import { getSoundMaterial, isSurface, setSoundMaterial, type SoundMaterial } from "./soundMaterials";
 
 /**
@@ -69,7 +70,7 @@ export function createImpactSounds(scene: BABYLON.Scene, sounds: SoundBoard, tan
     };
 
     // Everything with a physics body in the scene so far, by what it is.
-    const engine = scene.getPhysicsEngine();
+    const engine = getPhysics(scene);
     const ground = scene.getMeshByName("ground");
     track(ground && (ground.physicsImpostor ?? engine?.getImpostorForPhysicsObject(ground)), "ground");
     track(tank.physicsImpostor, "tank");

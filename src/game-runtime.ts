@@ -50,7 +50,8 @@ export class GameRuntime {
         this.statusRetryButton = document.getElementById("statusRetryButton") as HTMLButtonElement | null;
 
         hideDeprecatedRendererInfo();
-        this.engine = new Engine(canvas, true);
+        // No Babylon audio: the game synthesises its sounds with its own Web Audio context.
+        this.engine = new Engine(canvas, true, { audioEngine: false });
         configureEngine(this.engine);
         this.scene = new Scene(this.engine);
 

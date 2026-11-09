@@ -1,7 +1,7 @@
 import * as BABYLON from "@babylonjs/core";
 
 import { optimizeScene } from "../../src/scenes/core/performance";
-import { createTankBody, enablePhysics, prepareLooseBodies } from "../../src/scenes/core/physics";
+import { createTankBody, enablePhysics, getPhysics, prepareLooseBodies } from "../../src/scenes/core/physics";
 import { createBrickBuilds } from "../../src/scenes/world/bricks";
 import { addGround, createTestScene } from "../helpers/scene";
 
@@ -18,7 +18,7 @@ function setup() {
     createBrickBuilds({ scene, tank });
     optimizeScene(scene, tank);
     prepareLooseBodies(scene, tank);
-    const bricks = scene.getPhysicsEngine()!.getImpostors()
+    const bricks = getPhysics(scene)!.getImpostors()
         .filter((impostor) => (impostor.object as BABYLON.AbstractMesh).name.startsWith("brick"))
         .map((impostor) => {
             const body = impostor.physicsBody as { position: { x: number; y: number; z: number } };

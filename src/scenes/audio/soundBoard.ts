@@ -10,9 +10,9 @@ import { isSurface, type SoundMaterial, type SurfaceMaterial } from "./soundMate
  * right with where it is on screen. Small random variations keep repeated hits from sounding
  * identical.
  *
- * Everything goes through Babylon's master volume, so the mute shortcut (M) still works. Browsers
- * only allow audio after the player interacts with the page, so nothing plays until the first
- * key press or click.
+ * The sounds have their own Web Audio context (not Babylon's audio engine), with one master volume
+ * that the mute shortcut (M) turns off. Browsers only allow audio after the player interacts with
+ * the page, so the context is created, and sound starts, on the first key press, click or tap.
  */
 
 /** Sounds further away than this can't be heard. */
@@ -30,6 +30,24 @@ const TANK_BUMP_COOLDOWN_SECONDS = 0.3;
 
 type Voice = { output: GainNode };
 
+/** User actions that browsers let start audio (see the constructor). */
+const UNLOCK_EVENTS = ["keydown", "pointerdown", "pointerup", "touchend", "click"] as const;
+
+/**
+ * Everything plays through one master volume (the M key mutes it). Kept outside the sound board so
+ * muting works before the first sound, and for every board.
+ */
+let master: GainNode | null = null;
+let muted = false;
+
+/** Mutes or unmutes every sound in the game. */
+export function setSoundMuted(value: boolean): void {
+    muted = value;
+    if (master) {
+        master.gain.value = muted ? 0 : 1;
+    }
+}
+
 export class SoundBoard {
     private context: AudioContext | null = null;
     private bus: GainNode | null = null;
@@ -46,28 +64,28 @@ export class SoundBoard {
     private lastTankBump = 0;
 
     public constructor(scene: BABYLON.Scene, private readonly tank: BABYLON.AbstractMesh, private readonly camera: BABYLON.Camera) {
-        const audioEngine = BABYLON.Engine.audioEngine;
-        if (!audioEngine) {
-            return;
-        }
-        // We unlock audio ourselves on the first key press or click instead of showing Babylon's
-        // speaker button.
-        audioEngine.useCustomUnlockedButton = true;
-        // The context has to exist before Babylon can resume it.
+        // The sounds get their own Web Audio context, created and started on the first key press,
+        // click or tap: browsers only allow audio after one (and warn about a context made
+        // earlier). They only count a touch once the finger lifts (pointerup / touchend), not when
+        // it goes down, so phones need those too.
         const unlock = () => {
-            this.ensureContext();
-            audioEngine.unlock();
+            if (this.ensureContext()) {
+                return;
+            }
+            void this.context?.resume().catch(() => undefined);
         };
-        window.addEventListener("keydown", unlock);
-        window.addEventListener("pointerdown", unlock);
+        for (const type of UNLOCK_EVENTS) {
+            window.addEventListener(type, unlock);
+        }
 
         const observer = scene.onBeforeRenderObservable.add(() => {
             this.listener.copyFrom(this.tank.position);
             this.camera.getDirectionToRef(BABYLON.Axis.X, this.listenerRight);
         });
         scene.onDisposeObservable.addOnce(() => {
-            window.removeEventListener("keydown", unlock);
-            window.removeEventListener("pointerdown", unlock);
+            for (const type of UNLOCK_EVENTS) {
+                window.removeEventListener(type, unlock);
+            }
             scene.onBeforeRenderObservable.remove(observer);
             this.bus?.disconnect();
         });
@@ -114,12 +132,15 @@ export class SoundBoard {
         if (this.context) {
             return this.context.state === "running";
         }
-        const audioEngine = BABYLON.Engine.audioEngine;
-        const context = audioEngine?.audioContext;
-        if (!audioEngine || !context || !audioEngine.masterGain) {
+        const AudioContextClass = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+        if (!AudioContextClass) {
             return false;
         }
+        const context = new AudioContextClass();
         this.context = context;
+        master = context.createGain();
+        master.gain.value = muted ? 0 : 1;
+        master.connect(context.destination);
 
         // A gentle compressor keeps a wall collapsing into many hits from clipping.
         const compressor = context.createDynamicsCompressor();
@@ -131,7 +152,7 @@ export class SoundBoard {
         this.bus = context.createGain();
         this.bus.gain.value = 0.9;
         this.bus.connect(compressor);
-        compressor.connect(audioEngine.masterGain);
+        compressor.connect(master);
         this.ambience = context.createGain();
         this.ambience.connect(this.bus);
 

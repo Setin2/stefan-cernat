@@ -1,6 +1,7 @@
 import * as BABYLON from "../babylon";
 import type { AdvancedDynamicTexture, Rectangle } from "@babylonjs/gui/2D";
 
+import { setSoundMuted } from "../audio/soundBoard";
 import { prefersTouch } from "./device";
 import { NARROW_LAYOUT, UI, createCard, createKeycap, createRow, createSpacer, createText, refreshWhenFontLoaded, type GuiModule, isNarrowScreen } from "./style";
 
@@ -91,7 +92,7 @@ export class ControlOverlay {
 
     private toggleMute(): void {
         this.muted = !this.muted;
-        BABYLON.Engine.audioEngine?.setGlobalVolume(this.muted ? 0 : 1);
+        setSoundMuted(this.muted);
         this.updateHint();
     }
 

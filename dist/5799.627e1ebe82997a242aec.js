@@ -1,0 +1,2 @@
+/*! For license information please see 5799.627e1ebe82997a242aec.js.LICENSE.txt */
+"use strict";(self.webpackChunkgame=self.webpackChunkgame||[]).push([[5799],{95799(a,e,n){n.r(e),n.d(e,{shadowMapFragmentSoftTransparentShadowWGSL:()=>o});var r=n(69610);const s="shadowMapFragmentSoftTransparentShadow",t="#if SM_SOFTTRANSPARENTSHADOW==1\nif ((bayerDither8(floor(((fragmentInputs.position.xy)%(8.0)))))/64.0>=uniforms.softTransparentShadowSM.x*alpha) {discard;}\n#endif\n";r.l.IncludesShadersStoreWGSL[s]||(r.l.IncludesShadersStoreWGSL[s]=t);const o={name:s,shader:t}}}]);

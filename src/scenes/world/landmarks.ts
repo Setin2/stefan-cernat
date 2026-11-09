@@ -1,6 +1,7 @@
 import * as BABYLON from "../babylon";
 
 import { createRoadNetwork } from "./roads";
+import { getPhysics } from "../core/physics";
 import { addStaticBox } from "../core/staticBodies";
 import { createLumpyBall, createRandom, createRoundedBox, createToyMaterial } from "../core/toyStyle";
 import { smoothStep } from "../core/math";
@@ -120,7 +121,7 @@ function restylePodium(scene: BABYLON.Scene): void {
     // per-step boxes above, which follow the steps' shapes more closely. The scene loader doesn't
     // set mesh.physicsImpostor, so look the body up through the physics engine.
     podium.isVisible = false;
-    (podium.physicsImpostor ?? scene.getPhysicsEngine()?.getImpostorForPhysicsObject(podium))?.dispose();
+    (podium.physicsImpostor ?? getPhysics(scene)?.getImpostorForPhysicsObject(podium))?.dispose();
     podium.physicsImpostor = null;
 
     for (const child of podium.getChildMeshes()) {

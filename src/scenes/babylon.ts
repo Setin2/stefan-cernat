@@ -42,7 +42,9 @@ export { CubeMapToSphericalPolynomialTools } from "@babylonjs/core/Misc/HighDyna
 export { Observable, Observer } from "@babylonjs/core/Misc/observable";
 export { Node } from "@babylonjs/core/node";
 export { ParticleSystem } from "@babylonjs/core/Particles/particleSystem";
-export { PhysicsImpostor } from "@babylonjs/core/Physics/physicsImpostor";
+export { PhysicsImpostor } from "@babylonjs/core/Physics/v1/physicsImpostor";
+/** The physics engine the game uses (Babylon's "v1" engine, with cannon.js); see core/physics.ts. */
+export type { PhysicsEngine } from "@babylonjs/core/Physics/v1/physicsEngine";
 export { Scene } from "@babylonjs/core/scene";
 export type { Nullable } from "@babylonjs/core/types";
 
@@ -51,9 +53,9 @@ import "@babylonjs/core/Physics/physicsEngineComponent"; // scene.enablePhysics,
 import "@babylonjs/core/Lights/Shadows/shadowGeneratorSceneComponent"; // shadows
 import "@babylonjs/core/Particles/particleSystemComponent"; // scene.particleSystems
 import "@babylonjs/core/Meshes/thinInstanceMesh"; // mesh.thinInstanceAdd and friends
-import "@babylonjs/core/Audio/audioSceneComponent"; // Engine.audioEngine (sounds go through it)
 import "@babylonjs/core/Loading/Plugins/babylonFileLoader"; // loading scene.babylon
 // Classes the scene file (scenes/scene/scene.babylon) is made of, which the loader looks up by name.
 import "@babylonjs/core/Cameras/universalCamera";
 import "@babylonjs/core/Lights/hemisphericLight";
 import "@babylonjs/core/Lights/Shadows/cascadedShadowGenerator";
+import "@babylonjs/core/Materials/colorCurves"; // PBR materials' image processing settings

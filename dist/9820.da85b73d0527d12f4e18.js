@@ -1,0 +1,2 @@
+/*! For license information please see 9820.da85b73d0527d12f4e18.js.LICENSE.txt */
+"use strict";(self.webpackChunkgame=self.webpackChunkgame||[]).push([[9820],{79820(e,r,a){a.r(r),a.d(r,{passPixelShader:()=>l});var s=a(69610);const n="passPixelShader",t="varying vec2 vUV;uniform sampler2D textureSampler;\n#define CUSTOM_FRAGMENT_DEFINITIONS\nvoid main(void) \n{gl_FragColor=texture2D(textureSampler,vUV);}";s.l.ShadersStore[n]||(s.l.ShadersStore[n]=t);const l={name:n,shader:t}}}]);

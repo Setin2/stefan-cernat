@@ -45,6 +45,14 @@ const SLEEPING = 2;
  *   frame into equal sub-steps of at most 1/120s keeps the simulation stable at any frame rate
  *   while still advancing exactly the frame's time, so motion stays smooth.
  */
+/**
+ * The scene's physics engine, typed as the "v1" engine the game uses (impostors and cannon.js).
+ * Babylon's own type covers both its engines, without the v1-only methods.
+ */
+export function getPhysics(scene: BABYLON.Scene): BABYLON.PhysicsEngine | null {
+    return scene.getPhysicsEngine() as BABYLON.PhysicsEngine | null;
+}
+
 export function enablePhysics(scene: BABYLON.Scene): void {
     scene.enablePhysics();
     scene.getPhysicsEngine()?.setGravity(GRAVITY);
@@ -124,7 +132,7 @@ function fixFriction(world: CannonWorld): void {
  */
 function setGroundMaterial(scene: BABYLON.Scene, plugin: CannonPlugin): void {
     const ground = scene.getMeshByName("ground");
-    const engine = scene.getPhysicsEngine();
+    const engine = getPhysics(scene);
     const impostor = ground && (ground.physicsImpostor ?? engine?.getImpostorForPhysicsObject(ground));
     const body = impostor?.physicsBody as { material: unknown } | undefined;
     if (!body || !plugin.BJSCANNON) {
@@ -199,7 +207,7 @@ export function createTankBody(scene: BABYLON.Scene, tank: BABYLON.AbstractMesh)
  * Loose objects also land on and bump into the ramps here (the tank rides them instead).
  */
 export function prepareLooseBodies(scene: BABYLON.Scene, tank: BABYLON.AbstractMesh): void {
-    for (const impostor of scene.getPhysicsEngine()?.getImpostors() ?? []) {
+    for (const impostor of getPhysics(scene)?.getImpostors() ?? []) {
         const body = impostor.physicsBody as { sleepState?: number } | null;
         if (!body || impostor.mass === 0 || impostor.object === tank) {
             continue;
