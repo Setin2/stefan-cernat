@@ -4,7 +4,7 @@ import { Scene } from "@babylonjs/core/scene";
 // The scene loader shows Babylon's loading screen hooks, so it needs them loaded first.
 import "@babylonjs/core/Loading/loadingScreen";
 
-import { configureEngine, hideDeprecatedRendererInfo } from "./engine-config";
+import { avoidSizedFormatForImageUploads, configureEngine, hideDeprecatedRendererInfo, keepCanvasesOnCpuInFirefox } from "./engine-config";
 import { warmUpShaders } from "./scenes/core/warmUp";
 
 /**
@@ -50,6 +50,8 @@ export class GameRuntime {
         this.statusRetryButton = document.getElementById("statusRetryButton") as HTMLButtonElement | null;
 
         hideDeprecatedRendererInfo();
+        avoidSizedFormatForImageUploads();
+        keepCanvasesOnCpuInFirefox();
         // No Babylon audio: the game synthesises its sounds with its own Web Audio context.
         this.engine = new Engine(canvas, true, { audioEngine: false });
         configureEngine(this.engine);
